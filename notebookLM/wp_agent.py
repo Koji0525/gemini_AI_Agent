@@ -37,7 +37,6 @@ class WordPressAgent:
         self.wp_credentials = wp_credentials or {}
         self.is_logged_in = False
         
-        # ★★★ ここから追加 ★★★
         # WordPress 専用ページ（新しいタブ）
         self.wp_page = None
         
@@ -57,6 +56,52 @@ class WordPressAgent:
         else:
             logger.warning("⚠️ WordPress 認証情報が不完全です")
             self.auth = None
+        
+        # ========================================
+        # ✅ ここに追加：サブエージェントの初期化
+        # ========================================
+        
+        # シートマネージャー（後で外部から設定される）
+        self.sheets_manager = None
+        
+        # 投稿編集エージェント
+        self.post_editor = WordPressPostEditor(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPostEditor 初期化完了")
+        
+        # 投稿作成エージェント
+        self.post_creator = WordPressPostCreator(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPostCreator 初期化完了")
+        
+        # プラグインマネージャー
+        self.plugin_manager = WordPressPluginManager(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPluginManager 初期化完了")
+        
+        # 設定マネージャー
+        self.settings_manager = WordPressSettingsManager(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressSettingsManager 初期化完了")
+        
+        # テスター
+        self.tester = WordPressTester(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressTester 初期化完了")
+        
+        logger.info("="*60)
+        logger.info("WordPressAgent 全サブエージェント初期化完了")
+        logger.info("="*60)
     async def initialize_wp_session(self) -> bool:
         """
         WordPress セッション初期化（完全修正版 - クッキー強制ナビゲーション対応）
@@ -274,9 +319,7 @@ class WordPressAgent:
     
         # ログインしていない場合は再初期化
         return await self.initialize_wp_session()
-
-# === 修正終了 ===
-    
+       
     async def process_task(self, task: Dict) -> Dict:
         """WordPressタスクを処理"""
         try:
@@ -575,26 +618,26 @@ class WordPressAgent:
     def _build_gemini_prompt(self, task: Dict) -> str:
         """Gemini用プロンプトを構築"""
         return f"""
-WordPressで以下のタスクを実行したいです:
+        WordPressで以下のタスクを実行したいです:
 
-【タスク】
-{task['description']}
+        【タスク】
+        {task['description']}
 
-【WordPress情報】
-- URL: {self.wp_url}
-- 管理画面にログイン済み
+        【WordPress情報】
+        - URL: {self.wp_url}
+        - 管理画面にログイン済み
 
-【質問】
-このタスクを実行するための具体的な手順を、WordPress管理画面の操作として教えてください。
+        【質問】
+        このタスクを実行するための具体的な手順を、WordPress管理画面の操作として教えてください。
 
-以下の形式で回答してください:
-1. 移動するページのURL(相対パス)
-2. クリックまたは入力する要素のセレクタ
-3. 入力する値
-4. 確認すべきポイント
+        以下の形式で回答してください:
+        1. 移動するページのURL(相対パス)
+        2. クリックまたは入力する要素のセレクタ
+        3. 入力する値
+        4. 確認すべきポイント
 
-セレクタはできるだけ具体的に(id, class, name属性など)。
-"""
+        セレクタはできるだけ具体的に(id, class, name属性など)。
+        """
 
     def _build_generic_result(self, task: Dict, response: str) -> Dict:
         """汎用実行の結果を構築"""
@@ -616,379 +659,379 @@ WordPressで以下のタスクを実行したいです:
 
 # === 追加機能メソッド（分割済み） ===
 
-async def configure_acf_fields(self, task_params: Dict) -> Dict:
-    """Advanced Custom Fieldsのフィールドグループを設定"""
-    try:
-        # === パート1: パラメータ取得 ===
-        field_group_name = task_params.get('acf_field_group_name')
-        fields = task_params.get('acf_fields', [])
-        location_rules = task_params.get('acf_location_rules', {})
-        
-        logger.info(f"ACFフィールドグループ '{field_group_name}' を設定中...")
-        
-        # === パート2: ACF画面移動 ===
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/edit.php?post_type=acf-field-group")
-        await self.wp_page.wait_for_timeout(2000)
-        
-        # === パート3: 新規フィールドグループ追加 ===
-        await self._click_acf_add_new_button()
-        
-        # === パート4: フィールドグループ名入力 ===
-        await self._input_acf_field_group_name(field_group_name)
-        
-        # === パート5: スクリーンショットと結果返却 ===
-        return await self._build_acf_result(field_group_name, fields, location_rules)
-        
-    except Exception as e:
-        logger.error(f"ACF設定エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-async def _click_acf_add_new_button(self):
-    """ACF新規追加ボタンをクリック"""
-    add_button_selectors = [
-        'a.page-title-action:has-text("新規追加")',
-        'a:has-text("Add New")',
-        '.page-title-action'
-    ]
-    
-    for selector in add_button_selectors:
+    async def configure_acf_fields(self, task_params: Dict) -> Dict:
+        """Advanced Custom Fieldsのフィールドグループを設定"""
         try:
-            add_button = await self.wp_page.query_selector(selector)
-            if add_button and await add_button.is_visible():
-                await add_button.click()
-                await self.wp_page.wait_for_timeout(3000)
-                break
-        except:
-            continue
+            # === パート1: パラメータ取得 ===
+            field_group_name = task_params.get('acf_field_group_name')
+            fields = task_params.get('acf_fields', [])
+            location_rules = task_params.get('acf_location_rules', {})
+            
+            logger.info(f"ACFフィールドグループ '{field_group_name}' を設定中...")
+            
+            # === パート2: ACF画面移動 ===
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/edit.php?post_type=acf-field-group")
+            await self.wp_page.wait_for_timeout(2000)
+            
+            # === パート3: 新規フィールドグループ追加 ===
+            await self._click_acf_add_new_button()
+            
+            # === パート4: フィールドグループ名入力 ===
+            await self._input_acf_field_group_name(field_group_name)
+            
+            # === パート5: スクリーンショットと結果返却 ===
+            return await self._build_acf_result(field_group_name, fields, location_rules)
+            
+        except Exception as e:
+            logger.error(f"ACF設定エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-async def _input_acf_field_group_name(self, field_group_name: str):
-    """ACFフィールドグループ名を入力"""
-    title_input = await self.wp_page.query_selector('#title')
-    if title_input:
-        await title_input.fill(field_group_name)
-        logger.info(f"フィールドグループ名を入力: {field_group_name}")
+    async def _click_acf_add_new_button(self):
+        """ACF新規追加ボタンをクリック"""
+        add_button_selectors = [
+            'a.page-title-action:has-text("新規追加")',
+            'a:has-text("Add New")',
+            '.page-title-action'
+        ]
+        
+        for selector in add_button_selectors:
+            try:
+                add_button = await self.wp_page.query_selector(selector)
+                if add_button and await add_button.is_visible():
+                    await add_button.click()
+                    await self.wp_page.wait_for_timeout(3000)
+                    break
+            except:
+                continue
 
-async def _build_acf_result(self, field_group_name: str, fields: list, location_rules: dict) -> Dict:
-    """ACF設定結果を構築"""
-    # スクリーンショット
-    screenshot_path = f"acf_setup_{datetime.now().strftime('%H%M%S')}.png"
-    await self.wp_page.screenshot(path=screenshot_path)
-    
-    logger.info("⚠️ ACFフィールドの詳細設定は手動で確認してください")
-    
-    return {
-        'success': True,
-        'summary': f'ACFフィールドグループ "{field_group_name}" の設定画面を開きました。',
-        'field_group_name': field_group_name,
-        'fields_count': len(fields),
-        'screenshot': screenshot_path,
-        'full_text': f'ACFフィールドグループ設定\n名前: {field_group_name}\nフィールド数: {len(fields)}\n※フィールド追加は手動で実施してください'
-    }
+    async def _input_acf_field_group_name(self, field_group_name: str):
+        """ACFフィールドグループ名を入力"""
+        title_input = await self.wp_page.query_selector('#title')
+        if title_input:
+            await title_input.fill(field_group_name)
+            logger.info(f"フィールドグループ名を入力: {field_group_name}")
 
-# （他の追加機能メソッドも同様に分割。以下は一部のみ表示）
-
-async def configure_custom_post_type(self, task_params: Dict) -> Dict:
-    """Custom Post Type UIでカスタム投稿タイプを作成"""
-    try:
-        # === パート1: パラメータ取得 ===
-        cpt_slug = task_params.get('cpt_slug')
-        cpt_labels = task_params.get('cpt_labels', {})
-        cpt_supports = task_params.get('cpt_supports', [])
-        cpt_settings = task_params.get('cpt_settings', {})
+    async def _build_acf_result(self, field_group_name: str, fields: list, location_rules: dict) -> Dict:
+        """ACF設定結果を構築"""
+        # スクリーンショット
+        screenshot_path = f"acf_setup_{datetime.now().strftime('%H%M%S')}.png"
+        await self.wp_page.screenshot(path=screenshot_path)
         
-        logger.info(f"カスタム投稿タイプ '{cpt_slug}' を作成中...")
+        logger.info("⚠️ ACFフィールドの詳細設定は手動で確認してください")
         
-        # === パート2: CPT UI画面移動 ===
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_post_types")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # === パート3: 基本情報入力 ===
-        await self._input_cpt_basic_info(cpt_slug, cpt_labels)
-        
-        # === パート4: 結果構築 ===
-        return await self._build_cpt_result(cpt_slug, cpt_labels)
-        
-    except Exception as e:
-        logger.error(f"Custom Post Type作成エラー: {e}")
         return {
-            'success': False,
-            'error': str(e)
+            'success': True,
+            'summary': f'ACFフィールドグループ "{field_group_name}" の設定画面を開きました。',
+            'field_group_name': field_group_name,
+            'fields_count': len(fields),
+            'screenshot': screenshot_path,
+            'full_text': f'ACFフィールドグループ設定\n名前: {field_group_name}\nフィールド数: {len(fields)}\n※フィールド追加は手動で実施してください'
         }
 
-async def _input_cpt_basic_info(self, cpt_slug: str, cpt_labels: dict):
-    """CPT基本情報を入力"""
-    # Post Type Slug入力
-    slug_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[name]"]')
-    if slug_input:
-        await slug_input.fill(cpt_slug)
-        logger.info(f"スラッグを入力: {cpt_slug}")
-    
-    # Plural Label入力
-    plural_label = cpt_labels.get('plural', cpt_slug)
-    plural_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[label]"]')
-    if plural_input:
-        await plural_input.fill(plural_label)
-        logger.info(f"複数形ラベルを入力: {plural_label}")
-    
-    # Singular Label入力
-    singular_label = cpt_labels.get('singular', cpt_slug)
-    singular_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[singular_label]"]')
-    if singular_input:
-        await singular_input.fill(singular_label)
-        logger.info(f"単数形ラベルを入力: {singular_label}")
+    # （他の追加機能メソッドも同様に分割。以下は一部のみ表示）
 
-async def _build_cpt_result(self, cpt_slug: str, cpt_labels: dict) -> Dict:
-    """CPT作成結果を構築"""
-    screenshot_path = f"cpt_creation_{cpt_slug}_{datetime.now().strftime('%H%M%S')}.png"
-    await self.wp_page.screenshot(path=screenshot_path)
-    
-    logger.info("⚠️ 詳細設定とSupports設定は手動で確認してください")
-    
-    return {
-        'success': True,
-        'summary': f'カスタム投稿タイプ "{cpt_slug}" の設定画面を開きました。',
-        'cpt_slug': cpt_slug,
-        'cpt_labels': cpt_labels,
-        'screenshot': screenshot_path,
-        'full_text': f'Custom Post Type作成\nスラッグ: {cpt_slug}\nラベル: {cpt_labels}\n※Supports設定等は手動で実施してください'
-    }
+    async def configure_custom_post_type(self, task_params: Dict) -> Dict:
+        """Custom Post Type UIでカスタム投稿タイプを作成"""
+        try:
+            # === パート1: パラメータ取得 ===
+            cpt_slug = task_params.get('cpt_slug')
+            cpt_labels = task_params.get('cpt_labels', {})
+            cpt_supports = task_params.get('cpt_supports', [])
+            cpt_settings = task_params.get('cpt_settings', {})
+            
+            logger.info(f"カスタム投稿タイプ '{cpt_slug}' を作成中...")
+            
+            # === パート2: CPT UI画面移動 ===
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_post_types")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # === パート3: 基本情報入力 ===
+            await self._input_cpt_basic_info(cpt_slug, cpt_labels)
+            
+            # === パート4: 結果構築 ===
+            return await self._build_cpt_result(cpt_slug, cpt_labels)
+            
+        except Exception as e:
+            logger.error(f"Custom Post Type作成エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-
-# === 3. カスタムタクソノミー作成機能 ===
-async def configure_custom_taxonomy(self, task_params: Dict) -> Dict:
-    """
-    Custom Post Type UIでカスタムタクソノミーを作成
-    
-    Parameters:
-        taxonomy_slug: str - タクソノミースラッグ
-        taxonomy_labels: dict - ラベル設定
-        taxonomy_post_types: list - 紐づける投稿タイプ
-        taxonomy_hierarchical: bool - 階層構造の有無
-    """
-    try:
-        taxonomy_slug = task_params.get('taxonomy_slug')
-        taxonomy_labels = task_params.get('taxonomy_labels', {})
-        taxonomy_post_types = task_params.get('taxonomy_post_types', [])
-        taxonomy_hierarchical = task_params.get('taxonomy_hierarchical', True)
-        
-        logger.info(f"カスタムタクソノミー '{taxonomy_slug}' を作成中...")
-        
-        # 1 Custom Post Type UI - Taxonomies画面に移動
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_taxonomies")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # 2 Taxonomy Slug入力
-        slug_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[name]"]')
+    async def _input_cpt_basic_info(self, cpt_slug: str, cpt_labels: dict):
+        """CPT基本情報を入力"""
+        # Post Type Slug入力
+        slug_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[name]"]')
         if slug_input:
-            await slug_input.fill(taxonomy_slug)
-            logger.info(f"タクソノミースラッグを入力: {taxonomy_slug}")
+            await slug_input.fill(cpt_slug)
+            logger.info(f"スラッグを入力: {cpt_slug}")
         
-        # 3 Plural Label入力
-        plural_label = taxonomy_labels.get('plural', taxonomy_slug)
-        plural_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[label]"]')
+        # Plural Label入力
+        plural_label = cpt_labels.get('plural', cpt_slug)
+        plural_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[label]"]')
         if plural_input:
             await plural_input.fill(plural_label)
             logger.info(f"複数形ラベルを入力: {plural_label}")
         
-        # 4 Singular Label入力
-        singular_label = taxonomy_labels.get('singular', taxonomy_slug)
-        singular_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[singular_label]"]')
+        # Singular Label入力
+        singular_label = cpt_labels.get('singular', cpt_slug)
+        singular_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[singular_label]"]')
         if singular_input:
             await singular_input.fill(singular_label)
             logger.info(f"単数形ラベルを入力: {singular_label}")
-        
-        # 5 スクリーンショット
-        screenshot_path = f"taxonomy_creation_{taxonomy_slug}_{datetime.now().strftime('%H%M%S')}.png"
+
+    async def _build_cpt_result(self, cpt_slug: str, cpt_labels: dict) -> Dict:
+        """CPT作成結果を構築"""
+        screenshot_path = f"cpt_creation_{cpt_slug}_{datetime.now().strftime('%H%M%S')}.png"
         await self.wp_page.screenshot(path=screenshot_path)
         
-        logger.info("⚠️ Attach to Post Typesと階層設定は手動で確認してください")
+        logger.info("⚠️ 詳細設定とSupports設定は手動で確認してください")
         
         return {
             'success': True,
-            'summary': f'カスタムタクソノミー "{taxonomy_slug}" の設定画面を開きました。',
-            'taxonomy_slug': taxonomy_slug,
-            'taxonomy_labels': taxonomy_labels,
+            'summary': f'カスタム投稿タイプ "{cpt_slug}" の設定画面を開きました。',
+            'cpt_slug': cpt_slug,
+            'cpt_labels': cpt_labels,
             'screenshot': screenshot_path,
-            'full_text': f'Custom Taxonomy作成\nスラッグ: {taxonomy_slug}\nラベル: {taxonomy_labels}\n※投稿タイプ紐付けは手動で実施してください'
-        }
-        
-    except Exception as e:
-        logger.error(f"カスタムタクソノミー作成エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
+            'full_text': f'Custom Post Type作成\nスラッグ: {cpt_slug}\nラベル: {cpt_labels}\n※Supports設定等は手動で実施してください'
         }
 
 
-# === 4. M&A案件投稿機能（ACFフィールド付き） ===
-async def create_ma_case_post(self, task_params: Dict) -> Dict:
-    """
-    M&A案件をACFカスタムフィールド付きで投稿
-    
-    Parameters:
-        post_title: str - 投稿タイトル
-        post_content: str - 本文
-        acf_fields: dict - ACFカスタムフィールドの値
-        polylang_lang: str - 言語設定
-        post_status: str - 投稿ステータス
-    """
-    try:
-        post_title = task_params.get('post_title')
-        post_content = task_params.get('post_content', '')
-        acf_fields = task_params.get('acf_fields', {})
-        polylang_lang = task_params.get('polylang_lang', 'ja')
-        post_status = task_params.get('post_status', 'draft')
+    # === 3. カスタムタクソノミー作成機能 ===
+    async def configure_custom_taxonomy(self, task_params: Dict) -> Dict:
+        """
+        Custom Post Type UIでカスタムタクソノミーを作成
         
-        logger.info(f"M&A案件投稿: {post_title}")
-        
-        # 1 新規投稿画面に移動（ma_case投稿タイプ）
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/post-new.php?post_type=ma_case")
-        await self.wp_page.wait_for_timeout(5000)
-        
-        # 2 タイトル入力
-        await self._input_title(self.wp_page, post_title)
-        
-        # 3 本文入力（ある場合）
-        if post_content:
-            await self._input_content(self.wp_page, post_content)
-        
-        # 4 ACFフィールドに値を入力
-        logger.info("ACFフィールドに値を入力中...")
-        for field_name, field_value in acf_fields.items():
-            try:
-                # フィールド名からセレクタを推測
-                field_selector = f'input[name="acf[{field_name}]"]'
-                field_input = await self.wp_page.query_selector(field_selector)
-                
-                if field_input:
-                    await field_input.fill(str(field_value))
-                    logger.info(f"  {field_name}: {field_value}")
-                else:
-                    logger.warning(f"  フィールド '{field_name}' が見つかりません")
-            except Exception as e:
-                logger.warning(f"  フィールド '{field_name}' 入力エラー: {e}")
-        
-        # 5 Polylang言語設定
-        await self._set_polylang_language(self.wp_page, polylang_lang)
-        
-        # 6 スクリーンショット
-        screenshot_path = f"ma_case_{datetime.now().strftime('%H%M%S')}.png"
-        await self.wp_page.screenshot(path=screenshot_path)
-        
-        # 7 保存または公開
-        if post_status == 'draft':
-            saved = await self._save_draft(self.wp_page)
-            status_message = "下書き保存完了" if saved else "保存確認推奨"
-        elif post_status == 'publish':
-            published = await self._publish_post(self.wp_page)
-            status_message = "公開完了" if published else "公開確認推奨"
-        else:
-            saved = await self._save_draft(self.wp_page)
-            status_message = f"保存完了（ステータス: {post_status}）"
-        
-        summary = f"""【M&A案件投稿完了】
-タイトル: {post_title}
-言語: {polylang_lang}
-ACFフィールド: {len(acf_fields)}件
-投稿ステータス: {post_status}
-✅ {status_message}"""
-        
-        return {
-            'success': True,
-            'summary': summary,
-            'post_status': post_status,
-            'acf_fields_count': len(acf_fields),
-            'screenshot': screenshot_path,
-            'full_text': summary
-        }
-        
-    except Exception as e:
-        logger.error(f"M&A案件投稿エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        Parameters:
+            taxonomy_slug: str - タクソノミースラッグ
+            taxonomy_labels: dict - ラベル設定
+            taxonomy_post_types: list - 紐づける投稿タイプ
+            taxonomy_hierarchical: bool - 階層構造の有無
+        """
+        try:
+            taxonomy_slug = task_params.get('taxonomy_slug')
+            taxonomy_labels = task_params.get('taxonomy_labels', {})
+            taxonomy_post_types = task_params.get('taxonomy_post_types', [])
+            taxonomy_hierarchical = task_params.get('taxonomy_hierarchical', True)
+            
+            logger.info(f"カスタムタクソノミー '{taxonomy_slug}' を作成中...")
+            
+            # 1 Custom Post Type UI - Taxonomies画面に移動
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_taxonomies")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # 2 Taxonomy Slug入力
+            slug_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[name]"]')
+            if slug_input:
+                await slug_input.fill(taxonomy_slug)
+                logger.info(f"タクソノミースラッグを入力: {taxonomy_slug}")
+            
+            # 3 Plural Label入力
+            plural_label = taxonomy_labels.get('plural', taxonomy_slug)
+            plural_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[label]"]')
+            if plural_input:
+                await plural_input.fill(plural_label)
+                logger.info(f"複数形ラベルを入力: {plural_label}")
+            
+            # 4 Singular Label入力
+            singular_label = taxonomy_labels.get('singular', taxonomy_slug)
+            singular_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[singular_label]"]')
+            if singular_input:
+                await singular_input.fill(singular_label)
+                logger.info(f"単数形ラベルを入力: {singular_label}")
+            
+            # 5 スクリーンショット
+            screenshot_path = f"taxonomy_creation_{taxonomy_slug}_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            logger.info("⚠️ Attach to Post Typesと階層設定は手動で確認してください")
+            
+            return {
+                'success': True,
+                'summary': f'カスタムタクソノミー "{taxonomy_slug}" の設定画面を開きました。',
+                'taxonomy_slug': taxonomy_slug,
+                'taxonomy_labels': taxonomy_labels,
+                'screenshot': screenshot_path,
+                'full_text': f'Custom Taxonomy作成\nスラッグ: {taxonomy_slug}\nラベル: {taxonomy_labels}\n※投稿タイプ紐付けは手動で実施してください'
+            }
+            
+        except Exception as e:
+            logger.error(f"カスタムタクソノミー作成エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
-# === 5. Polylang翻訳連携機能 ===
-async def link_polylang_translations(self, original_post_id: int, translated_post_id: int, lang_code: str) -> Dict:
-    """
-    Polylangで投稿同士を翻訳関係として連携
-    
-    Parameters:
-        original_post_id: int - 元の投稿ID
-        translated_post_id: int - 翻訳先の投稿ID
-        lang_code: str - 翻訳先の言語コード
-    """
-    try:
-        logger.info(f"Polylang翻訳連携: {original_post_id} → {translated_post_id} ({lang_code})")
+    # === 4. M&A案件投稿機能（ACFフィールド付き） ===
+    async def create_ma_case_post(self, task_params: Dict) -> Dict:
+        """
+        M&A案件をACFカスタムフィールド付きで投稿
         
-        # 元の投稿の編集画面を開く
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/post.php?post={original_post_id}&action=edit")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # Polylang言語メタボックスで+ボタンをクリック
-        logger.info("Polylang言語設定メタボックスを操作中...")
-        
-        # スクリーンショット
-        screenshot_path = f"polylang_link_{datetime.now().strftime('%H%M%S')}.png"
-        await self.wp_page.screenshot(path=screenshot_path)
-        
-        logger.info("⚠️ Polylang翻訳連携は手動で確認してください")
-        
-        return {
-            'success': True,
-            'summary': f'投稿ID {original_post_id} の編集画面を開きました。Polylang設定で投稿ID {translated_post_id} を連携してください。',
-            'original_post_id': original_post_id,
-            'translated_post_id': translated_post_id,
-            'lang_code': lang_code,
-            'screenshot': screenshot_path,
-            'full_text': f'Polylang翻訳連携\n元投稿ID: {original_post_id}\n翻訳先ID: {translated_post_id}\n言語: {lang_code}\n※手動で連携を完了してください'
-        }
-        
-    except Exception as e:
-        logger.error(f"Polylang翻訳連携エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        Parameters:
+            post_title: str - 投稿タイトル
+            post_content: str - 本文
+            acf_fields: dict - ACFカスタムフィールドの値
+            polylang_lang: str - 言語設定
+            post_status: str - 投稿ステータス
+        """
+        try:
+            post_title = task_params.get('post_title')
+            post_content = task_params.get('post_content', '')
+            acf_fields = task_params.get('acf_fields', {})
+            polylang_lang = task_params.get('polylang_lang', 'ja')
+            post_status = task_params.get('post_status', 'draft')
+            
+            logger.info(f"M&A案件投稿: {post_title}")
+            
+            # 1 新規投稿画面に移動（ma_case投稿タイプ）
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/post-new.php?post_type=ma_case")
+            await self.wp_page.wait_for_timeout(5000)
+            
+            # 2 タイトル入力
+            await self._input_title(self.wp_page, post_title)
+            
+            # 3 本文入力（ある場合）
+            if post_content:
+                await self._input_content(self.wp_page, post_content)
+            
+            # 4 ACFフィールドに値を入力
+            logger.info("ACFフィールドに値を入力中...")
+            for field_name, field_value in acf_fields.items():
+                try:
+                    # フィールド名からセレクタを推測
+                    field_selector = f'input[name="acf[{field_name}]"]'
+                    field_input = await self.wp_page.query_selector(field_selector)
+                    
+                    if field_input:
+                        await field_input.fill(str(field_value))
+                        logger.info(f"  {field_name}: {field_value}")
+                    else:
+                        logger.warning(f"  フィールド '{field_name}' が見つかりません")
+                except Exception as e:
+                    logger.warning(f"  フィールド '{field_name}' 入力エラー: {e}")
+            
+            # 5 Polylang言語設定
+            await self._set_polylang_language(self.wp_page, polylang_lang)
+            
+            # 6 スクリーンショット
+            screenshot_path = f"ma_case_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            # 7 保存または公開
+            if post_status == 'draft':
+                saved = await self._save_draft(self.wp_page)
+                status_message = "下書き保存完了" if saved else "保存確認推奨"
+            elif post_status == 'publish':
+                published = await self._publish_post(self.wp_page)
+                status_message = "公開完了" if published else "公開確認推奨"
+            else:
+                saved = await self._save_draft(self.wp_page)
+                status_message = f"保存完了（ステータス: {post_status}）"
+            
+            summary = f"""【M&A案件投稿完了】
+    タイトル: {post_title}
+    言語: {polylang_lang}
+    ACFフィールド: {len(acf_fields)}件
+    投稿ステータス: {post_status}
+    ✅ {status_message}"""
+            
+            return {
+                'success': True,
+                'summary': summary,
+                'post_status': post_status,
+                'acf_fields_count': len(acf_fields),
+                'screenshot': screenshot_path,
+                'full_text': summary
+            }
+            
+        except Exception as e:
+            logger.error(f"M&A案件投稿エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-def _calculate_dynamic_timeout(self, text_content: str) -> int:
-    """動的タイムアウト計算 - WP処理対応"""
-    base_timeout = 120
+
+    # === 5. Polylang翻訳連携機能 ===
+    async def link_polylang_translations(self, original_post_id: int, translated_post_id: int, lang_code: str) -> Dict:
+        """
+        Polylangで投稿同士を翻訳関係として連携
         
-    # 既存のキーワード
-    long_task_keywords = [
-        '要件定義', '設計書', 'コード生成', '実装'
-    ]
+        Parameters:
+            original_post_id: int - 元の投稿ID
+            translated_post_id: int - 翻訳先の投稿ID
+            lang_code: str - 翻訳先の言語コード
+        """
+        try:
+            logger.info(f"Polylang翻訳連携: {original_post_id} → {translated_post_id} ({lang_code})")
+            
+            # 元の投稿の編集画面を開く
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/post.php?post={original_post_id}&action=edit")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # Polylang言語メタボックスで+ボタンをクリック
+            logger.info("Polylang言語設定メタボックスを操作中...")
+            
+            # スクリーンショット
+            screenshot_path = f"polylang_link_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            logger.info("⚠️ Polylang翻訳連携は手動で確認してください")
+            
+            return {
+                'success': True,
+                'summary': f'投稿ID {original_post_id} の編集画面を開きました。Polylang設定で投稿ID {translated_post_id} を連携してください。',
+                'original_post_id': original_post_id,
+                'translated_post_id': translated_post_id,
+                'lang_code': lang_code,
+                'screenshot': screenshot_path,
+                'full_text': f'Polylang翻訳連携\n元投稿ID: {original_post_id}\n翻訳先ID: {translated_post_id}\n言語: {lang_code}\n※手動で連携を完了してください'
+            }
+            
+        except Exception as e:
+            logger.error(f"Polylang翻訳連携エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _calculate_dynamic_timeout(self, text_content: str) -> int:
+        """動的タイムアウト計算 - WP処理対応"""
+        base_timeout = 120
+            
+        # 既存のキーワード
+        long_task_keywords = [
+            '要件定義', '設計書', 'コード生成', '実装'
+        ]
+            
+        # === 新規追加: WordPress専用キーワード ===
+        wp_long_task_keywords = [
+            'FacetWP', 'Relevanssi', 'インデックス再構築',
+            'WP-CLI', 'データベース移行', 'プラグイン一括',
+            'ACF Pro ライセンス', 'カスタムフィールド同期'
+        ]
+            
+        # 通常の長時間タスク
+        if any(kw in text_content for kw in long_task_keywords):
+            base_timeout = 300
+            
+        # === WP特化の超長時間タスク ===
+        if any(kw in text_content for kw in wp_long_task_keywords):
+            base_timeout = 600  # 10分
+            logger.info(f"⏱️ config WP長時間処理を検出 - タイムアウト: {base_timeout}秒")
         
-    # === 新規追加: WordPress専用キーワード ===
-    wp_long_task_keywords = [
-        'FacetWP', 'Relevanssi', 'インデックス再構築',
-        'WP-CLI', 'データベース移行', 'プラグイン一括',
-        'ACF Pro ライセンス', 'カスタムフィールド同期'
-    ]
-        
-    # 通常の長時間タスク
-    if any(kw in text_content for kw in long_task_keywords):
-        base_timeout = 300
-        
-    # === WP特化の超長時間タスク ===
-    if any(kw in text_content for kw in wp_long_task_keywords):
-        base_timeout = 600  # 10分
-        logger.info(f"⏱️ config WP長時間処理を検出 - タイムアウト: {base_timeout}秒")
-    
-    async def cleanup(self):
-        """WordPress セッションをクリーンアップ"""
-        if self.wp_page:
-            try:
-                await self.wp_page.close()
-                logger.info("WordPress セッションを終了しました")
-            except Exception as e:
-                logger.warning(f"⚠️ WordPress ページクローズエラー: {e}")
-        
-    return base_timeout
-        
+        async def cleanup(self):
+            """WordPress セッションをクリーンアップ"""
+            if self.wp_page:
+                try:
+                    await self.wp_page.close()
+                    logger.info("WordPress セッションを終了しました")
+                except Exception as e:
+                    logger.warning(f"⚠️ WordPress ページクローズエラー: {e}")
+            
+        return base_timeout
+            

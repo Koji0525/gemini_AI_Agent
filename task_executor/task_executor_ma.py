@@ -415,12 +415,18 @@ class MATaskExecutor:
     async def _execute_ma_case_post(self, task: Dict) -> Dict:
         """M&A案件投稿タスクを実行"""
         logger.info("【M&A案件投稿】")
-        
+
         wp_agent = self.agents.get('wordpress')
         if not wp_agent:
+            # === パート1: WordPressエージェント未登録エラー ===
+            logger.error("❌ WordPressエージェントが登録されていません")
+            logger.error("登録済みエージェント一覧:")
+            for agent_name in self.agents.keys():
+                logger.error(f"  - {agent_name}")
+        
             return {
                 'success': False,
-                'error': 'WordPressエージェントが登録されていません'
+                'error': 'WordPressエージェントが登録されていません。test_tasks.pyでエージェント登録を確認してください。'
             }
         
         parameters = task.get('parameters', {})
@@ -448,13 +454,24 @@ class MATaskExecutor:
     async def _execute_search_setup(self, task: Dict) -> Dict:
         """検索機能設定タスクを実行"""
         logger.info("【検索機能設定】")
-        
+
+        # === パート1: プラグインエージェント取得（フォールバック付き） ===
         plugin_agent = self.agents.get('plugin')
+
+        # プラグインエージェントがない場合、WordPressエージェントから取得を試みる
         if not plugin_agent:
-            return {
-                'success': False,
-                'error': 'プラグインエージェントが登録されていません'
-            }
+            logger.warning("⚠️ plugin エージェントが直接登録されていません")
+        
+            wp_agent = self.agents.get('wordpress')
+            if wp_agent and hasattr(wp_agent, 'plugin_manager'):
+                plugin_agent = wp_agent.plugin_manager
+                logger.info("✅ WordPressエージェントからplugin_managerを取得しました")
+            else:
+                logger.error("❌ プラグインエージェントが見つかりません")
+                return {
+                    'success': False,
+                    'error': 'プラグインエージェントが登録されていません。WordPressエージェントを確認してください。'
+                }
         
         parameters = task.get('parameters', {})
         
@@ -496,13 +513,24 @@ class MATaskExecutor:
     async def _execute_user_role_setup(self, task: Dict) -> Dict:
         """ユーザーロール設定タスクを実行"""
         logger.info("【ユーザーロール設定】")
-        
+    
+        # === パート1: プラグインエージェント取得（フォールバック付き） ===
         plugin_agent = self.agents.get('plugin')
+    
+        # プラグインエージェントがない場合、WordPressエージェントから取得を試みる
         if not plugin_agent:
-            return {
-                'success': False,
-                'error': 'プラグインエージェントが登録されていません'
-            }
+            logger.warning("⚠️ plugin エージェントが直接登録されていません")
+        
+            wp_agent = self.agents.get('wordpress')
+            if wp_agent and hasattr(wp_agent, 'plugin_manager'):
+                plugin_agent = wp_agent.plugin_manager
+                logger.info("✅ WordPressエージェントからplugin_managerを取得しました")
+            else:
+                logger.error("❌ プラグインエージェントが見つかりません")
+                return {
+                    'success': False,
+                    'error': 'プラグインエージェントが登録されていません。WordPressエージェントを確認してください。'
+                }
         
         parameters = task.get('parameters', {})
         

@@ -11,10 +11,99 @@ logger = logging.getLogger(__name__)
 
 class WordPressPluginManager:
     """WordPressプラグイン管理機能"""
-    
-    def __init__(self, wp_url: str):
-        self.wp_url = wp_url
-    
+
+    def __init__(self, browser_controller, wp_credentials: Dict = None):
+        """
+        初期化
+        
+        Args:
+            browser_controller: BrowserController インスタンス
+            wp_credentials: WordPress 認証情報
+        """
+        self.browser = browser_controller
+        self.wp_credentials = wp_credentials or {}
+        self.wp_url = self.wp_credentials.get('wp_url', '').rstrip('/')
+        
+        logger.info(f"WordPressPluginManager 初期化: {self.wp_url}")
+
+        # ========================================
+        # ✅ サブエージェントの初期化
+        # ========================================
+            
+        # シートマネージャー（後で外部から設定される）
+        self.sheets_manager = None
+            
+        # 投稿編集エージェント
+        try:
+            self.post_editor = WordPressPostEditor(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPostEditor 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPostEditor 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.post_editor = None
+            
+        # 投稿作成エージェント
+        try:
+            self.post_creator = WordPressPostCreator(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPostCreator 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPostCreator 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.post_creator = None
+            
+        # ========================================
+        # ✅ 重要：プラグインマネージャー（修正版）
+        # ========================================
+        try:
+            self.plugin_manager = WordPressPluginManager(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPluginManager 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPluginManager 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.plugin_manager = None
+            
+        # 設定マネージャー
+        try:
+            self.settings_manager = WordPressSettingsManager(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressSettingsManager 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressSettingsManager 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.settings_manager = None
+            
+        # テスター
+        try:
+            self.tester = WordPressTester(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressTester 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressTester 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.tester = None
+            
+        logger.info("="*60)
+        logger.info("WordPressAgent 全サブエージェント初期化完了")
+        logger.info("="*60)
+        
     async def install_plugin(self, page: Page, task: Dict) -> Dict:
         """プラグインをインストール"""
         try:

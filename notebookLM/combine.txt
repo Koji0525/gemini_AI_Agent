@@ -14018,8 +14018,10 @@ task_executor_ma.py
 M&A/企業検索専用のタスク実行モジュール（完全版）
 task_executor.pyから分離
 """
+import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, List
+from datetime import datetime
 from config_utils import ErrorHandler
 
 logger = logging.getLogger(__name__)
@@ -14031,7 +14033,7 @@ class MATaskExecutor:
     def __init__(self, sheets_manager, browser, max_iterations: int = 30):
         """
         MATaskExecutorの初期化
-        
+    
         Args:
             sheets_manager: Google Sheetsマネージャー
             browser: ブラウザコントローラー
@@ -14042,8 +14044,8 @@ class MATaskExecutor:
         self.browser = browser
         self.max_iterations = max_iterations
         self.agents = {}  # エージェント辞書を空で初期化
-        self.review_agent = None  # ← レビューエージェント用の属性を追加
-        
+        self.review_agent = None  # レビューエージェント用の属性
+    
         logger.info(f"MATaskExecutor initialized (max_iterations={max_iterations})")
     
     # === 追加メソッド: エージェント登録機能 ===
@@ -14428,12 +14430,18 @@ class MATaskExecutor:
     async def _execute_ma_case_post(self, task: Dict) -> Dict:
         """M&A案件投稿タスクを実行"""
         logger.info("【M&A案件投稿】")
-        
+
         wp_agent = self.agents.get('wordpress')
         if not wp_agent:
+            # === パート1: WordPressエージェント未登録エラー ===
+            logger.error("❌ WordPressエージェントが登録されていません")
+            logger.error("登録済みエージェント一覧:")
+            for agent_name in self.agents.keys():
+                logger.error(f"  - {agent_name}")
+        
             return {
                 'success': False,
-                'error': 'WordPressエージェントが登録されていません'
+                'error': 'WordPressエージェントが登録されていません。test_tasks.pyでエージェント登録を確認してください。'
             }
         
         parameters = task.get('parameters', {})
@@ -14461,13 +14469,24 @@ class MATaskExecutor:
     async def _execute_search_setup(self, task: Dict) -> Dict:
         """検索機能設定タスクを実行"""
         logger.info("【検索機能設定】")
-        
+
+        # === パート1: プラグインエージェント取得（フォールバック付き） ===
         plugin_agent = self.agents.get('plugin')
+
+        # プラグインエージェントがない場合、WordPressエージェントから取得を試みる
         if not plugin_agent:
-            return {
-                'success': False,
-                'error': 'プラグインエージェントが登録されていません'
-            }
+            logger.warning("⚠️ plugin エージェントが直接登録されていません")
+        
+            wp_agent = self.agents.get('wordpress')
+            if wp_agent and hasattr(wp_agent, 'plugin_manager'):
+                plugin_agent = wp_agent.plugin_manager
+                logger.info("✅ WordPressエージェントからplugin_managerを取得しました")
+            else:
+                logger.error("❌ プラグインエージェントが見つかりません")
+                return {
+                    'success': False,
+                    'error': 'プラグインエージェントが登録されていません。WordPressエージェントを確認してください。'
+                }
         
         parameters = task.get('parameters', {})
         
@@ -14509,13 +14528,24 @@ class MATaskExecutor:
     async def _execute_user_role_setup(self, task: Dict) -> Dict:
         """ユーザーロール設定タスクを実行"""
         logger.info("【ユーザーロール設定】")
-        
+    
+        # === パート1: プラグインエージェント取得（フォールバック付き） ===
         plugin_agent = self.agents.get('plugin')
+    
+        # プラグインエージェントがない場合、WordPressエージェントから取得を試みる
         if not plugin_agent:
-            return {
-                'success': False,
-                'error': 'プラグインエージェントが登録されていません'
-            }
+            logger.warning("⚠️ plugin エージェントが直接登録されていません")
+        
+            wp_agent = self.agents.get('wordpress')
+            if wp_agent and hasattr(wp_agent, 'plugin_manager'):
+                plugin_agent = wp_agent.plugin_manager
+                logger.info("✅ WordPressエージェントからplugin_managerを取得しました")
+            else:
+                logger.error("❌ プラグインエージェントが見つかりません")
+                return {
+                    'success': False,
+                    'error': 'プラグインエージェントが登録されていません。WordPressエージェントを確認してください。'
+                }
         
         parameters = task.get('parameters', {})
         
@@ -15291,28 +15321,28 @@ class TaskTester:
             def resolve_task_executor():
                 """利用可能なTaskExecutorを動的に解決"""
                 available_executors = []
-    
+
                 # MATaskExecutorの確認
                 try:
                     from task_executor.task_executor_ma import MATaskExecutor
                     available_executors.append(('ma', MATaskExecutor))
                 except ImportError:
                     pass
-    
+
                 # ContentTaskExecutorの確認
                 try:
                     from task_executor.content_task_executor import ContentTaskExecutor
                     available_executors.append(('content', ContentTaskExecutor))
                 except ImportError:
                     pass
-    
+
                 # TaskCoordinatorの確認
                 try:
                     from task_executor.task_coordinator import TaskCoordinator
                     available_executors.append(('coordinator', TaskCoordinator))
                 except ImportError:
                     pass
-    
+
                 if available_executors:
                     executor_type, executor_class = available_executors[0]
                     logger.info(f"✅ {executor_type} Executor を使用: {executor_class.__name__}")
@@ -15321,279 +15351,342 @@ class TaskTester:
                     logger.error("❌ 利用可能なTaskExecutorが見つかりません")
                     return None
 
-            # 使用例
-            executor_class = resolve_task_executor()
-            if executor_class:
-                self.task_executor = executor_class(
-                    self.sheets_manager,
-                    self.browser,
-                    max_iterations=30
-                )
-            
-            # === パート4: TaskExecutor初期化 ===
+            # ========================================
+            # === パート4: TaskExecutor初期化（統一版） ===
+            # ========================================
             logger.info("⚙️ タスク実行エンジン初期化中...")
-        
-            if TaskExecutor is None:
-                logger.error("❌ TaskExecutor のインポートに失敗しました")
-                return False
-        
-            # TaskExecutorを初期化
-            self.task_executor = TaskExecutor(
+
+            # ステップ1: 利用可能なExecutorを解決
+            executor_class = resolve_task_executor()
+
+            # ステップ2: フォールバック処理
+            if executor_class is None:
+                # resolve_task_executorで見つからなかった場合、TaskExecutorを試す
+                if TaskExecutor is None:
+                    logger.error("❌ TaskExecutor のインポートに失敗しました")
+                    return False
+                executor_class = TaskExecutor
+                logger.info("⚙️ デフォルトのTaskExecutorを使用します")
+
+            # ステップ3: Executorの初期化
+            logger.info(f"🚀 {executor_class.__name__} を初期化中...")
+            self.task_executor = executor_class(
                 self.sheets_manager,
                 self.browser,
                 max_iterations=30
             )
-            
+
+            # ステップ4: Executor種別の判定フラグ
+            is_ma_executor = 'MATaskExecutor' in executor_class.__name__
+            is_standard_executor = 'TaskExecutor' in executor_class.__name__ and not is_ma_executor
+
+            logger.info(f"📝 使用するExecutor: {executor_class.__name__}")
+            logger.info(f"   - MATaskExecutor: {is_ma_executor}")
+            logger.info(f"   - 標準TaskExecutor: {is_standard_executor}")
+        
             # === パート5: 各エージェントの登録 ===
             logger.info("🤖 エージェント登録中...")
-            
+                
             # ★★★ 各種エージェントの初期化と登録 ★★★
-            
+                
             # 1. Design Agent
             try:
                 from design_agent import DesignAgent
-                design_agent = DesignAgent(self.browser)
-                self.task_executor.register_agent('design', design_agent)
-                logger.info("✅ Design Agent登録完了")
+                self.design_agent = DesignAgent(self.browser)
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_agent('design', self.design_agent)
+                logger.info("✅ Design Agent初期化完了")
             except ImportError:
                 logger.warning("⚠️ design_agent が見つかりません")
-            
+                self.design_agent = None
+
             # 2. Dev Agent
             try:
                 from dev_agent import DevAgent
-                dev_agent = DevAgent(self.browser)
-                self.task_executor.register_agent('dev', dev_agent)
-                logger.info("✅ Dev Agent登録完了")
+                self.dev_agent = DevAgent(self.browser)
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_agent('dev', self.dev_agent)
+                logger.info("✅ Dev Agent初期化完了")
             except ImportError:
                 logger.warning("⚠️ dev_agent が見つかりません")
-            
+                self.dev_agent = None
+
             # 3. Review Agent
             try:
                 from review_agent import ReviewAgent
-                review_agent = ReviewAgent()
-                review_agent.browser = self.browser
-                review_agent.sheets_manager = self.sheets_manager
-                self.task_executor.register_review_agent(review_agent)
-                logger.info("✅ Review Agent登録完了")
+                self.review_agent = ReviewAgent()
+                self.review_agent.browser = self.browser
+                self.review_agent.sheets_manager = self.sheets_manager
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_review_agent(self.review_agent)
+                logger.info("✅ Review Agent初期化完了")
             except ImportError:
                 logger.warning("⚠️ review_agent が見つかりません")
-            
+                self.review_agent = None
+
             # 4. Content Writer Agents
             try:
                 from content_writer_agent import ContentWriterAgent
-                content_writer = ContentWriterAgent(self.browser)
-                self.task_executor.register_agent('writer', content_writer)
-                self.task_executor.register_agent('content', content_writer)
-                logger.info("✅ Content Writer Agent登録完了")
+                self.content_writer = ContentWriterAgent(self.browser)
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_agent('writer', self.content_writer)
+                    self.task_executor.register_agent('content', self.content_writer)
+                logger.info("✅ Content Writer Agent初期化完了")
             except ImportError:
                 logger.warning("⚠️ content_writer_agent が見つかりません")
-            
+                self.content_writer = None
+                
+            # ========================================
             # 5. WordPress Agent（重要！）
+            # ========================================
             logger.info("🗄️ WordPress Agent設定中...")
+            
+            # 認証情報の取得とログ出力
             wp_url = settings.get('wp_url', '').strip()
             wp_user = settings.get('wp_user', '').strip()
             wp_pass = settings.get('wp_pass', '').strip()
             
+            # ✅ デバッグ：認証情報の状態を確認
+            logger.info("="*60)
+            logger.info("📋 WordPress認証情報チェック:")
+            logger.info("="*60)
+            logger.info(f"   - wp_url: {'✅ 設定済み' if wp_url else '❌ 未設定'} ({len(wp_url)} chars)")
+            logger.info(f"   - wp_user: {'✅ 設定済み' if wp_user else '❌ 未設定'}")
+            logger.info(f"   - wp_pass: {'✅ 設定済み' if wp_pass else '❌ 未設定'}")
+            logger.info("="*60)
+
+            # インスタンス変数として初期化（重要！）
+            self.wordpress_agent = None
+
             if wp_url and wp_user and wp_pass:
                 try:
+                    logger.info("📦 WordPressAgentクラスをインポート中...")
                     from wordpress.wp_agent import WordPressAgent
-                    
+            
                     wp_credentials = {
                         'wp_url': wp_url,
                         'wp_user': wp_user,
                         'wp_pass': wp_pass
                     }
+            
+                    # ✅ self.wordpress_agent として保存
+                    logger.info("🔧 WordPressAgentインスタンスを作成中...")
+                    self.wordpress_agent = WordPressAgent(self.browser, wp_credentials)
+                    logger.info("✅ WordPressAgentインスタンス作成完了")
                     
-                    wordpress_agent = WordPressAgent(self.browser, wp_credentials)
-                    wordpress_agent.sheets_manager = self.sheets_manager
-                    
-                    logger.info("WordPressへのログインを試行中...")
-                    wp_login_success = await wordpress_agent.initialize_wp_session()
-                    
+                    self.wordpress_agent.sheets_manager = self.sheets_manager
+                    logger.info("✅ sheets_manager を設定")
+            
+                    logger.info("🔐 WordPressへのログインを試行中...")
+                    wp_login_success = await self.wordpress_agent.initialize_wp_session()
+            
                     if wp_login_success:
-                        self.task_executor.register_agent('wordpress', wordpress_agent)
-                        logger.info("✅ WordPress Agent登録完了")
+                        logger.info("✅ WordPressログイン成功")
+                        # ✅ 一旦登録（後で再登録される）
+                        if hasattr(self, 'task_executor') and self.task_executor:
+                            self.task_executor.register_agent('wordpress', self.wordpress_agent)
+                            logger.info("✅ WordPressAgent 一時登録完了")
+                        logger.info("✅ WordPress Agent初期化完了")
                     else:
                         logger.warning("⚠️ WordPressログイン失敗")
-                        
-                except Exception as e:
-                    logger.error(f"WordPress Agent初期化エラー: {e}")
-            else:
-                logger.warning("⚠️ WordPress認証情報が未設定です")
+                        logger.warning("⚠️ ログイン失敗でもエージェントは保持します")
+                        # ✅ ログイン失敗でもエージェントは保持（重要！）
+                        # self.wordpress_agent = None  # ← コメントアウト
             
+                except Exception as e:
+                    logger.error("="*60)
+                    logger.error(f"❌ WordPress Agent初期化エラー: {e}")
+                    logger.error("="*60)
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    logger.error("⚠️ エージェントをNoneに設定します")
+                    self.wordpress_agent = None
+            else:
+                logger.warning("="*60)
+                logger.warning("⚠️ WordPress認証情報が未設定です")
+                logger.warning(f"   - wp_url: {bool(wp_url)}")
+                logger.warning(f"   - wp_user: {bool(wp_user)}")
+                logger.warning(f"   - wp_pass: {bool(wp_pass)}")
+                logger.warning("="*60)
+                
             # ========================================
-            # ✅ ここに追加: WordPress Dev Agent
+            # 6. WordPress Dev Agent
             # ========================================
             logger.info("🔧 WordPress Dev Agent設定中...")
+            self.wp_dev_agent = None
+                
             try:
                 from wordpress.wp_dev import WordPressDevAgent
-                
-                wp_dev_agent = WordPressDevAgent(self.browser)
-                if hasattr(wp_dev_agent, 'sheets_manager'):
-                    wp_dev_agent.sheets_manager = self.sheets_manager
-                
-                self.task_executor.register_agent('wp_dev', wp_dev_agent)
-                logger.info("✅ WordPress Dev Agent (wp_dev) 登録完了")
+                    
+                self.wp_dev_agent = WordPressDevAgent(self.browser)
+                if hasattr(self.wp_dev_agent, 'sheets_manager'):
+                    self.wp_dev_agent.sheets_manager = self.sheets_manager
+                    
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_agent('wp_dev', self.wp_dev_agent)
+                logger.info("✅ WordPress Dev Agent (wp_dev) 初期化完了")
             except ImportError as e:
                 logger.warning(f"⚠️ wordpress/wp_dev.py のインポート失敗: {e}")
                 logger.info("💡 wp_dev タスクは標準 dev エージェントで処理されます")
             except Exception as e:
                 logger.warning(f"⚠️ wp_dev エージェント初期化エラー: {e}")
-            
-            # ========================================
-            # ✅ WordPress専用エージェント登録（強化版フォールバック）
-            # ========================================
-            logger.info("🔧 WordPress専用エージェント設定中...")
-            
-            # WordPress Dev Agent
-            wp_dev_registered = False
-            try:
-                from wordpress.wp_dev import WordPressDevAgent
-                wp_dev_agent = WordPressDevAgent(self.browser)
-                if hasattr(wp_dev_agent, 'sheets_manager'):
-                    wp_dev_agent.sheets_manager = self.sheets_manager
                 
-                # executeメソッドの確認
-                if hasattr(wp_dev_agent, 'execute') or hasattr(wp_dev_agent, 'execute_task'):
-                    self.task_executor.register_agent('wp_dev', wp_dev_agent)
-                    logger.info("✅ WordPress Dev Agent (wp_dev) 登録完了")
-                    wp_dev_registered = True
-                else:
-                    logger.warning("⚠️ wp_dev に実行メソッドがありません - フォールバック使用")
-                    
-            except ImportError:
-                logger.warning("⚠️ wordpress/wp_dev.py が見つかりません - フォールバック使用")
-            except Exception as e:
-                logger.warning(f"⚠️ wp_dev 初期化エラー: {e} - フォールバック使用")
-            
-            # フォールバック: 標準 dev エージェントを使用
-            if not wp_dev_registered:
-                try:
-                    # 既に登録されている dev エージェントを取得
-                    if 'dev' in self.task_executor.agents:
-                        dev_agent = self.task_executor.agents['dev']
-                        
-                        # dev エージェントを wp_dev としても登録
-                        self.task_executor.register_agent('wp_dev', dev_agent)
-                        logger.info("✅ wp_dev → dev エージェントで代替（フォールバック成功）")
-                    else:
-                        # dev エージェントも存在しない場合、新規作成を試みる
-                        from dev_agent import DevAgent
-                        fallback_dev_agent = DevAgent(self.browser)
-                        self.task_executor.register_agent('wp_dev', fallback_dev_agent)
-                        logger.info("✅ wp_dev → 新規 dev エージェントで代替（緊急フォールバック）")
-                        
-                except Exception as e:
-                    logger.error(f"❌ wp_dev フォールバック失敗: {e}")
-            
-            # WordPress Design Agent（同様のフォールバック）
-            wp_design_registered = False
-            try:
-                from wordpress.wp_design import WordPressDesignAgent
-                wp_design_agent = WordPressDesignAgent(self.browser)
-                if hasattr(wp_design_agent, 'sheets_manager'):
-                    wp_design_agent.sheets_manager = self.sheets_manager
-                
-                if hasattr(wp_design_agent, 'execute') or hasattr(wp_design_agent, 'execute_task'):
-                    self.task_executor.register_agent('wp_design', wp_design_agent)
-                    logger.info("✅ WordPress Design Agent (wp_design) 登録完了")
-                    wp_design_registered = True
-                else:
-                    logger.warning("⚠️ wp_design に実行メソッドがありません - フォールバック使用")
-                    
-            except ImportError:
-                logger.warning("⚠️ wordpress/wp_design.py が見つかりません - フォールバック使用")
-            except Exception as e:
-                logger.warning(f"⚠️ wp_design 初期化エラー: {e} - フォールバック使用")
-            
-            # フォールバック
-            if not wp_design_registered:
-                try:
-                    if 'design' in self.task_executor.agents:
-                        design_agent = self.task_executor.agents['design']
-                        self.task_executor.register_agent('wp_design', design_agent)
-                        logger.info("✅ wp_design → design エージェントで代替（フォールバック成功）")
-                    else:
-                        from design_agent import DesignAgent
-                        fallback_design_agent = DesignAgent(self.browser)
-                        self.task_executor.register_agent('wp_design', fallback_design_agent)
-                        logger.info("✅ wp_design → 新規 design エージェントで代替（緊急フォールバック）")
-                        
-                except Exception as e:
-                    logger.error(f"❌ wp_design フォールバック失敗: {e}")
-            
             # ========================================
-            # ✅ ここに追加: WordPress Design Agent
+            # 7. WordPress Design Agent
             # ========================================
             logger.info("🎨 WordPress Design Agent設定中...")
+            self.wp_design_agent = None
+                
             try:
                 from wordpress.wp_design import WordPressDesignAgent
-                
-                wp_design_agent = WordPressDesignAgent(self.browser)
-                if hasattr(wp_design_agent, 'sheets_manager'):
-                    wp_design_agent.sheets_manager = self.sheets_manager
-                
-                self.task_executor.register_agent('wp_design', wp_design_agent)
-                logger.info("✅ WordPress Design Agent (wp_design) 登録完了")
+                    
+                self.wp_design_agent = WordPressDesignAgent(self.browser)
+                if hasattr(self.wp_design_agent, 'sheets_manager'):
+                    self.wp_design_agent.sheets_manager = self.sheets_manager
+                    
+                if hasattr(self, 'task_executor') and self.task_executor:
+                    self.task_executor.register_agent('wp_design', self.wp_design_agent)
+                logger.info("✅ WordPress Design Agent (wp_design) 初期化完了")
             except ImportError as e:
                 logger.warning(f"⚠️ wordpress/wp_design.py のインポート失敗: {e}")
                 logger.info("💡 wp_design タスクは標準 design エージェントで処理されます")
             except Exception as e:
                 logger.warning(f"⚠️ wp_design エージェント初期化エラー: {e}")
-            
+                
+            # ========================================
+            # ✅ システム初期化完了（全エージェント初期化後）
+            # ========================================
             logger.info("="*60)
             logger.info("✅ システム初期化完了")
             logger.info("="*60)
             
+            # ========================================
+            # ✅ デバッグ：is_ma_executor フラグの確認
+            # ========================================
+            logger.info("\n" + "="*60)
+            logger.info("🔍 デバッグ情報")
+            logger.info("="*60)
+            logger.info(f"Executor種別: {executor_class.__name__}")
+            logger.info(f"is_ma_executor フラグ: {is_ma_executor}")
+            logger.info(f"wordpress_agent 存在: {hasattr(self, 'wordpress_agent')}")
+            if hasattr(self, 'wordpress_agent'):
+                logger.info(f"wordpress_agent 値: {self.wordpress_agent}")
+                if self.wordpress_agent:
+                    logger.info(f"plugin_manager 存在: {hasattr(self.wordpress_agent, 'plugin_manager')}")
+                    if hasattr(self.wordpress_agent, 'plugin_manager'):
+                        logger.info(f"plugin_manager 値: {self.wordpress_agent.plugin_manager}")
+            logger.info("="*60)
+
+            # ========================================
+            # ✅ 重要：MATaskExecutor用のエージェント再登録
+            # ========================================
+
+            if is_ma_executor:
+                logger.info("\n" + "="*60)
+                logger.info("🔄 MATaskExecutor用エージェント再登録中...")
+                logger.info("="*60)
+        
+                # インスタンス変数から初期化済みエージェントを収集
+                agents_to_register = {}
+        
+                # design_agentの登録
+                if hasattr(self, 'design_agent') and self.design_agent:
+                    agents_to_register['design'] = self.design_agent
+        
+                # dev_agentの登録
+                if hasattr(self, 'dev_agent') and self.dev_agent:
+                    agents_to_register['dev'] = self.dev_agent
+        
+                # review_agentの登録
+                if hasattr(self, 'review_agent') and self.review_agent:
+                    agents_to_register['review'] = self.review_agent
+        
+                # content_writerの登録
+                if hasattr(self, 'content_writer') and self.content_writer:
+                    agents_to_register['writer'] = self.content_writer
+                    agents_to_register['content'] = self.content_writer
+        
+                # ========================================
+                # ✅ 重要：wordpress_agentの登録（デバッグ強化）
+                # ========================================
+                logger.info("\n📋 wordpress_agent 登録チェック:")
+                logger.info(f"   - hasattr: {hasattr(self, 'wordpress_agent')}")
+                if hasattr(self, 'wordpress_agent'):
+                    logger.info(f"   - value: {self.wordpress_agent}")
+                    logger.info(f"   - is None: {self.wordpress_agent is None}")
+                
+                if hasattr(self, 'wordpress_agent') and self.wordpress_agent:
+                    agents_to_register['wordpress'] = self.wordpress_agent
+                    logger.info("  ✅ wordpress_agent を取得")
+            
+                    # wordpressから派生するサブエージェントも登録
+                    if hasattr(self.wordpress_agent, 'plugin_manager'):
+                        logger.info(f"  📦 plugin_manager 存在確認: {self.wordpress_agent.plugin_manager is not None}")
+                        if self.wordpress_agent.plugin_manager:
+                            agents_to_register['plugin'] = self.wordpress_agent.plugin_manager
+                            logger.info("  ✅ plugin_manager を取得")
+                        else:
+                            logger.error("  ❌ plugin_manager is None!")
+                    else:
+                        logger.error("  ❌ plugin_manager 属性が存在しません!")
+                else:
+                    logger.error("  ❌ wordpress_agent が見つかりません！")
+                    if hasattr(self, 'wordpress_agent'):
+                        logger.error(f"     wordpress_agent is None: {self.wordpress_agent is None}")
+        
+                # wp_dev_agentの登録
+                if hasattr(self, 'wp_dev_agent') and self.wp_dev_agent:
+                    agents_to_register['wp_dev'] = self.wp_dev_agent
+                elif hasattr(self, 'dev_agent') and self.dev_agent:
+                    agents_to_register['wp_dev'] = self.dev_agent
+                    logger.info("  🔄 wp_dev → dev でフォールバック")
+        
+                # wp_design_agentの登録
+                if hasattr(self, 'wp_design_agent') and self.wp_design_agent:
+                    agents_to_register['wp_design'] = self.wp_design_agent
+                elif hasattr(self, 'design_agent') and self.design_agent:
+                    agents_to_register['wp_design'] = self.design_agent
+                    logger.info("  🔄 wp_design → design でフォールバック")
+        
+                # エージェントを一括登録
+                logger.info("\n📝 エージェント登録処理:")
+                for agent_name, agent_instance in agents_to_register.items():
+                    try:
+                        self.task_executor.register_agent(agent_name, agent_instance)
+                        logger.info(f"  ✅ {agent_name:15s} 登録完了")
+                    except Exception as e:
+                        logger.error(f"  ❌ {agent_name:15s} 登録失敗: {e}")
+        
+                # レビューエージェントの特別登録
+                if hasattr(self, 'review_agent') and self.review_agent:
+                    try:
+                        self.task_executor.register_review_agent(self.review_agent)
+                        logger.info(f"  ✅ {'review (専用)':15s} 登録完了")
+                    except Exception as e:
+                        logger.error(f"  ❌ review (専用) 登録失敗: {e}")
+        
+                logger.info("="*60)
+                logger.info(f"MATaskExecutor エージェント登録完了: {len(agents_to_register)}個")
+                logger.info("="*60)
+        
+                # デバッグ：登録済みエージェント一覧を表示
+                logger.info("\n📋 登録済みエージェント一覧:")
+                for agent_name in self.task_executor.agents.keys():
+                    logger.info(f"  - {agent_name}")
+                logger.info("")
+            else:
+                logger.warning("\n⚠️ MATaskExecutorではないため、再登録処理をスキップします")
+                logger.warning(f"   Executor種別: {executor_class.__name__}")
+                logger.warning(f"   is_ma_executor: {is_ma_executor}")
+                    
+            # ========================================
+            # ✅ 最後にreturn
+            # ========================================
+            return True
+                
         except Exception as e:
             ErrorHandler.log_error(e, "システム初期化")
             raise
-    
-    async def test_specific_task(self, task_id: str):
-        """特定のタスクIDをテスト実行"""
-        try:
-            # === パート1: タスク検索 ===
-            logger.info(f"\n{'='*60}")
-            logger.info(f"タスクID {task_id} のテスト実行")
-            logger.info(f"{'='*60}\n")
-            
-            # pm_tasksから該当タスクを取得
-            tasks = await self.task_executor.load_pending_tasks()
-            target_task = None
-            
-            for task in tasks:
-                if str(task['task_id']) == str(task_id):
-                    target_task = task
-                    break
-            
-            if not target_task:
-                logger.error(f"❌ タスクID {task_id} が見つかりません（statusがpendingか確認してください）")
-                return False
-            
-            # === パート2: タスク情報表示と確認 ===
-            # タスク情報を表示
-            self._display_task_info(target_task)
-            
-            # 実行確認
-            confirm = input("\nこのタスクを実行しますか？ (y/n): ")
-            if confirm.lower() != 'y':
-                logger.info("実行をキャンセルしました")
-                return False
-            
-            # === パート3: タスク実行と結果処理 ===
-            # タスク実行
-            success = await self.task_executor.execute_task(target_task)
-            
-            if success:
-                logger.info(f"\n✅ タスク {task_id} のテスト実行完了")
-            else:
-                logger.error(f"\n❌ タスク {task_id} のテスト実行失敗")
-            
-            return success
-            
-        except Exception as e:
-            ErrorHandler.log_error(e, f"タスク {task_id} テスト実行")
-            return False
     
     async def test_tasks_by_role(self, role: str, auto: bool = False):
         """特定の役割のタスクをテスト実行"""
@@ -16767,7 +16860,6 @@ class WordPressAgent:
         self.wp_credentials = wp_credentials or {}
         self.is_logged_in = False
         
-        # ★★★ ここから追加 ★★★
         # WordPress 専用ページ（新しいタブ）
         self.wp_page = None
         
@@ -16787,6 +16879,52 @@ class WordPressAgent:
         else:
             logger.warning("⚠️ WordPress 認証情報が不完全です")
             self.auth = None
+        
+        # ========================================
+        # ✅ ここに追加：サブエージェントの初期化
+        # ========================================
+        
+        # シートマネージャー（後で外部から設定される）
+        self.sheets_manager = None
+        
+        # 投稿編集エージェント
+        self.post_editor = WordPressPostEditor(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPostEditor 初期化完了")
+        
+        # 投稿作成エージェント
+        self.post_creator = WordPressPostCreator(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPostCreator 初期化完了")
+        
+        # プラグインマネージャー
+        self.plugin_manager = WordPressPluginManager(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressPluginManager 初期化完了")
+        
+        # 設定マネージャー
+        self.settings_manager = WordPressSettingsManager(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressSettingsManager 初期化完了")
+        
+        # テスター
+        self.tester = WordPressTester(
+            browser_controller=self.browser,
+            wp_credentials=self.wp_credentials
+        )
+        logger.info("✅ WordPressTester 初期化完了")
+        
+        logger.info("="*60)
+        logger.info("WordPressAgent 全サブエージェント初期化完了")
+        logger.info("="*60)
     async def initialize_wp_session(self) -> bool:
         """
         WordPress セッション初期化（完全修正版 - クッキー強制ナビゲーション対応）
@@ -17004,9 +17142,7 @@ class WordPressAgent:
     
         # ログインしていない場合は再初期化
         return await self.initialize_wp_session()
-
-# === 修正終了 ===
-    
+       
     async def process_task(self, task: Dict) -> Dict:
         """WordPressタスクを処理"""
         try:
@@ -17305,26 +17441,26 @@ class WordPressAgent:
     def _build_gemini_prompt(self, task: Dict) -> str:
         """Gemini用プロンプトを構築"""
         return f"""
-WordPressで以下のタスクを実行したいです:
+        WordPressで以下のタスクを実行したいです:
 
-【タスク】
-{task['description']}
+        【タスク】
+        {task['description']}
 
-【WordPress情報】
-- URL: {self.wp_url}
-- 管理画面にログイン済み
+        【WordPress情報】
+        - URL: {self.wp_url}
+        - 管理画面にログイン済み
 
-【質問】
-このタスクを実行するための具体的な手順を、WordPress管理画面の操作として教えてください。
+        【質問】
+        このタスクを実行するための具体的な手順を、WordPress管理画面の操作として教えてください。
 
-以下の形式で回答してください:
-1. 移動するページのURL(相対パス)
-2. クリックまたは入力する要素のセレクタ
-3. 入力する値
-4. 確認すべきポイント
+        以下の形式で回答してください:
+        1. 移動するページのURL(相対パス)
+        2. クリックまたは入力する要素のセレクタ
+        3. 入力する値
+        4. 確認すべきポイント
 
-セレクタはできるだけ具体的に(id, class, name属性など)。
-"""
+        セレクタはできるだけ具体的に(id, class, name属性など)。
+        """
 
     def _build_generic_result(self, task: Dict, response: str) -> Dict:
         """汎用実行の結果を構築"""
@@ -17346,382 +17482,382 @@ WordPressで以下のタスクを実行したいです:
 
 # === 追加機能メソッド（分割済み） ===
 
-async def configure_acf_fields(self, task_params: Dict) -> Dict:
-    """Advanced Custom Fieldsのフィールドグループを設定"""
-    try:
-        # === パート1: パラメータ取得 ===
-        field_group_name = task_params.get('acf_field_group_name')
-        fields = task_params.get('acf_fields', [])
-        location_rules = task_params.get('acf_location_rules', {})
-        
-        logger.info(f"ACFフィールドグループ '{field_group_name}' を設定中...")
-        
-        # === パート2: ACF画面移動 ===
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/edit.php?post_type=acf-field-group")
-        await self.wp_page.wait_for_timeout(2000)
-        
-        # === パート3: 新規フィールドグループ追加 ===
-        await self._click_acf_add_new_button()
-        
-        # === パート4: フィールドグループ名入力 ===
-        await self._input_acf_field_group_name(field_group_name)
-        
-        # === パート5: スクリーンショットと結果返却 ===
-        return await self._build_acf_result(field_group_name, fields, location_rules)
-        
-    except Exception as e:
-        logger.error(f"ACF設定エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-async def _click_acf_add_new_button(self):
-    """ACF新規追加ボタンをクリック"""
-    add_button_selectors = [
-        'a.page-title-action:has-text("新規追加")',
-        'a:has-text("Add New")',
-        '.page-title-action'
-    ]
-    
-    for selector in add_button_selectors:
+    async def configure_acf_fields(self, task_params: Dict) -> Dict:
+        """Advanced Custom Fieldsのフィールドグループを設定"""
         try:
-            add_button = await self.wp_page.query_selector(selector)
-            if add_button and await add_button.is_visible():
-                await add_button.click()
-                await self.wp_page.wait_for_timeout(3000)
-                break
-        except:
-            continue
+            # === パート1: パラメータ取得 ===
+            field_group_name = task_params.get('acf_field_group_name')
+            fields = task_params.get('acf_fields', [])
+            location_rules = task_params.get('acf_location_rules', {})
+            
+            logger.info(f"ACFフィールドグループ '{field_group_name}' を設定中...")
+            
+            # === パート2: ACF画面移動 ===
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/edit.php?post_type=acf-field-group")
+            await self.wp_page.wait_for_timeout(2000)
+            
+            # === パート3: 新規フィールドグループ追加 ===
+            await self._click_acf_add_new_button()
+            
+            # === パート4: フィールドグループ名入力 ===
+            await self._input_acf_field_group_name(field_group_name)
+            
+            # === パート5: スクリーンショットと結果返却 ===
+            return await self._build_acf_result(field_group_name, fields, location_rules)
+            
+        except Exception as e:
+            logger.error(f"ACF設定エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-async def _input_acf_field_group_name(self, field_group_name: str):
-    """ACFフィールドグループ名を入力"""
-    title_input = await self.wp_page.query_selector('#title')
-    if title_input:
-        await title_input.fill(field_group_name)
-        logger.info(f"フィールドグループ名を入力: {field_group_name}")
+    async def _click_acf_add_new_button(self):
+        """ACF新規追加ボタンをクリック"""
+        add_button_selectors = [
+            'a.page-title-action:has-text("新規追加")',
+            'a:has-text("Add New")',
+            '.page-title-action'
+        ]
+        
+        for selector in add_button_selectors:
+            try:
+                add_button = await self.wp_page.query_selector(selector)
+                if add_button and await add_button.is_visible():
+                    await add_button.click()
+                    await self.wp_page.wait_for_timeout(3000)
+                    break
+            except:
+                continue
 
-async def _build_acf_result(self, field_group_name: str, fields: list, location_rules: dict) -> Dict:
-    """ACF設定結果を構築"""
-    # スクリーンショット
-    screenshot_path = f"acf_setup_{datetime.now().strftime('%H%M%S')}.png"
-    await self.wp_page.screenshot(path=screenshot_path)
-    
-    logger.info("⚠️ ACFフィールドの詳細設定は手動で確認してください")
-    
-    return {
-        'success': True,
-        'summary': f'ACFフィールドグループ "{field_group_name}" の設定画面を開きました。',
-        'field_group_name': field_group_name,
-        'fields_count': len(fields),
-        'screenshot': screenshot_path,
-        'full_text': f'ACFフィールドグループ設定\n名前: {field_group_name}\nフィールド数: {len(fields)}\n※フィールド追加は手動で実施してください'
-    }
+    async def _input_acf_field_group_name(self, field_group_name: str):
+        """ACFフィールドグループ名を入力"""
+        title_input = await self.wp_page.query_selector('#title')
+        if title_input:
+            await title_input.fill(field_group_name)
+            logger.info(f"フィールドグループ名を入力: {field_group_name}")
 
-# （他の追加機能メソッドも同様に分割。以下は一部のみ表示）
-
-async def configure_custom_post_type(self, task_params: Dict) -> Dict:
-    """Custom Post Type UIでカスタム投稿タイプを作成"""
-    try:
-        # === パート1: パラメータ取得 ===
-        cpt_slug = task_params.get('cpt_slug')
-        cpt_labels = task_params.get('cpt_labels', {})
-        cpt_supports = task_params.get('cpt_supports', [])
-        cpt_settings = task_params.get('cpt_settings', {})
+    async def _build_acf_result(self, field_group_name: str, fields: list, location_rules: dict) -> Dict:
+        """ACF設定結果を構築"""
+        # スクリーンショット
+        screenshot_path = f"acf_setup_{datetime.now().strftime('%H%M%S')}.png"
+        await self.wp_page.screenshot(path=screenshot_path)
         
-        logger.info(f"カスタム投稿タイプ '{cpt_slug}' を作成中...")
+        logger.info("⚠️ ACFフィールドの詳細設定は手動で確認してください")
         
-        # === パート2: CPT UI画面移動 ===
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_post_types")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # === パート3: 基本情報入力 ===
-        await self._input_cpt_basic_info(cpt_slug, cpt_labels)
-        
-        # === パート4: 結果構築 ===
-        return await self._build_cpt_result(cpt_slug, cpt_labels)
-        
-    except Exception as e:
-        logger.error(f"Custom Post Type作成エラー: {e}")
         return {
-            'success': False,
-            'error': str(e)
+            'success': True,
+            'summary': f'ACFフィールドグループ "{field_group_name}" の設定画面を開きました。',
+            'field_group_name': field_group_name,
+            'fields_count': len(fields),
+            'screenshot': screenshot_path,
+            'full_text': f'ACFフィールドグループ設定\n名前: {field_group_name}\nフィールド数: {len(fields)}\n※フィールド追加は手動で実施してください'
         }
 
-async def _input_cpt_basic_info(self, cpt_slug: str, cpt_labels: dict):
-    """CPT基本情報を入力"""
-    # Post Type Slug入力
-    slug_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[name]"]')
-    if slug_input:
-        await slug_input.fill(cpt_slug)
-        logger.info(f"スラッグを入力: {cpt_slug}")
-    
-    # Plural Label入力
-    plural_label = cpt_labels.get('plural', cpt_slug)
-    plural_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[label]"]')
-    if plural_input:
-        await plural_input.fill(plural_label)
-        logger.info(f"複数形ラベルを入力: {plural_label}")
-    
-    # Singular Label入力
-    singular_label = cpt_labels.get('singular', cpt_slug)
-    singular_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[singular_label]"]')
-    if singular_input:
-        await singular_input.fill(singular_label)
-        logger.info(f"単数形ラベルを入力: {singular_label}")
+    # （他の追加機能メソッドも同様に分割。以下は一部のみ表示）
 
-async def _build_cpt_result(self, cpt_slug: str, cpt_labels: dict) -> Dict:
-    """CPT作成結果を構築"""
-    screenshot_path = f"cpt_creation_{cpt_slug}_{datetime.now().strftime('%H%M%S')}.png"
-    await self.wp_page.screenshot(path=screenshot_path)
-    
-    logger.info("⚠️ 詳細設定とSupports設定は手動で確認してください")
-    
-    return {
-        'success': True,
-        'summary': f'カスタム投稿タイプ "{cpt_slug}" の設定画面を開きました。',
-        'cpt_slug': cpt_slug,
-        'cpt_labels': cpt_labels,
-        'screenshot': screenshot_path,
-        'full_text': f'Custom Post Type作成\nスラッグ: {cpt_slug}\nラベル: {cpt_labels}\n※Supports設定等は手動で実施してください'
-    }
+    async def configure_custom_post_type(self, task_params: Dict) -> Dict:
+        """Custom Post Type UIでカスタム投稿タイプを作成"""
+        try:
+            # === パート1: パラメータ取得 ===
+            cpt_slug = task_params.get('cpt_slug')
+            cpt_labels = task_params.get('cpt_labels', {})
+            cpt_supports = task_params.get('cpt_supports', [])
+            cpt_settings = task_params.get('cpt_settings', {})
+            
+            logger.info(f"カスタム投稿タイプ '{cpt_slug}' を作成中...")
+            
+            # === パート2: CPT UI画面移動 ===
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_post_types")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # === パート3: 基本情報入力 ===
+            await self._input_cpt_basic_info(cpt_slug, cpt_labels)
+            
+            # === パート4: 結果構築 ===
+            return await self._build_cpt_result(cpt_slug, cpt_labels)
+            
+        except Exception as e:
+            logger.error(f"Custom Post Type作成エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-
-# === 3. カスタムタクソノミー作成機能 ===
-async def configure_custom_taxonomy(self, task_params: Dict) -> Dict:
-    """
-    Custom Post Type UIでカスタムタクソノミーを作成
-    
-    Parameters:
-        taxonomy_slug: str - タクソノミースラッグ
-        taxonomy_labels: dict - ラベル設定
-        taxonomy_post_types: list - 紐づける投稿タイプ
-        taxonomy_hierarchical: bool - 階層構造の有無
-    """
-    try:
-        taxonomy_slug = task_params.get('taxonomy_slug')
-        taxonomy_labels = task_params.get('taxonomy_labels', {})
-        taxonomy_post_types = task_params.get('taxonomy_post_types', [])
-        taxonomy_hierarchical = task_params.get('taxonomy_hierarchical', True)
-        
-        logger.info(f"カスタムタクソノミー '{taxonomy_slug}' を作成中...")
-        
-        # 1 Custom Post Type UI - Taxonomies画面に移動
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_taxonomies")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # 2 Taxonomy Slug入力
-        slug_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[name]"]')
+    async def _input_cpt_basic_info(self, cpt_slug: str, cpt_labels: dict):
+        """CPT基本情報を入力"""
+        # Post Type Slug入力
+        slug_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[name]"]')
         if slug_input:
-            await slug_input.fill(taxonomy_slug)
-            logger.info(f"タクソノミースラッグを入力: {taxonomy_slug}")
+            await slug_input.fill(cpt_slug)
+            logger.info(f"スラッグを入力: {cpt_slug}")
         
-        # 3 Plural Label入力
-        plural_label = taxonomy_labels.get('plural', taxonomy_slug)
-        plural_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[label]"]')
+        # Plural Label入力
+        plural_label = cpt_labels.get('plural', cpt_slug)
+        plural_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[label]"]')
         if plural_input:
             await plural_input.fill(plural_label)
             logger.info(f"複数形ラベルを入力: {plural_label}")
         
-        # 4 Singular Label入力
-        singular_label = taxonomy_labels.get('singular', taxonomy_slug)
-        singular_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[singular_label]"]')
+        # Singular Label入力
+        singular_label = cpt_labels.get('singular', cpt_slug)
+        singular_input = await self.wp_page.query_selector('input[name="cpt_custom_post_type[singular_label]"]')
         if singular_input:
             await singular_input.fill(singular_label)
             logger.info(f"単数形ラベルを入力: {singular_label}")
-        
-        # 5 スクリーンショット
-        screenshot_path = f"taxonomy_creation_{taxonomy_slug}_{datetime.now().strftime('%H%M%S')}.png"
+
+    async def _build_cpt_result(self, cpt_slug: str, cpt_labels: dict) -> Dict:
+        """CPT作成結果を構築"""
+        screenshot_path = f"cpt_creation_{cpt_slug}_{datetime.now().strftime('%H%M%S')}.png"
         await self.wp_page.screenshot(path=screenshot_path)
         
-        logger.info("⚠️ Attach to Post Typesと階層設定は手動で確認してください")
+        logger.info("⚠️ 詳細設定とSupports設定は手動で確認してください")
         
         return {
             'success': True,
-            'summary': f'カスタムタクソノミー "{taxonomy_slug}" の設定画面を開きました。',
-            'taxonomy_slug': taxonomy_slug,
-            'taxonomy_labels': taxonomy_labels,
+            'summary': f'カスタム投稿タイプ "{cpt_slug}" の設定画面を開きました。',
+            'cpt_slug': cpt_slug,
+            'cpt_labels': cpt_labels,
             'screenshot': screenshot_path,
-            'full_text': f'Custom Taxonomy作成\nスラッグ: {taxonomy_slug}\nラベル: {taxonomy_labels}\n※投稿タイプ紐付けは手動で実施してください'
-        }
-        
-    except Exception as e:
-        logger.error(f"カスタムタクソノミー作成エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
+            'full_text': f'Custom Post Type作成\nスラッグ: {cpt_slug}\nラベル: {cpt_labels}\n※Supports設定等は手動で実施してください'
         }
 
 
-# === 4. M&A案件投稿機能（ACFフィールド付き） ===
-async def create_ma_case_post(self, task_params: Dict) -> Dict:
-    """
-    M&A案件をACFカスタムフィールド付きで投稿
-    
-    Parameters:
-        post_title: str - 投稿タイトル
-        post_content: str - 本文
-        acf_fields: dict - ACFカスタムフィールドの値
-        polylang_lang: str - 言語設定
-        post_status: str - 投稿ステータス
-    """
-    try:
-        post_title = task_params.get('post_title')
-        post_content = task_params.get('post_content', '')
-        acf_fields = task_params.get('acf_fields', {})
-        polylang_lang = task_params.get('polylang_lang', 'ja')
-        post_status = task_params.get('post_status', 'draft')
+    # === 3. カスタムタクソノミー作成機能 ===
+    async def configure_custom_taxonomy(self, task_params: Dict) -> Dict:
+        """
+        Custom Post Type UIでカスタムタクソノミーを作成
         
-        logger.info(f"M&A案件投稿: {post_title}")
-        
-        # 1 新規投稿画面に移動（ma_case投稿タイプ）
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/post-new.php?post_type=ma_case")
-        await self.wp_page.wait_for_timeout(5000)
-        
-        # 2 タイトル入力
-        await self._input_title(self.wp_page, post_title)
-        
-        # 3 本文入力（ある場合）
-        if post_content:
-            await self._input_content(self.wp_page, post_content)
-        
-        # 4 ACFフィールドに値を入力
-        logger.info("ACFフィールドに値を入力中...")
-        for field_name, field_value in acf_fields.items():
-            try:
-                # フィールド名からセレクタを推測
-                field_selector = f'input[name="acf[{field_name}]"]'
-                field_input = await self.wp_page.query_selector(field_selector)
-                
-                if field_input:
-                    await field_input.fill(str(field_value))
-                    logger.info(f"  {field_name}: {field_value}")
-                else:
-                    logger.warning(f"  フィールド '{field_name}' が見つかりません")
-            except Exception as e:
-                logger.warning(f"  フィールド '{field_name}' 入力エラー: {e}")
-        
-        # 5 Polylang言語設定
-        await self._set_polylang_language(self.wp_page, polylang_lang)
-        
-        # 6 スクリーンショット
-        screenshot_path = f"ma_case_{datetime.now().strftime('%H%M%S')}.png"
-        await self.wp_page.screenshot(path=screenshot_path)
-        
-        # 7 保存または公開
-        if post_status == 'draft':
-            saved = await self._save_draft(self.wp_page)
-            status_message = "下書き保存完了" if saved else "保存確認推奨"
-        elif post_status == 'publish':
-            published = await self._publish_post(self.wp_page)
-            status_message = "公開完了" if published else "公開確認推奨"
-        else:
-            saved = await self._save_draft(self.wp_page)
-            status_message = f"保存完了（ステータス: {post_status}）"
-        
-        summary = f"""【M&A案件投稿完了】
-タイトル: {post_title}
-言語: {polylang_lang}
-ACFフィールド: {len(acf_fields)}件
-投稿ステータス: {post_status}
-✅ {status_message}"""
-        
-        return {
-            'success': True,
-            'summary': summary,
-            'post_status': post_status,
-            'acf_fields_count': len(acf_fields),
-            'screenshot': screenshot_path,
-            'full_text': summary
-        }
-        
-    except Exception as e:
-        logger.error(f"M&A案件投稿エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        Parameters:
+            taxonomy_slug: str - タクソノミースラッグ
+            taxonomy_labels: dict - ラベル設定
+            taxonomy_post_types: list - 紐づける投稿タイプ
+            taxonomy_hierarchical: bool - 階層構造の有無
+        """
+        try:
+            taxonomy_slug = task_params.get('taxonomy_slug')
+            taxonomy_labels = task_params.get('taxonomy_labels', {})
+            taxonomy_post_types = task_params.get('taxonomy_post_types', [])
+            taxonomy_hierarchical = task_params.get('taxonomy_hierarchical', True)
+            
+            logger.info(f"カスタムタクソノミー '{taxonomy_slug}' を作成中...")
+            
+            # 1 Custom Post Type UI - Taxonomies画面に移動
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/admin.php?page=cptui_manage_taxonomies")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # 2 Taxonomy Slug入力
+            slug_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[name]"]')
+            if slug_input:
+                await slug_input.fill(taxonomy_slug)
+                logger.info(f"タクソノミースラッグを入力: {taxonomy_slug}")
+            
+            # 3 Plural Label入力
+            plural_label = taxonomy_labels.get('plural', taxonomy_slug)
+            plural_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[label]"]')
+            if plural_input:
+                await plural_input.fill(plural_label)
+                logger.info(f"複数形ラベルを入力: {plural_label}")
+            
+            # 4 Singular Label入力
+            singular_label = taxonomy_labels.get('singular', taxonomy_slug)
+            singular_input = await self.wp_page.query_selector('input[name="cpt_custom_tax[singular_label]"]')
+            if singular_input:
+                await singular_input.fill(singular_label)
+                logger.info(f"単数形ラベルを入力: {singular_label}")
+            
+            # 5 スクリーンショット
+            screenshot_path = f"taxonomy_creation_{taxonomy_slug}_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            logger.info("⚠️ Attach to Post Typesと階層設定は手動で確認してください")
+            
+            return {
+                'success': True,
+                'summary': f'カスタムタクソノミー "{taxonomy_slug}" の設定画面を開きました。',
+                'taxonomy_slug': taxonomy_slug,
+                'taxonomy_labels': taxonomy_labels,
+                'screenshot': screenshot_path,
+                'full_text': f'Custom Taxonomy作成\nスラッグ: {taxonomy_slug}\nラベル: {taxonomy_labels}\n※投稿タイプ紐付けは手動で実施してください'
+            }
+            
+        except Exception as e:
+            logger.error(f"カスタムタクソノミー作成エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
-# === 5. Polylang翻訳連携機能 ===
-async def link_polylang_translations(self, original_post_id: int, translated_post_id: int, lang_code: str) -> Dict:
-    """
-    Polylangで投稿同士を翻訳関係として連携
-    
-    Parameters:
-        original_post_id: int - 元の投稿ID
-        translated_post_id: int - 翻訳先の投稿ID
-        lang_code: str - 翻訳先の言語コード
-    """
-    try:
-        logger.info(f"Polylang翻訳連携: {original_post_id} → {translated_post_id} ({lang_code})")
+    # === 4. M&A案件投稿機能（ACFフィールド付き） ===
+    async def create_ma_case_post(self, task_params: Dict) -> Dict:
+        """
+        M&A案件をACFカスタムフィールド付きで投稿
         
-        # 元の投稿の編集画面を開く
-        await self.wp_page.goto(f"{self.wp_url}/wp-admin/post.php?post={original_post_id}&action=edit")
-        await self.wp_page.wait_for_timeout(3000)
-        
-        # Polylang言語メタボックスで+ボタンをクリック
-        logger.info("Polylang言語設定メタボックスを操作中...")
-        
-        # スクリーンショット
-        screenshot_path = f"polylang_link_{datetime.now().strftime('%H%M%S')}.png"
-        await self.wp_page.screenshot(path=screenshot_path)
-        
-        logger.info("⚠️ Polylang翻訳連携は手動で確認してください")
-        
-        return {
-            'success': True,
-            'summary': f'投稿ID {original_post_id} の編集画面を開きました。Polylang設定で投稿ID {translated_post_id} を連携してください。',
-            'original_post_id': original_post_id,
-            'translated_post_id': translated_post_id,
-            'lang_code': lang_code,
-            'screenshot': screenshot_path,
-            'full_text': f'Polylang翻訳連携\n元投稿ID: {original_post_id}\n翻訳先ID: {translated_post_id}\n言語: {lang_code}\n※手動で連携を完了してください'
-        }
-        
-    except Exception as e:
-        logger.error(f"Polylang翻訳連携エラー: {e}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        Parameters:
+            post_title: str - 投稿タイトル
+            post_content: str - 本文
+            acf_fields: dict - ACFカスタムフィールドの値
+            polylang_lang: str - 言語設定
+            post_status: str - 投稿ステータス
+        """
+        try:
+            post_title = task_params.get('post_title')
+            post_content = task_params.get('post_content', '')
+            acf_fields = task_params.get('acf_fields', {})
+            polylang_lang = task_params.get('polylang_lang', 'ja')
+            post_status = task_params.get('post_status', 'draft')
+            
+            logger.info(f"M&A案件投稿: {post_title}")
+            
+            # 1 新規投稿画面に移動（ma_case投稿タイプ）
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/post-new.php?post_type=ma_case")
+            await self.wp_page.wait_for_timeout(5000)
+            
+            # 2 タイトル入力
+            await self._input_title(self.wp_page, post_title)
+            
+            # 3 本文入力（ある場合）
+            if post_content:
+                await self._input_content(self.wp_page, post_content)
+            
+            # 4 ACFフィールドに値を入力
+            logger.info("ACFフィールドに値を入力中...")
+            for field_name, field_value in acf_fields.items():
+                try:
+                    # フィールド名からセレクタを推測
+                    field_selector = f'input[name="acf[{field_name}]"]'
+                    field_input = await self.wp_page.query_selector(field_selector)
+                    
+                    if field_input:
+                        await field_input.fill(str(field_value))
+                        logger.info(f"  {field_name}: {field_value}")
+                    else:
+                        logger.warning(f"  フィールド '{field_name}' が見つかりません")
+                except Exception as e:
+                    logger.warning(f"  フィールド '{field_name}' 入力エラー: {e}")
+            
+            # 5 Polylang言語設定
+            await self._set_polylang_language(self.wp_page, polylang_lang)
+            
+            # 6 スクリーンショット
+            screenshot_path = f"ma_case_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            # 7 保存または公開
+            if post_status == 'draft':
+                saved = await self._save_draft(self.wp_page)
+                status_message = "下書き保存完了" if saved else "保存確認推奨"
+            elif post_status == 'publish':
+                published = await self._publish_post(self.wp_page)
+                status_message = "公開完了" if published else "公開確認推奨"
+            else:
+                saved = await self._save_draft(self.wp_page)
+                status_message = f"保存完了（ステータス: {post_status}）"
+            
+            summary = f"""【M&A案件投稿完了】
+    タイトル: {post_title}
+    言語: {polylang_lang}
+    ACFフィールド: {len(acf_fields)}件
+    投稿ステータス: {post_status}
+    ✅ {status_message}"""
+            
+            return {
+                'success': True,
+                'summary': summary,
+                'post_status': post_status,
+                'acf_fields_count': len(acf_fields),
+                'screenshot': screenshot_path,
+                'full_text': summary
+            }
+            
+        except Exception as e:
+            logger.error(f"M&A案件投稿エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
-def _calculate_dynamic_timeout(self, text_content: str) -> int:
-    """動的タイムアウト計算 - WP処理対応"""
-    base_timeout = 120
+
+    # === 5. Polylang翻訳連携機能 ===
+    async def link_polylang_translations(self, original_post_id: int, translated_post_id: int, lang_code: str) -> Dict:
+        """
+        Polylangで投稿同士を翻訳関係として連携
         
-    # 既存のキーワード
-    long_task_keywords = [
-        '要件定義', '設計書', 'コード生成', '実装'
-    ]
+        Parameters:
+            original_post_id: int - 元の投稿ID
+            translated_post_id: int - 翻訳先の投稿ID
+            lang_code: str - 翻訳先の言語コード
+        """
+        try:
+            logger.info(f"Polylang翻訳連携: {original_post_id} → {translated_post_id} ({lang_code})")
+            
+            # 元の投稿の編集画面を開く
+            await self.wp_page.goto(f"{self.wp_url}/wp-admin/post.php?post={original_post_id}&action=edit")
+            await self.wp_page.wait_for_timeout(3000)
+            
+            # Polylang言語メタボックスで+ボタンをクリック
+            logger.info("Polylang言語設定メタボックスを操作中...")
+            
+            # スクリーンショット
+            screenshot_path = f"polylang_link_{datetime.now().strftime('%H%M%S')}.png"
+            await self.wp_page.screenshot(path=screenshot_path)
+            
+            logger.info("⚠️ Polylang翻訳連携は手動で確認してください")
+            
+            return {
+                'success': True,
+                'summary': f'投稿ID {original_post_id} の編集画面を開きました。Polylang設定で投稿ID {translated_post_id} を連携してください。',
+                'original_post_id': original_post_id,
+                'translated_post_id': translated_post_id,
+                'lang_code': lang_code,
+                'screenshot': screenshot_path,
+                'full_text': f'Polylang翻訳連携\n元投稿ID: {original_post_id}\n翻訳先ID: {translated_post_id}\n言語: {lang_code}\n※手動で連携を完了してください'
+            }
+            
+        except Exception as e:
+            logger.error(f"Polylang翻訳連携エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    def _calculate_dynamic_timeout(self, text_content: str) -> int:
+        """動的タイムアウト計算 - WP処理対応"""
+        base_timeout = 120
+            
+        # 既存のキーワード
+        long_task_keywords = [
+            '要件定義', '設計書', 'コード生成', '実装'
+        ]
+            
+        # === 新規追加: WordPress専用キーワード ===
+        wp_long_task_keywords = [
+            'FacetWP', 'Relevanssi', 'インデックス再構築',
+            'WP-CLI', 'データベース移行', 'プラグイン一括',
+            'ACF Pro ライセンス', 'カスタムフィールド同期'
+        ]
+            
+        # 通常の長時間タスク
+        if any(kw in text_content for kw in long_task_keywords):
+            base_timeout = 300
+            
+        # === WP特化の超長時間タスク ===
+        if any(kw in text_content for kw in wp_long_task_keywords):
+            base_timeout = 600  # 10分
+            logger.info(f"⏱️ config WP長時間処理を検出 - タイムアウト: {base_timeout}秒")
         
-    # === 新規追加: WordPress専用キーワード ===
-    wp_long_task_keywords = [
-        'FacetWP', 'Relevanssi', 'インデックス再構築',
-        'WP-CLI', 'データベース移行', 'プラグイン一括',
-        'ACF Pro ライセンス', 'カスタムフィールド同期'
-    ]
-        
-    # 通常の長時間タスク
-    if any(kw in text_content for kw in long_task_keywords):
-        base_timeout = 300
-        
-    # === WP特化の超長時間タスク ===
-    if any(kw in text_content for kw in wp_long_task_keywords):
-        base_timeout = 600  # 10分
-        logger.info(f"⏱️ config WP長時間処理を検出 - タイムアウト: {base_timeout}秒")
-    
-    async def cleanup(self):
-        """WordPress セッションをクリーンアップ"""
-        if self.wp_page:
-            try:
-                await self.wp_page.close()
-                logger.info("WordPress セッションを終了しました")
-            except Exception as e:
-                logger.warning(f"⚠️ WordPress ページクローズエラー: {e}")
-        
-    return base_timeout
-        
+        async def cleanup(self):
+            """WordPress セッションをクリーンアップ"""
+            if self.wp_page:
+                try:
+                    await self.wp_page.close()
+                    logger.info("WordPress セッションを終了しました")
+                except Exception as e:
+                    logger.warning(f"⚠️ WordPress ページクローズエラー: {e}")
+            
+        return base_timeout
+            
 
 #wp_auth.py
 """WordPress認証・ログイン管理（完全修正版 - クッキー強制ナビゲーション対応）"""
@@ -18651,10 +18787,99 @@ logger = logging.getLogger(__name__)
 
 class WordPressPluginManager:
     """WordPressプラグイン管理機能"""
-    
-    def __init__(self, wp_url: str):
-        self.wp_url = wp_url
-    
+
+    def __init__(self, browser_controller, wp_credentials: Dict = None):
+        """
+        初期化
+        
+        Args:
+            browser_controller: BrowserController インスタンス
+            wp_credentials: WordPress 認証情報
+        """
+        self.browser = browser_controller
+        self.wp_credentials = wp_credentials or {}
+        self.wp_url = self.wp_credentials.get('wp_url', '').rstrip('/')
+        
+        logger.info(f"WordPressPluginManager 初期化: {self.wp_url}")
+
+        # ========================================
+        # ✅ サブエージェントの初期化
+        # ========================================
+            
+        # シートマネージャー（後で外部から設定される）
+        self.sheets_manager = None
+            
+        # 投稿編集エージェント
+        try:
+            self.post_editor = WordPressPostEditor(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPostEditor 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPostEditor 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.post_editor = None
+            
+        # 投稿作成エージェント
+        try:
+            self.post_creator = WordPressPostCreator(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPostCreator 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPostCreator 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.post_creator = None
+            
+        # ========================================
+        # ✅ 重要：プラグインマネージャー（修正版）
+        # ========================================
+        try:
+            self.plugin_manager = WordPressPluginManager(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressPluginManager 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressPluginManager 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.plugin_manager = None
+            
+        # 設定マネージャー
+        try:
+            self.settings_manager = WordPressSettingsManager(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressSettingsManager 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressSettingsManager 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.settings_manager = None
+            
+        # テスター
+        try:
+            self.tester = WordPressTester(
+                browser_controller=self.browser,
+                wp_credentials=self.wp_credentials
+            )
+            logger.info("✅ WordPressTester 初期化完了")
+        except Exception as e:
+            logger.error(f"❌ WordPressTester 初期化エラー: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.tester = None
+            
+        logger.info("="*60)
+        logger.info("WordPressAgent 全サブエージェント初期化完了")
+        logger.info("="*60)
+        
     async def install_plugin(self, page: Page, task: Dict) -> Dict:
         """プラグインをインストール"""
         try:
