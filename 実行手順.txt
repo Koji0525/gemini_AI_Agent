@@ -1,0 +1,66 @@
+Geminiの自動テキスト生成ツールの実行手順
+cd "C:\Users\color\Documents\gemini_AI_Agent"
+python run_multi_agent.py --auto
+
+テストモードの立ち上げ手順
+python test_tasks.py
+
+
+cd "C:\Users\KMH SHOP\Videos\mvp\gemini_AI_Agent"
+python run_multi_agent.py --pc-id 3 --auto
+
+python run_multi_agent.py --pc-id 1 --auto
+
+# Google Drive JSONアップローダー
+cd "C:\Users\color\Documents\gemini_AI_Agent"
+python drive_uploader.py 
+
+Yで実行して
+kojikjazu0525@gmail.com　を選択する
+
+
+# 手動の場合
+mkdir backup_old_agents
+copy content_writer_agent.py backup_old_agents\
+copy pm_agent.py backup_old_agents\
+copy task_executor.py backup_old_agents\
+
+# または自動スクリプトを実行
+python backup_before_update.py
+
+
+
+🚀 使い方
+パターン1：B12セルから自動取得（推奨）
+bashpython main_automator.py
+スプレッドシートのB12セルに設定したPC_IDが自動的に使用されます。
+パターン2：PC_IDを明示的に指定
+bashpython main_automator.py --pc-id 2
+パターン3：環境変数を使用
+bashpython main_automator.py --no-auto-detect
+
+
+
+        # sheets_manager.py に追加
+def read_file_from_drive(self, file_id: str) -> Optional[str]:
+    """Google DriveからファイルをDLして読み込む"""
+    try:
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseDownload
+        import io
+        
+        service = build('drive', 'v3', credentials=self.gc.auth)
+        request = service.files().get_media(fileId=file_id)
+        
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+        
+        content = fh.getvalue().decode('utf-8')
+        return content
+    except Exception as e:
+        logger.error(f"Google Driveファイル読み込みエラー: {e}")
+        return None

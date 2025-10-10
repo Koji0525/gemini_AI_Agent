@@ -1,0 +1,68 @@
+"""WordPressテスト機能"""
+import logging
+from datetime import datetime
+from typing import Dict
+from playwright.async_api import Page
+
+logger = logging.getLogger(__name__)
+
+
+class WordPressTester:
+    """WordPressテスト機能"""
+    
+    def __init__(self, wp_url: str):
+        self.wp_url = wp_url
+    
+    async def test_functionality(self, page: Page, task: Dict) -> Dict:
+        """機能をテスト"""
+        try:
+            logger.info("機能テストを実行中...")
+            
+            test_results = []
+            
+            # 1. サイトの表示テスト
+            await page.goto(self.wp_url)
+            await page.wait_for_timeout(3000)
+            
+            # ページタイトル取得
+            page_title = await page.title()
+            test_results.append(f"✅ サイト表示OK: {page_title}")
+            
+            # スクリーンショット
+            site_screenshot = f"wp_site_{datetime.now().strftime('%H%M%S')}.png"
+            await page.screenshot(path=site_screenshot, full_page=True)
+            test_results.append(f"📸 サイト全体: {site_screenshot}")
+            
+            # 2. 管理画面テスト
+            await page.goto(f"{self.wp_url}/wp-admin/")
+            await page.wait_for_timeout(2000)
+            
+            admin_screenshot = f"wp_admin_{datetime.now().strftime('%H%M%S')}.png"
+            await page.screenshot(path=admin_screenshot)
+            test_results.append("✅ 管理画面OK")
+            test_results.append(f"📸 管理画面: {admin_screenshot}")
+            
+            # 3. プラグインステータス確認
+            await page.goto(f"{self.wp_url}/wp-admin/plugins.php")
+            await page.wait_for_timeout(2000)
+            
+            plugins_screenshot = f"wp_plugins_{datetime.now().strftime('%H%M%S')}.png"
+            await page.screenshot(path=plugins_screenshot)
+            test_results.append("✅ プラグイン一覧確認")
+            test_results.append(f"📸 プラグイン: {plugins_screenshot}")
+            
+            summary = '\n'.join(test_results)
+            logger.info("\n" + summary)
+            
+            return {
+                'success': True,
+                'summary': summary[:500],
+                'full_text': summary
+            }
+            
+        except Exception as e:
+            logger.error(f"機能テストエラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }

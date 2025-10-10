@@ -1,0 +1,124 @@
+# command_monitor_agent.py
+import asyncio
+import re
+import subprocess
+import logging
+from pathlib import Path
+from typing import List, Dict, Optional, Callable
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+class CommandMonitorAgent:
+    """コマンド実行と出力監視のエージェント"""
+    
+    def __init__(self, browser_controller, sheets_manager):
+        self.browser_controller = browser_controller
+        self.sheets_manager = sheets_manager
+        self.error_patterns = [
+            r'Error:', r'Exception:', r'Traceback', r'失敗', r'エラー',
+            r'FileNotFoundError', r'ImportError', r'SyntaxError',
+            r'ModuleNotFoundError', r'AttributeError', r'TypeError',
+            r'ValueError', r'KeyError', r'IndexError'
+        ]
+        self.warning_patterns = [
+            r'Warning:', r'警告', r'DeprecationWarning'
+        ]
+    
+    async def execute_command(self, command: str, timeout: int = 300) -> Dict:
+        """コマンドを実行して出力を監視"""
+        try:
+            logger.info(f"コマンド実行: {command}")
+            
+            process = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout
+            )
+            
+            output = stdout.decode('utf-8', errors='ignore')
+            error_output = stderr.decode('utf-8', errors='ignore')
+            return_code = process.returncode
+            
+            result = {
+                'command': command,
+                'return_code': return_code,
+                'stdout': output,
+                'stderr': error_output,
+                'timestamp': datetime.now().isoformat(),
+                'has_errors': self._detect_errors(output + error_output),
+                'errors': self._extract_errors(output + error_output),
+                'warnings': self._extract_warnings(output + error_output)
+            }
+            
+            return result
+            
+        except asyncio.TimeoutError:
+            logger.error(f"コマンドタイムアウト: {command}")
+            return {
+                'command': command,
+                'return_code': -1,
+                'stdout': '',
+                'stderr': 'コマンド実行タイムアウト',
+                'timestamp': datetime.now().isoformat(),
+                'has_errors': True,
+                'errors': ['実行タイムアウト'],
+                'warnings': []
+            }
+        except Exception as e:
+            logger.error(f"コマンド実行エラー: {e}")
+            return {
+                'command': command,
+                'return_code': -1,
+                'stdout': '',
+                'stderr': str(e),
+                'timestamp': datetime.now().isoformat(),
+                'has_errors': True,
+                'errors': [str(e)],
+                'warnings': []
+            }
+    
+    def _detect_errors(self, output: str) -> bool:
+        """出力にエラーが含まれているか検出"""
+        output_lower = output.lower()
+        for pattern in self.error_patterns:
+            if re.search(pattern, output_lower, re.IGNORECASE):
+                return True
+        return False
+    
+    def _extract_errors(self, output: str) -> List[str]:
+        """エラーメッセージを抽出"""
+        errors = []
+        lines = output.split('\n')
+        
+        for i, line in enumerate(lines):
+            for pattern in self.error_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    # エラー行とその前後2行を取得
+                    start = max(0, i - 2)
+                    end = min(len(lines), i + 3)
+                    context = '\n'.join(lines[start:end])
+                    errors.append(context)
+                    break
+        
+        return errors
+    
+    def _extract_warnings(self, output: str) -> List[str]:
+        """警告メッセージを抽出"""
+        warnings = []
+        lines = output.split('\n')
+        
+        for i, line in enumerate(lines):
+            for pattern in self.warning_patterns:
+                if re.search(pattern, line, re.IGNORECASE):
+                    context = '\n'.join(lines[max(0, i-1):min(len(lines), i+2)])
+                    warnings.append(context)
+                    break
+        
+        return warnings

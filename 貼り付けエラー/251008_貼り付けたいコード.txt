@@ -1,0 +1,160 @@
+# pm_agent.py の _parse_json_response メソッドを以下に置き換え
+
+def _parse_json_response(self, text: str) -> Optional[Dict]:
+    """応答からJSON部分を抽出してパース（強化版）"""
+    try:
+        if not text:
+            logger.warning("空の応答テキスト")
+            return None
+        
+        logger.info("="*60)
+        logger.info("JSON解析開始")
+        logger.info("="*60)
+        logger.info(f"応答全体の長さ: {len(text)}文字")
+        
+        # パターン1: ```json ... ``` で囲まれている場合
+        import re
+        json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+            logger.info("✅ パターン1: ```json...``` 形式を検出")
+            try:
+                result = json.loads(json_str)
+                logger.info(f"✅ JSON解析成功（パターン1）: タスク数={len(result.get('tasks', []))}")
+                return result
+            except json.JSONDecodeError as e:
+                logger.warning(f"パターン1でJSON解析失敗: {e}")
+        
+        # パターン2: { から始まる最初のJSONオブジェクト全体を抽出
+        start_idx = text.find('{')
+        if start_idx != -1:
+            logger.info(f"✅ '{' を位置 {start_idx} で検出")
+            
+            # ネストされた括弧を正しくカウント
+            brace_count = 0
+            in_string = False
+            escape_next = False
+            
+            for i, char in enumerate(text[start_idx:], start=start_idx):
+                if escape_next:
+                    escape_next = False
+                    continue
+                
+                if char == '\\':
+                    escape_next = True
+                    continue
+                
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                
+                if not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            # JSONオブジェクトの終わりを発見
+                            potential_json = text[start_idx:i+1]
+                            logger.info(f"✅ 完全なJSONオブジェクトを抽出: {len(potential_json)}文字")
+                            
+                            try:
+                                result = json.loads(potential_json)
+                                logger.info(f"✅ JSON解析成功: タスク数={len(result.get('tasks', []))}")
+                                return result
+                            except json.JSONDecodeError as e:
+                                logger.error(f"❌ JSON解析エラー: {e}")
+                                logger.error(f"エラー位置: line {e.lineno}, column {e.colno}")
+                                
+                                # エラー箇所周辺を表示
+                                error_pos = e.pos if hasattr(e, 'pos') else 0
+                                context_start = max(0, error_pos - 100)
+                                context_end = min(len(potential_json), error_pos + 100)
+                                logger.error(f"エラー周辺のテキスト:\n{potential_json[context_start:context_end]}")
+                                
+                                # 修復を試みる
+                                repaired_json = self._attempt_json_repair(potential_json, e)
+                                if repaired_json:
+                                    return repaired_json
+        
+        # パターン3: 最後の手段 - 全体をJSONとして試す
+        logger.info("パターン3: テキスト全体をJSONとして解析")
+        try:
+            result = json.loads(text)
+            logger.info(f"✅ JSON解析成功（全体解析）: タスク数={len(result.get('tasks', []))}")
+            return result
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ 全体解析も失敗: {e}")
+        
+        # すべて失敗
+        logger.error("="*60)
+        logger.error("❌ すべてのJSON解析パターンが失敗")
+        logger.error("="*60)
+        logger.error(f"応答の先頭500文字:\n{text[:500]}")
+        logger.error(f"応答の末尾500文字:\n{text[-500:]}")
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"❌ JSON解析で予期しないエラー: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+def _attempt_json_repair(self, json_str: str, error: json.JSONDecodeError) -> Optional[Dict]:
+    """壊れたJSONの修復を試みる"""
+    try:
+        logger.info("🔧 JSON修復を試みます...")
+        
+        # エラー位置を取得
+        error_pos = error.pos if hasattr(error, 'pos') else len(json_str)
+        
+        # 修復方法1: エラー位置の直前で切り捨てて閉じる
+        if "Expecting ',' delimiter" in str(error) or "Expecting ':' delimiter" in str(error):
+            # 最後の完全なタスクまで戻る
+            last_complete_task = json_str.rfind('},', 0, error_pos)
+            if last_complete_task > 0:
+                # tasksリストを閉じる
+                repaired = json_str[:last_complete_task + 1] + '], "risks": [], "success_criteria": []}'
+                logger.info(f"修復試行1: 位置{last_complete_task}で切り捨て")
+                try:
+                    result = json.loads(repaired)
+                    logger.info(f"✅ 修復成功! タスク数={len(result.get('tasks', []))}")
+                    return result
+                except:
+                    pass
+        
+        # 修復方法2: 不完全なフィールドを削除
+        lines = json_str.split('\n')
+        error_line = error.lineno if hasattr(error, 'lineno') else len(lines)
+        
+        if error_line > 0 and error_line <= len(lines):
+            # エラー行以降を削除して再構築
+            truncated_lines = lines[:error_line-1]
+            
+            # 開いている括弧を閉じる
+            truncated = '\n'.join(truncated_lines)
+            open_braces = truncated.count('{') - truncated.count('}')
+            open_brackets = truncated.count('[') - truncated.count(']')
+            
+            repaired = truncated
+            if ',"tasks":[' in repaired and not repaired.rstrip().endswith(']'):
+                repaired += ']'
+            
+            for _ in range(open_braces):
+                repaired += '}'
+            
+            logger.info("修復試行2: 不完全な部分を削除して閉じる")
+            try:
+                result = json.loads(repaired)
+                logger.info(f"✅ 修復成功! タスク数={len(result.get('tasks', []))}")
+                return result
+            except:
+                pass
+        
+        logger.warning("❌ JSON修復に失敗")
+        return None
+        
+    except Exception as e:
+        logger.error(f"JSON修復中のエラー: {e}")
+        return None

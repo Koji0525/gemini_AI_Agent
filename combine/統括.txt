@@ -1,0 +1,15 @@
+
+C:\Users\color\Documents\gemini_AI_Agent\notebookLM
+のフォルダ内の.pyファイルをすべて1つの.txtファイルにつなげて、その時に#.pyファイルの名前を先頭に付けて修正するプログラムを作って！
+
+pm.pyファイル
+po.pyファイル
+
+↓
+combine.txtファイル
+
+#pm.py
+ファイルの中のコード
+
+#po.py
+ファイルの中のコード

@@ -1,0 +1,218 @@
+JSON
+{
+  "project_analysis": "ウズベキスタンのM&Aポータルサイト構築（WordPress/Cocoon）と、Google Apps Scriptによる7言語（日・英・露・ウズ・中・韓・トル）の情報収集・翻訳・投稿（下書き）の自動化プロセスをテスト構築する。",
+  "tasks": [
+    {
+      "task_id": 1,
+      "description": "【設計】Google Apps Scriptによる情報収集・翻訳・WordPress投稿自動化プロセスの要件定義と設計書を作成。",
+      "required_role": "design",
+      "priority": "high",
+      "estimated_time": "4時間",
+      "dependencies": []
+    },
+    {
+      "task_id": 2,
+      "description": "【開発】Google Apps Scriptから指定スプレッドシートのC列記事を取得し、記事生成・投稿に必要なデータ構造を定義。",
+      "required_role": "dev",
+      "priority": "high",
+      "estimated_time": "3時間",
+      "dependencies": [1]
+    },
+    {
+      "task_id": 3,
+      "description": "【プラグイン】Polylangプラグインをインストールし、7言語（ja, en, ru, uz_UZ, zh_CN, ko_KR, tr_TR）の設定を完了。",
+      "required_role": "plugin",
+      "priority": "high",
+      "estimated_time": "1時間",
+      "dependencies": []
+    },
+    {
+      "task_id": 4,
+      "description": "【日本語】スプレッドシート記載の参照記事を元に、ウズベキスタンでの事業検討者向けに有益な情報を日本語でまとめた記事を作成。",
+      "required_role": "writer_ja",
+      "priority": "high",
+      "estimated_time": "2時間",
+      "dependencies": [2],
+      "language": "ja",
+      "polylang_lang": "ja",
+      "target_url": "https://docs.google.com/spreadsheets/d/1DW0l1H2AOnIP3dc-WomdA_GtwvSzE6ia2m2OizgDiyg/edit?gid=856641369#gid=856641369"
+    },
+    {
+      "task_id": 5,
+      "description": "【レビュー】タスク4（日本語記事）の品質チェック（内容の正確性、ターゲット層への有用性、文体）。",
+      "required_role": "review",
+      "priority": "high",
+      "estimated_time": "30分",
+      "dependencies": [4],
+      "review_language": "ja",
+      "review_target_task_id": 4
+    },
+    {
+      "task_id": 6,
+      "description": "【英語】タスク4の日本語記事を基に、Polylang連携を考慮した英語記事を作成。",
+      "required_role": "writer_en",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "en",
+      "polylang_lang": "en",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 7,
+      "description": "【ロシア語】タスク4の日本語記事を基に、Polylang連携を考慮したロシア語記事を作成。",
+      "required_role": "writer_ru",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "ru",
+      "polylang_lang": "ru",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 8,
+      "description": "【ウズベク語】タスク4の日本語記事を基に、Polylang連携を考慮したウズベク語記事を作成。",
+      "required_role": "writer_uz",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "uz",
+      "polylang_lang": "uz_UZ",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 9,
+      "description": "【中国語】タスク4の日本語記事を基に、Polylang連携を考慮した中国語記事を作成。",
+      "required_role": "writer_zh",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "zh",
+      "polylang_lang": "zh_CN",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 10,
+      "description": "【韓国語】タスク4の日本語記事を基に、Polylang連携を考慮した韓国語記事を作成。",
+      "required_role": "writer_ko",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "ko",
+      "polylang_lang": "ko_KR",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 11,
+      "description": "【トルコ語】タスク4の日本語記事を基に、Polylang連携を考慮したトルコ語記事を作成。",
+      "required_role": "writer_tr",
+      "priority": "medium",
+      "estimated_time": "1.5時間",
+      "dependencies": [5],
+      "language": "tr",
+      "polylang_lang": "tr_TR",
+      "reference_task_id": 4
+    },
+    {
+      "task_id": 12,
+      "description": "【WordPress投稿】タスク4の日本語記事をWordPressに下書き保存（Polylang: 日本語）。",
+      "required_role": "wordpress",
+      "priority": "high",
+      "estimated_time": "30分",
+      "dependencies": [5, 3],
+      "language": "ja",
+      "polylang_lang": "ja",
+      "source_task_id": 4,
+      "post_action": "create"
+    },
+    {
+      "task_id": 13,
+      "description": "【WordPress投稿】タスク6の英語記事をタスク12と連携させてWordPressに下書き保存（Polylang: 英語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [6, 12],
+      "language": "en",
+      "polylang_lang": "en",
+      "source_task_id": 6,
+      "post_action": "create"
+    },
+    {
+      "task_id": 14,
+      "description": "【WordPress投稿】タスク7のロシア語記事をタスク12と連携させてWordPressに下書き保存（Polylang: ロシア語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [7, 12],
+      "language": "ru",
+      "polylang_lang": "ru",
+      "source_task_id": 7,
+      "post_action": "create"
+    },
+    {
+      "task_id": 15,
+      "description": "【WordPress投稿】タスク8のウズベク語記事をタスク12と連携させてWordPressに下書き保存（Polylang: ウズベク語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [8, 12],
+      "language": "uz",
+      "polylang_lang": "uz_UZ",
+      "source_task_id": 8,
+      "post_action": "create"
+    },
+    {
+      "task_id": 16,
+      "description": "【WordPress投稿】タスク9の中国語記事をタスク12と連携させてWordPressに下書き保存（Polylang: 中国語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [9, 12],
+      "language": "zh",
+      "polylang_lang": "zh_CN",
+      "source_task_id": 9,
+      "post_action": "create"
+    },
+    {
+      "task_id": 17,
+      "description": "【WordPress投稿】タスク10の韓国語記事をタスク12と連携させてWordPressに下書き保存（Polylang: 韓国語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [10, 12],
+      "language": "ko",
+      "polylang_lang": "ko_KR",
+      "source_task_id": 10,
+      "post_action": "create"
+    },
+    {
+      "task_id": 18,
+      "description": "【WordPress投稿】タスク11のトルコ語記事をタスク12と連携させてWordPressに下書き保存（Polylang: トルコ語）。",
+      "required_role": "wordpress",
+      "priority": "medium",
+      "estimated_time": "30分",
+      "dependencies": [11, 12],
+      "language": "tr",
+      "polylang_lang": "tr_TR",
+      "source_task_id": 11,
+      "post_action": "create"
+    },
+    {
+      "task_id": 19,
+      "description": "【開発】タスク1で設計した自動化プロセスに基づき、WordPress REST APIを利用した記事下書き投稿機能（Polylang対応）をGoogle Apps Scriptで実装。",
+      "required_role": "dev",
+      "priority": "high",
+      "estimated_time": "8時間",
+      "dependencies": [1, 12, 13, 14, 15, 16, 17, 18]
+    },
+    {
+      "task_id": 20,
+      "description": "【レビュー】Google Apps Scriptの自動投稿機能（タスク19）の動作確認と、記事の多言語連携（Polylang）が正しく行われているかのシステムテスト。",
+      "required_role": "review",
+      "priority": "high",
+      "estimated_time": "2時間",
+      "dependencies": [19]
+    }
+  ],
+  "risks": [
+    "Google Apps ScriptとWordPress REST APIの

@@ -1,0 +1,7 @@
+保存する時に同じ名前があると1、2、3となるのが
+cd C:\Users\color\Documents\gemini_AI_Agent\notebookLM_move
+py move.py
+
+上書き保存するのが
+cd C:\Users\color\Documents\gemini_AI_Agent\notebookLM_move
+py Overwrite_save.py
