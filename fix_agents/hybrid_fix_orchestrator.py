@@ -1,7 +1,7 @@
-# hybrid_fix_orchestrator.py
+﻿# hybrid_fix_orchestrator.py
 """
-ハイブリチE��修正オーケストレーター
-ローカルとクラウド修正を統括管琁E
+繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ
+繝ｭ繝ｼ繧ｫ繝ｫ縺ｨ繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧堤ｵｱ諡ｬ邂｡逅・
 """
 
 import asyncio
@@ -19,25 +19,25 @@ logger = logging.getLogger(__name__)
 
 
 class FixStrategy(Enum):
-    """修正戦略"""
-    LOCAL_ONLY = "local_only"          # ローカルのみ
-    CLOUD_ONLY = "cloud_only"          # クラウド�Eみ
-    LOCAL_FIRST = "local_first"        # ローカル優允E
-    CLOUD_FIRST = "cloud_first"        # クラウド優允E
-    PARALLEL = "parallel"              # 並列実衁E
-    ADAPTIVE = "adaptive"              # 適応的選抁E
+    """菫ｮ豁｣謌ｦ逡･"""
+    LOCAL_ONLY = "local_only"          # 繝ｭ繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ
+    CLOUD_ONLY = "cloud_only"          # 繧ｯ繝ｩ繧ｦ繝峨・縺ｿ
+    LOCAL_FIRST = "local_first"        # 繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈・
+    CLOUD_FIRST = "cloud_first"        # 繧ｯ繝ｩ繧ｦ繝牙━蜈・
+    PARALLEL = "parallel"              # 荳ｦ蛻怜ｮ溯｡・
+    ADAPTIVE = "adaptive"              # 驕ｩ蠢懃噪驕ｸ謚・
 
 
 class HybridFixOrchestrator:
     """
-    ハイブリチE��修正オーケストレーター
+    繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ
     
-    機�E:
-    - エラー刁E��とルーチE��ング
-    - ローカル/クラウド修正の選抁E
-    - フォールバック戦略
-    - 並列実行管琁E
-    - 統計情報の収集
+    讖溯・:
+    - 繧ｨ繝ｩ繝ｼ蛻・｡槭→繝ｫ繝ｼ繝・ぅ繝ｳ繧ｰ
+    - 繝ｭ繝ｼ繧ｫ繝ｫ/繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣縺ｮ驕ｸ謚・
+    - 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ謌ｦ逡･
+    - 荳ｦ蛻怜ｮ溯｡檎ｮ｡逅・
+    - 邨ｱ險域ュ蝣ｱ縺ｮ蜿朱寔
     """
     
     def __init__(
@@ -48,20 +48,20 @@ class HybridFixOrchestrator:
         default_strategy: FixStrategy = FixStrategy.ADAPTIVE
     ):
         """
-        初期匁E
+        蛻晄悄蛹・
         
         Args:
-            local_agent: ローカル修正エージェンチE
-            cloud_agent: クラウド修正エージェンチE
-            error_classifier: エラー刁E��器
-            default_strategy: チE��ォルト戦略
+            local_agent: 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝・
+            cloud_agent: 繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝・
+            error_classifier: 繧ｨ繝ｩ繝ｼ蛻・｡槫勣
+            default_strategy: 繝・ヵ繧ｩ繝ｫ繝域姶逡･
         """
         self.local_agent = local_agent
         self.cloud_agent = cloud_agent
         self.error_classifier = error_classifier or ErrorClassifier()
         self.default_strategy = default_strategy
         
-        # 統計情報
+        # 邨ｱ險域ュ蝣ｱ
         self.stats = {
             "total_tasks": 0,
             "local_fixes": 0,
@@ -73,10 +73,10 @@ class HybridFixOrchestrator:
             "strategy_usage": {strategy.value: 0 for strategy in FixStrategy}
         }
         
-        # 修正履歴
+        # 菫ｮ豁｣螻･豁ｴ
         self.fix_history = []
         
-        logger.info(f"✁EHybridFixOrchestrator 初期化完亁E(戦略={default_strategy.value})")
+        logger.info(f"笨・HybridFixOrchestrator 蛻晄悄蛹門ｮ御ｺ・(謌ｦ逡･={default_strategy.value})")
     
     async def execute_fix_task(
         self, 
@@ -84,36 +84,36 @@ class HybridFixOrchestrator:
         strategy: Optional[FixStrategy] = None
     ) -> FixResult:
         """
-        修正タスクを実衁E
+        菫ｮ豁｣繧ｿ繧ｹ繧ｯ繧貞ｮ溯｡・
         
         Args:
-            bug_fix_task: バグ修正タスク
-            strategy: 修正戦略�E�省略時�EチE��ォルト！E
+            bug_fix_task: 繝舌げ菫ｮ豁｣繧ｿ繧ｹ繧ｯ
+            strategy: 菫ｮ豁｣謌ｦ逡･・育怐逡･譎ゅ・繝・ヵ繧ｩ繝ｫ繝茨ｼ・
             
         Returns:
-            FixResult: 修正結果
+            FixResult: 菫ｮ豁｣邨先棡
         """
         start_time = datetime.now()
         task_id = bug_fix_task.task_id
         
         self.stats["total_tasks"] += 1
         
-        # 戦略の決宁E
+        # 謌ｦ逡･縺ｮ豎ｺ螳・
         selected_strategy = strategy or self.default_strategy
         
-        # 適応的戦略の場合、エラー刁E��に基づぁE��決宁E
+        # 驕ｩ蠢懃噪謌ｦ逡･縺ｮ蝣ｴ蜷医√お繝ｩ繝ｼ蛻・梵縺ｫ蝓ｺ縺･縺・※豎ｺ螳・
         if selected_strategy == FixStrategy.ADAPTIVE:
             selected_strategy = await self._select_adaptive_strategy(bug_fix_task.error_context)
         
         self.stats["strategy_usage"][selected_strategy.value] += 1
         
         logger.info("=" * 80)
-        logger.info(f"🎯 ハイブリチE��修正開姁E {task_id}")
-        logger.info(f"📊 選択戦略: {selected_strategy.value}")
+        logger.info(f"識 繝上う繝悶Μ繝・ラ菫ｮ豁｣髢句ｧ・ {task_id}")
+        logger.info(f"投 驕ｸ謚樊姶逡･: {selected_strategy.value}")
         logger.info("=" * 80)
         
         try:
-            # 戦略に応じた実衁E
+            # 謌ｦ逡･縺ｫ蠢懊§縺溷ｮ溯｡・
             if selected_strategy == FixStrategy.LOCAL_ONLY:
                 result = await self._execute_local_only(bug_fix_task)
                 
@@ -132,7 +132,7 @@ class HybridFixOrchestrator:
             else:
                 result = await self._execute_local_first(bug_fix_task)
             
-            # 統計情報の更新
+            # 邨ｱ險域ュ蝣ｱ縺ｮ譖ｴ譁ｰ
             if result.success:
                 self.stats["successful_fixes"] += 1
             else:
@@ -141,7 +141,7 @@ class HybridFixOrchestrator:
             execution_time = (datetime.now() - start_time).total_seconds()
             self._update_avg_execution_time(execution_time)
             
-            # 履歴に追加
+            # 螻･豁ｴ縺ｫ霑ｽ蜉
             self.fix_history.append({
                 "task_id": task_id,
                 "timestamp": datetime.now().isoformat(),
@@ -151,12 +151,12 @@ class HybridFixOrchestrator:
                 "agent_used": result.agent_used if hasattr(result, 'agent_used') else "unknown"
             })
             
-            logger.info(f"{'✁E if result.success else '❁E} 修正{'成功' if result.success else '失敁E}: {task_id} ({execution_time:.2f}私E")
+            logger.info(f"{'笨・ if result.success else '笶・} 菫ｮ豁｣{'謌仙粥' if result.success else '螟ｱ謨・}: {task_id} ({execution_time:.2f}遘・")
             
             return result
             
         except Exception as e:
-            logger.error(f"💥 修正実行エラー: {e}", exc_info=True)
+            logger.error(f"徴 菫ｮ豁｣螳溯｡後お繝ｩ繝ｼ: {e}", exc_info=True)
             self.stats["failed_fixes"] += 1
             
             return FixResult(
@@ -171,72 +171,72 @@ class HybridFixOrchestrator:
     
     async def _select_adaptive_strategy(self, error_context: ErrorContextModel) -> FixStrategy:
         """
-        エラーコンチE��ストに基づぁE��適応的に戦略を選抁E
+        繧ｨ繝ｩ繝ｼ繧ｳ繝ｳ繝・く繧ｹ繝医↓蝓ｺ縺･縺・※驕ｩ蠢懃噪縺ｫ謌ｦ逡･繧帝∈謚・
         
         Args:
-            error_context: エラーコンチE��スチE
+            error_context: 繧ｨ繝ｩ繝ｼ繧ｳ繝ｳ繝・く繧ｹ繝・
             
         Returns:
-            FixStrategy: 選択された戦略
+            FixStrategy: 驕ｸ謚槭＆繧後◆謌ｦ逡･
         """
-        # エラー刁E��E
+        # 繧ｨ繝ｩ繝ｼ蛻・｡・
         classification = self.error_classifier.classify(error_context)
         
         complexity = classification.get("complexity", "medium")
         error_type = classification.get("error_type", "unknown")
         confidence = classification.get("confidence", 0.5)
         
-        logger.info(f"📊 エラー刁E��E 褁E��度={complexity}, タイチE{error_type}, 信頼度={confidence:.2f}")
+        logger.info(f"投 繧ｨ繝ｩ繝ｼ蛻・｡・ 隍・尅蠎ｦ={complexity}, 繧ｿ繧､繝・{error_type}, 菫｡鬆ｼ蠎ｦ={confidence:.2f}")
         
-        # 褁E��度に基づく戦略選抁E
+        # 隍・尅蠎ｦ縺ｫ蝓ｺ縺･縺乗姶逡･驕ｸ謚・
         if complexity == "simple":
-            # 単純なエラーはローカルで迁E��に処琁E
+            # 蜊倡ｴ斐↑繧ｨ繝ｩ繝ｼ縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ縺ｧ霑・溘↓蜃ｦ逅・
             return FixStrategy.LOCAL_FIRST
             
         elif complexity == "medium":
-            # 中程度の褁E��さ�Eローカル優先、失敗時クラウチE
+            # 荳ｭ遞句ｺｦ縺ｮ隍・尅縺輔・繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈医∝､ｱ謨玲凾繧ｯ繝ｩ繧ｦ繝・
             if confidence > 0.7:
                 return FixStrategy.LOCAL_FIRST
             else:
                 return FixStrategy.CLOUD_FIRST
                 
         else:  # complex
-            # 褁E��なエラーは最初からクラウチE
+            # 隍・尅縺ｪ繧ｨ繝ｩ繝ｼ縺ｯ譛蛻昴°繧峨け繝ｩ繧ｦ繝・
             if error_type in ["design_flaw", "architectural", "multi_file"]:
                 return FixStrategy.CLOUD_ONLY
             else:
                 return FixStrategy.CLOUD_FIRST
     
     async def _execute_local_only(self, bug_fix_task: BugFixTask) -> FixResult:
-        """ローカルのみで実衁E""
-        logger.info("💻 ローカル修正実衁E)
+        """繝ｭ繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ縺ｧ螳溯｡・""
+        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣螳溯｡・)
         self.stats["local_fixes"] += 1
         result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
         result.agent_used = "local"
         return result
     
     async def _execute_cloud_only(self, bug_fix_task: BugFixTask) -> FixResult:
-        """クラウド�Eみで実衁E""
-        logger.info("☁E��Eクラウド修正実衁E)
+        """繧ｯ繝ｩ繧ｦ繝峨・縺ｿ縺ｧ螳溯｡・""
+        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螳溯｡・)
         self.stats["cloud_fixes"] += 1
         result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         result.agent_used = "cloud"
         return result
     
     async def _execute_local_first(self, bug_fix_task: BugFixTask) -> FixResult:
-        """ローカル優先、失敗時クラウドにフォールバック"""
-        logger.info("💻 ローカル修正を試衁E)
+        """繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈医∝､ｱ謨玲凾繧ｯ繝ｩ繧ｦ繝峨↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ"""
+        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣繧定ｩｦ陦・)
         self.stats["local_fixes"] += 1
         
         local_result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
         
         if local_result.success and local_result.confidence_score >= 0.7:
-            logger.info("✁Eローカル修正成功")
+            logger.info("笨・繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣謌仙粥")
             local_result.agent_used = "local"
             return local_result
         
-        logger.warning("⚠�E�Eローカル修正不十刁E��クラウドにフォールバック")
-        logger.info("☁E��Eクラウド修正実衁E)
+        logger.warning("笞・・繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣荳榊香蛻・√け繝ｩ繧ｦ繝峨↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ")
+        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螳溯｡・)
         self.stats["cloud_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
@@ -246,19 +246,19 @@ class HybridFixOrchestrator:
         return cloud_result
     
     async def _execute_cloud_first(self, bug_fix_task: BugFixTask) -> FixResult:
-        """クラウド優先、失敗時ローカルにフォールバック"""
-        logger.info("☁E��Eクラウド修正を試衁E)
+        """繧ｯ繝ｩ繧ｦ繝牙━蜈医∝､ｱ謨玲凾繝ｭ繝ｼ繧ｫ繝ｫ縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ"""
+        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧定ｩｦ陦・)
         self.stats["cloud_fixes"] += 1
         
         cloud_result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         
         if cloud_result.success:
-            logger.info("✁Eクラウド修正成功")
+            logger.info("笨・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣謌仙粥")
             cloud_result.agent_used = "cloud"
             return cloud_result
         
-        logger.warning("⚠�E�Eクラウド修正失敗、ローカルにフォールバック")
-        logger.info("💻 ローカル修正実衁E)
+        logger.warning("笞・・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螟ｱ謨励√Ο繝ｼ繧ｫ繝ｫ縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ")
+        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣螳溯｡・)
         self.stats["local_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
@@ -268,13 +268,13 @@ class HybridFixOrchestrator:
         return local_result
     
     async def _execute_parallel(self, bug_fix_task: BugFixTask) -> FixResult:
-        """ローカルとクラウドを並列実行し、最良の結果を選抁E""
-        logger.info("🔀 並列修正実行（ローカル & クラウド！E)
+        """繝ｭ繝ｼ繧ｫ繝ｫ縺ｨ繧ｯ繝ｩ繧ｦ繝峨ｒ荳ｦ蛻怜ｮ溯｡後＠縲∵怙濶ｯ縺ｮ邨先棡繧帝∈謚・""
+        logger.info("楳 荳ｦ蛻嶺ｿｮ豁｣螳溯｡鯉ｼ医Ο繝ｼ繧ｫ繝ｫ & 繧ｯ繝ｩ繧ｦ繝会ｼ・)
         self.stats["local_fixes"] += 1
         self.stats["cloud_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
-        # 並列実衁E
+        # 荳ｦ蛻怜ｮ溯｡・
         results = await asyncio.gather(
             self.local_agent.execute_bug_fix_task(bug_fix_task),
             self.cloud_agent.execute_bug_fix_task(bug_fix_task),
@@ -283,25 +283,25 @@ class HybridFixOrchestrator:
         
         local_result, cloud_result = results
         
-        # エラーハンドリング
+        # 繧ｨ繝ｩ繝ｼ繝上Φ繝峨Μ繝ｳ繧ｰ
         if isinstance(local_result, Exception):
-            logger.error(f"❁Eローカル並列実行エラー: {local_result}")
+            logger.error(f"笶・繝ｭ繝ｼ繧ｫ繝ｫ荳ｦ蛻怜ｮ溯｡後お繝ｩ繝ｼ: {local_result}")
             local_result = None
         
         if isinstance(cloud_result, Exception):
-            logger.error(f"❁Eクラウド並列実行エラー: {cloud_result}")
+            logger.error(f"笶・繧ｯ繝ｩ繧ｦ繝我ｸｦ蛻怜ｮ溯｡後お繝ｩ繝ｼ: {cloud_result}")
             cloud_result = None
         
-        # 最良の結果を選抁E
+        # 譛濶ｯ縺ｮ邨先棡繧帝∈謚・
         best_result = self._select_best_result(local_result, cloud_result)
         
         if best_result:
             best_result.agent_used = "parallel"
-            logger.info(f"✁E並列実行完亁E��最良結果を選択（エージェンチE{best_result.agent_used}�E�E)
+            logger.info(f"笨・荳ｦ蛻怜ｮ溯｡悟ｮ御ｺ・∵怙濶ｯ邨先棡繧帝∈謚橸ｼ医お繝ｼ繧ｸ繧ｧ繝ｳ繝・{best_result.agent_used}・・)
             return best_result
         else:
-            # 両方失敁E
-            logger.error("❁E並列実行失敗（両エージェント失敗！E)
+            # 荳｡譁ｹ螟ｱ謨・
+            logger.error("笶・荳ｦ蛻怜ｮ溯｡悟､ｱ謨暦ｼ井ｸ｡繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝亥､ｱ謨暦ｼ・)
             return FixResult(
                 task_id=bug_fix_task.task_id,
                 success=False,
@@ -319,55 +319,55 @@ class HybridFixOrchestrator:
         cloud_result: Optional[FixResult]
     ) -> Optional[FixResult]:
         """
-        2つの結果から最良のも�Eを選抁E
+        2縺､縺ｮ邨先棡縺九ｉ譛濶ｯ縺ｮ繧ゅ・繧帝∈謚・
         
         Args:
-            local_result: ローカル結果
-            cloud_result: クラウド結果
+            local_result: 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡
+            cloud_result: 繧ｯ繝ｩ繧ｦ繝臥ｵ先棡
             
         Returns:
-            Optional[FixResult]: 最良の結果
+            Optional[FixResult]: 譛濶ｯ縺ｮ邨先棡
         """
-        # どちらかがNoneの場吁E
+        # 縺ｩ縺｡繧峨°縺君one縺ｮ蝣ｴ蜷・
         if local_result is None:
             return cloud_result
         if cloud_result is None:
             return local_result
         
-        # 両方成功の場合、信頼度で比輁E
+        # 荳｡譁ｹ謌仙粥縺ｮ蝣ｴ蜷医∽ｿ｡鬆ｼ蠎ｦ縺ｧ豈碑ｼ・
         if local_result.success and cloud_result.success:
             local_score = local_result.confidence_score or 0.5
             cloud_score = cloud_result.confidence_score or 0.5
             
             if cloud_score > local_score:
-                logger.info(f"☁E��Eクラウド結果を選択（信頼度: {cloud_score:.2f} > {local_score:.2f}�E�E)
+                logger.info(f"笘・ｸ・繧ｯ繝ｩ繧ｦ繝臥ｵ先棡繧帝∈謚橸ｼ井ｿ｡鬆ｼ蠎ｦ: {cloud_score:.2f} > {local_score:.2f}・・)
                 return cloud_result
             else:
-                logger.info(f"💻 ローカル結果を選択（信頼度: {local_score:.2f} >= {cloud_score:.2f}�E�E)
+                logger.info(f"捗 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡繧帝∈謚橸ｼ井ｿ｡鬆ｼ蠎ｦ: {local_score:.2f} >= {cloud_score:.2f}・・)
                 return local_result
         
-        # どちらか一方のみ成功
+        # 縺ｩ縺｡繧峨°荳譁ｹ縺ｮ縺ｿ謌仙粥
         if local_result.success:
-            logger.info("💻 ローカル結果を選択（ローカルのみ成功�E�E)
+            logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡繧帝∈謚橸ｼ医Ο繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ謌仙粥・・)
             return local_result
         if cloud_result.success:
-            logger.info("☁E��Eクラウド結果を選択（クラウド�Eみ成功�E�E)
+            logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝臥ｵ先棡繧帝∈謚橸ｼ医け繝ｩ繧ｦ繝峨・縺ｿ謌仙粥・・)
             return cloud_result
         
-        # 両方失敗�E場合、信頼度が高い方
+        # 荳｡譁ｹ螟ｱ謨励・蝣ｴ蜷医∽ｿ｡鬆ｼ蠎ｦ縺碁ｫ倥＞譁ｹ
         local_score = local_result.confidence_score or 0.0
         cloud_score = cloud_result.confidence_score or 0.0
         
         return cloud_result if cloud_score > local_score else local_result
     
     def _update_avg_execution_time(self, execution_time: float):
-        """平坁E��行時間を更新"""
+        """蟷ｳ蝮・ｮ溯｡梧凾髢薙ｒ譖ｴ譁ｰ"""
         total = self.stats["total_tasks"]
         current_avg = self.stats["avg_execution_time"]
         self.stats["avg_execution_time"] = (current_avg * (total - 1) + execution_time) / total
     
     def get_stats(self) -> Dict[str, Any]:
-        """統計情報を取征E""
+        """邨ｱ險域ュ蝣ｱ繧貞叙蠕・""
         success_rate = 0.0
         if self.stats["total_tasks"] > 0:
             success_rate = self.stats["successful_fixes"] / self.stats["total_tasks"]
@@ -380,20 +380,20 @@ class HybridFixOrchestrator:
         }
     
     def print_stats(self):
-        """統計情報を表示"""
+        """邨ｱ險域ュ蝣ｱ繧定｡ｨ遉ｺ"""
         stats = self.get_stats()
         
         print("\n" + "=" * 80)
-        print("📊 ハイブリチE��修正オーケストレーター 統計情報")
+        print("投 繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ 邨ｱ險域ュ蝣ｱ")
         print("=" * 80)
-        print(f"総タスク数: {stats['total_tasks']}")
-        print(f"成功数: {stats['successful_fixes']} ({stats['success_rate']:.1%})")
-        print(f"失敗数: {stats['failed_fixes']}")
-        print(f"平坁E��行時閁E {stats['avg_execution_time']:.2f}私E)
-        print(f"\nローカル修正: {stats['local_fixes']}囁E)
-        print(f"クラウド修正: {stats['cloud_fixes']}囁E)
-        print(f"ハイブリチE��修正: {stats['hybrid_fixes']}囁E)
-        print("\n戦略使用状況E")
+        print(f"邱上ち繧ｹ繧ｯ謨ｰ: {stats['total_tasks']}")
+        print(f"謌仙粥謨ｰ: {stats['successful_fixes']} ({stats['success_rate']:.1%})")
+        print(f"螟ｱ謨玲焚: {stats['failed_fixes']}")
+        print(f"蟷ｳ蝮・ｮ溯｡梧凾髢・ {stats['avg_execution_time']:.2f}遘・)
+        print(f"\n繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣: {stats['local_fixes']}蝗・)
+        print(f"繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣: {stats['cloud_fixes']}蝗・)
+        print(f"繝上う繝悶Μ繝・ラ菫ｮ豁｣: {stats['hybrid_fixes']}蝗・)
+        print("\n謌ｦ逡･菴ｿ逕ｨ迥ｶ豕・")
         for strategy, count in stats['strategy_usage'].items():
-            print(f"  - {strategy}: {count}囁E)
+            print(f"  - {strategy}: {count}蝗・)
         print("=" * 80 + "\n")
