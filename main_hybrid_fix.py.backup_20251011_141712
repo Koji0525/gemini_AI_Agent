@@ -10,7 +10,6 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 import asyncio
-import uuid
 import logging
 import sys
 from typing import Optional, Dict, Any
@@ -24,7 +23,6 @@ from browser_controller import BrowserController
 
 # 新システムのインポート
 from fix_agents.hybrid_fix_orchestrator import HybridFixOrchestrator, FixStrategy
-from fix_agents.local_fix_agent import LocalFixAgent
 from fix_agents.cloud_fix_agent import CloudFixAgent
 from fix_agents.error_classifier import ErrorClassifier
 from fix_agents.fix_agent import BaseFixAgent
@@ -34,7 +32,7 @@ from fix_agents.patch_manager import PatchManager
 from cloud_storage_manager import CloudStorageManager
 
 # データモデル
-from data_models.data_models import BugFixTask, ErrorContextModel, ErrorSeverity, ErrorCategory
+from .data_models.data_models import BugFixTask, ErrorContextModel, ErrorSeverity, ErrorCategory
 
 # 設定
 from config_hybrid import HybridFixConfig
@@ -154,25 +152,13 @@ class HybridFixSystem:
             logger.info("✅ LocalFixAgent 初期化完了")
             
             # 8. クラウド修正エージェント初期化
-            if self.config.cloud_provider and (
-                self.config.openai_api_key or 
-                self.config.anthropic_api_key or 
-                self.config.google_api_key
-            ):
-                self.cloud_agent = CloudFixAgent(
-                    command_monitor=self.cmd_monitor,
-                    wp_tester=self.wp_tester,
-                    api_provider=self.config.cloud_provider,
-                    api_key=(
-                        self.config.openai_api_key if self.config.cloud_provider == "openai"
-                        else self.config.anthropic_api_key if self.config.cloud_provider == "anthropic"
-                        else self.config.google_api_key
-                    )
-                )
-                logger.info(f"✅ CloudFixAgent 初期化完了 (provider={self.config.cloud_provider})")
-            else:
-                self.cloud_agent = None
-                logger.info("⚠️ CloudFixAgent スキップ（API キーなし）")
+            self.cloud_agent = CloudFixAgent(
+                command_monitor=self.cmd_monitor,
+                wp_tester=self.wp_tester,
+                api_provider=self.config.cloud_provider,
+                model_name=self.config.cloud_model
+            )
+            logger.info(f"✅ CloudFixAgent 初期化完了 (provider={self.config.cloud_provider})")
             
             # 9. エラー分類器初期化
             error_classifier = ErrorClassifier()
@@ -239,10 +225,9 @@ class HybridFixSystem:
             # 2. バグ修正タスクを作成
             bug_fix_task = BugFixTask(
                 task_id=f"{task_id}-AutoFix",
-                original_task_id=task_id,
                 error_context=error_context,
                 target_files=[file_path],
-                priority=str(self._calculate_priority(error_context)),
+                priority=self._calculate_priority(error_context),
                 run_tests=self.config.enable_auto_tests,
                 create_pr=self.config.enable_auto_pr
             )
@@ -322,8 +307,6 @@ class HybridFixSystem:
         severity = self._infer_severity(error, error_category)
         
         return ErrorContextModel(
-            error_id=str(uuid.uuid4()),
-            task_id=f"{file_path}_{line_number or 0}",
             error_type=type(error).__name__,
             error_message=str(error),
             severity=severity,
@@ -344,7 +327,7 @@ class HybridFixSystem:
         elif "Syntax" in error_type or "Indent" in error_type:
             return ErrorCategory.SYNTAX
         elif error_type in ["AttributeError", "NameError", "TypeError", "KeyError"]:
-            return ErrorCategory.UNKNOWN
+            return ErrorCategory.RUNTIME
         elif "Recursion" in error_type or "Memory" in error_type:
             return ErrorCategory.PERFORMANCE
         else:
@@ -363,11 +346,11 @@ class HybridFixSystem:
             return ErrorSeverity.CRITICAL
         
         # 高優先度
-        if category == ErrorCategory.UNKNOWN or "Runtime" in error_type:
+        if category == ErrorCategory.LOGIC or "Runtime" in error_type:
             return ErrorSeverity.HIGH
         
         # 中優先度
-        if category in [ErrorCategory.UNKNOWN, ErrorCategory.IMPORT]:
+        if category in [ErrorCategory.RUNTIME, ErrorCategory.IMPORT]:
             return ErrorSeverity.MEDIUM
         
         # 低優先度

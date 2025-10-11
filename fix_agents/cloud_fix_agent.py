@@ -173,7 +173,7 @@ class CloudFixAgent:
             
             # 5. テスト実行（オプション）
             test_passed = True
-            if self.wp_tester and bug_fix_task.run_tests:
+            if self.wp_tester and getattr(bug_fix_task, "run_tests", False):
                 test_result = await self._run_tests(bug_fix_task)
                 test_passed = test_result['success']
                 
@@ -267,7 +267,7 @@ class CloudFixAgent:
         prompt_parts.append(f"エラーメッセージ: {error_context.error_message}")
         prompt_parts.append(f"深刻度: {error_context.severity.value}")
         prompt_parts.append(f"カテゴリ: {error_context.error_category.value}")
-        prompt_parts.append(f"発生ファイル: {error_context.file_path}:{error_context.line_number}")
+        prompt_parts.append(f"発生ファイル: {(error_context.error_location.file_path if error_context.error_location else "unknown")}:{(error_context.error_location.line_number if error_context.error_location else 0)}")
         prompt_parts.append("")
         
         # スタックトレース（全体）
@@ -296,9 +296,9 @@ class CloudFixAgent:
             prompt_parts.append("")
         
         # コンテキスト情報
-        if error_context.context_info:
+        if hasattr(error_context, "context_info") and error_context.context_info:
             prompt_parts.append("【追加コンテキスト】")
-            for key, value in error_context.context_info.items():
+            for key, value in getattr(error_context, "context_info", {}).items():
                 prompt_parts.append(f"- {key}: {value}")
             prompt_parts.append("")
         

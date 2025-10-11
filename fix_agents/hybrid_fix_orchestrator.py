@@ -212,15 +212,40 @@ class HybridFixOrchestrator:
         logger.info("実行 ローカル修正タスク実行")
         self.stats["local_fixes"] += 1
         result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
-        result.agent_used = "local"
         return result
     
     async def _execute_cloud_only(self, bug_fix_task: BugFixTask) -> FixResult:
         """クラウドエージェントのみで実行"""
         logger.info("実行 クラウド修正タスク実行")
+        
+        # CloudFixAgent が None の場合はエラー
+        if self.cloud_agent is None:
+            logger.error("❌ CloudFixAgent が利用できません")
+            return FixResult(
+                task_id=bug_fix_task.task_id,
+                success=False,
+                error_message="CloudFixAgent not available"
+            )
+        
         self.stats["cloud_fixes"] += 1
         result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
-        result.agent_used = "cloud"
+        return result
+    
+    async def _execute_local_first(self, bug_fix_task: BugFixTask) -> FixResult:
+        """ローカル優先、失敗時はクラウドにフォールバック"""
+        # CloudFixAgent が None の場合はエラー
+        if self.cloud_agent is None:
+            logger.error("❌ CloudFixAgent が利用できません")
+            return FixResult(
+                task_id=bug_fix_task.task_id,
+                success=False,
+                error_message="CloudFixAgent not available"
+            )
+
+        """クラウドエージェントのみで実行"""
+        logger.info("実行 クラウド修正タスク実行")
+        self.stats["cloud_fixes"] += 1
+        result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         return result
     
     async def _execute_local_first(self, bug_fix_task: BugFixTask) -> FixResult:
@@ -232,7 +257,7 @@ class HybridFixOrchestrator:
         
         if local_result.success and local_result.confidence_score >= 0.7:
             logger.info("成功 ローカル修正タスク成功")
-            local_result.agent_used = "local"
+        # local_# result.agent_used = "local"
             return local_result
         
         logger.warning("ローカル修正タスク失敗、クラウドにフォールバック")
@@ -241,20 +266,26 @@ class HybridFixOrchestrator:
         self.stats["hybrid_fixes"] += 1
         
         cloud_result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
-        cloud_result.agent_used = "hybrid_local_then_cloud"
+        # cloud_result.agent_used = "hybrid_local_then_cloud"
         
         return cloud_result
     
     async def _execute_cloud_first(self, bug_fix_task: BugFixTask) -> FixResult:
         """クラウド優先、失敗時はローカルにフォールバック"""
         logger.info("実行 クラウド修正タスク優先実行")
+        
+        # CloudFixAgent が None の場合はローカルにフォールバック
+        if self.cloud_agent is None:
+            logger.warning("⚠️ CloudFixAgent 未使用、ローカルにフォールバック")
+            return await self._execute_local_only(bug_fix_task)
+        
         self.stats["cloud_fixes"] += 1
         
         cloud_result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         
         if cloud_result.success:
             logger.info("成功 クラウド修正タスク成功")
-            cloud_result.agent_used = "cloud"
+        # cloud_# result.agent_used = "cloud"
             return cloud_result
         
         logger.warning("クラウド修正タスク失敗、ローカルにフォールバック")
@@ -263,7 +294,35 @@ class HybridFixOrchestrator:
         self.stats["hybrid_fixes"] += 1
         
         local_result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
-        local_result.agent_used = "hybrid_cloud_then_local"
+        # local_result.agent_used = "hybrid_cloud_then_local"
+        
+        return local_result
+    
+    async def _execute_parallel(self, bug_fix_task: BugFixTask) -> FixResult:
+        """ローカルとクラウドを並列実行し、最適な結果を選択"""
+        # CloudFixAgent が None の場合はローカルにフォールバック
+        if self.cloud_agent is None:
+            logger.warning("⚠️ CloudFixAgent 未使用、ローカルにフォールバック")
+            return await self._execute_local_only(bug_fix_task)
+
+        """クラウド優先、失敗時はローカルにフォールバック"""
+        logger.info("実行 クラウド修正タスク優先実行")
+        self.stats["cloud_fixes"] += 1
+        
+        cloud_result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
+        
+        if cloud_result.success:
+            logger.info("成功 クラウド修正タスク成功")
+        # cloud_# result.agent_used = "cloud"
+            return cloud_result
+        
+        logger.warning("クラウド修正タスク失敗、ローカルにフォールバック")
+        logger.info("実行 ローカル修正タスク実行")
+        self.stats["local_fixes"] += 1
+        self.stats["hybrid_fixes"] += 1
+        
+        local_result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
+        # local_result.agent_used = "hybrid_cloud_then_local"
         
         return local_result
     
@@ -296,7 +355,7 @@ class HybridFixOrchestrator:
         best_result = self._select_best_result(local_result, cloud_result)
         
         if best_result:
-            best_result.agent_used = "parallel"
+        # best_result.agent_used = "parallel"
             logger.info(f"成功 並列実行完了、最適な結果を選択: 使用エージェント={best_result.agent_used}")
             return best_result
         else:
@@ -376,7 +435,7 @@ class HybridFixOrchestrator:
             **self.stats,
             "success_rate": success_rate,
             "local_agent_stats": self.local_agent.get_stats(),
-            "cloud_agent_stats": self.cloud_agent.get_stats()
+            "cloud_agent_stats": self.cloud_agent.get_stats() if self.cloud_agent else {} if self.cloud_agent else {} if self.cloud_agent else {} if self.cloud_agent else {} if self.cloud_agent else {} if self.cloud_agent else {} if self.cloud_agent else {}
         }
     
     def print_stats(self):
