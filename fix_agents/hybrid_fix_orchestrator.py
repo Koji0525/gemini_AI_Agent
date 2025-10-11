@@ -12,8 +12,8 @@ from enum import Enum
 
 from data_models import BugFixTask, FixResult, ErrorContextModel
 from .local_fix_agent import LocalFixAgent
-from cloud_fix_agent import CloudFixAgent
-from error_classifier import ErrorClassifier
+from .cloud_fix_agent import CloudFixAgent
+from .error_classifier import ErrorClassifier
 
 logger = logging.getLogger(__name__)
 
