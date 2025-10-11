@@ -4,7 +4,7 @@ ErrorContextModelとバグ修正タスクの構造化データモデル
 """
 
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 from enum import Enum
 
