@@ -1,0 +1,43 @@
+{
+  "timestamp": "267010.1852791",
+  "total_images": 3,
+  "categories": {
+    "NON_GOOGLE": 2,
+    "ACCOUNT_IMAGE": 1
+  },
+  "images": [
+    {
+      "index": 0,
+      "src": "https://lh3.google.com/u/0/ogw/AF2bZyiwMP3C0D1T9QRCkP81UJNcwgpIAGBDrFYMd2qEh5Vr1A=s32-c-mo",
+      "alt": "",
+      "visible": true,
+      "width": 32,
+      "height": 32,
+      "x": 1868,
+      "y": 20,
+      "category": "NON_GOOGLE"
+    },
+    {
+      "index": 1,
+      "src": "https://www.gstatic.com/lamda/images/gemini_sparkle_aurora_33f86dc0c0257da337c63.svg",
+      "alt": "",
+      "visible": true,
+      "width": 16,
+      "height": 16,
+      "x": 1715.296875,
+      "y": 28,
+      "category": "NON_GOOGLE"
+    },
+    {
+      "index": 2,
+      "src": "https://lh3.googleusercontent.com/a/ACg8ocIeZEaE2-t8twzxz78a0St71ouCT6HhSO87vlQZOmjsxpqlzQ=s64-c-mo",
+      "alt": "プロフィール写真",
+      "visible": false,
+      "width": 0,
+      "height": 0,
+      "x": 0,
+      "y": 0,
+      "category": "ACCOUNT_IMAGE"
+    }
+  ]
+}
