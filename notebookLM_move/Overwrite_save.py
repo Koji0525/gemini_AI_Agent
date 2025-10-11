@@ -53,7 +53,10 @@ def main():
         r"C:\Users\color\Documents\gemini_AI_Agent",
         r"C:\Users\color\Documents\gemini_AI_Agent\wordpress",
         r"C:\Users\color\Documents\gemini_AI_Agent\task_executor",
-        r"C:\Users\color\Documents\gemini_AI_Agent\wordpress\wp_dev"
+        r"C:\Users\color\Documents\gemini_AI_Agent\wordpress\wp_dev",
+        r"C:\Users\color\Documents\gemini_AI_Agent\fix_agents",
+        r"C:\Users\color\Documents\gemini_AI_Agent\data_models",
+        r"C:\Users\color\Documents\gemini_AI_Agent\agents",
     ]
     
     # コピー先フォルダ

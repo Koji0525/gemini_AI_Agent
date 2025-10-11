@@ -1,7 +1,7 @@
 # hybrid_fix_orchestrator.py
 """
-繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ
-繝ｭ繝ｼ繧ｫ繝ｫ縺ｨ繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧堤ｵｱ諡ｬ邂｡逅・
+郢昜ｸ翫≧郢晄じﾎ懃ｹ昴・繝ｩ闖ｫ・ｮ雎・ｽ｣郢ｧ・ｪ郢晢ｽｼ郢ｧ・ｱ郢ｧ・ｹ郢晏現ﾎ樒ｹ晢ｽｼ郢ｧ・ｿ郢晢ｽｼ
+郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｨ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣郢ｧ蝣､・ｵ・ｱ隲｡・ｬ驍ゑｽ｡騾・・
 """
 
 import asyncio
@@ -19,25 +19,25 @@ logger = logging.getLogger(__name__)
 
 
 class FixStrategy(Enum):
-    """菫ｮ豁｣謌ｦ逡･"""
-    LOCAL_ONLY = "local_only"          # 繝ｭ繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ
-    CLOUD_ONLY = "cloud_only"          # 繧ｯ繝ｩ繧ｦ繝峨・縺ｿ
-    LOCAL_FIRST = "local_first"        # 繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈・
-    CLOUD_FIRST = "cloud_first"        # 繧ｯ繝ｩ繧ｦ繝牙━蜈・
-    PARALLEL = "parallel"              # 荳ｦ蛻怜ｮ溯｡・
-    ADAPTIVE = "adaptive"              # 驕ｩ蠢懃噪驕ｸ謚・
+    """闖ｫ・ｮ雎・ｽ｣隰鯉ｽｦ騾｡・･"""
+    LOCAL_ONLY = "local_only"          # 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｮ邵ｺ・ｿ
+    CLOUD_ONLY = "cloud_only"          # 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晏ｳｨ繝ｻ邵ｺ・ｿ
+    LOCAL_FIRST = "local_first"        # 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ陷・ｽｪ陷医・
+    CLOUD_FIRST = "cloud_first"        # 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晉甥笏∬怦繝ｻ
+    PARALLEL = "parallel"              # 闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡繝ｻ
+    ADAPTIVE = "adaptive"              # 鬩包ｽｩ陟｢諛・飭鬩包ｽｸ隰壹・
 
 
 class HybridFixOrchestrator:
     """
-    繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ
+    郢昜ｸ翫≧郢晄じﾎ懃ｹ昴・繝ｩ闖ｫ・ｮ雎・ｽ｣郢ｧ・ｪ郢晢ｽｼ郢ｧ・ｱ郢ｧ・ｹ郢晏現ﾎ樒ｹ晢ｽｼ郢ｧ・ｿ郢晢ｽｼ
     
-    讖溯・:
-    - 繧ｨ繝ｩ繝ｼ蛻・｡槭→繝ｫ繝ｼ繝・ぅ繝ｳ繧ｰ
-    - 繝ｭ繝ｼ繧ｫ繝ｫ/繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣縺ｮ驕ｸ謚・
-    - 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ謌ｦ逡･
-    - 荳ｦ蛻怜ｮ溯｡檎ｮ｡逅・
-    - 邨ｱ險域ュ蝣ｱ縺ｮ蜿朱寔
+    隶匁ｺｯ繝ｻ:
+    - 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ陋ｻ繝ｻ・｡讒ｭ竊堤ｹ晢ｽｫ郢晢ｽｼ郢昴・縺・ｹ晢ｽｳ郢ｧ・ｰ
+    - 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ/郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣邵ｺ・ｮ鬩包ｽｸ隰壹・
+    - 郢晁ｼ斐°郢晢ｽｼ郢晢ｽｫ郢晁・繝｣郢ｧ・ｯ隰鯉ｽｦ騾｡・･
+    - 闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡讙趣ｽｮ・｡騾・・
+    - 驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ邵ｺ・ｮ陷ｿ譛ｱ蟇・
     """
     
     def __init__(
@@ -48,20 +48,20 @@ class HybridFixOrchestrator:
         default_strategy: FixStrategy = FixStrategy.ADAPTIVE
     ):
         """
-        蛻晄悄蛹・
+        陋ｻ譎・ｄ陋ｹ繝ｻ
         
         Args:
-            local_agent: 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝・
-            cloud_agent: 繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝・
-            error_classifier: 繧ｨ繝ｩ繝ｼ蛻・｡槫勣
-            default_strategy: 繝・ヵ繧ｩ繝ｫ繝域姶逡･
+            local_agent: 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣郢ｧ・ｨ郢晢ｽｼ郢ｧ・ｸ郢ｧ・ｧ郢晢ｽｳ郢昴・
+            cloud_agent: 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣郢ｧ・ｨ郢晢ｽｼ郢ｧ・ｸ郢ｧ・ｧ郢晢ｽｳ郢昴・
+            error_classifier: 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ陋ｻ繝ｻ・｡讒ｫ蜍｣
+            default_strategy: 郢昴・繝ｵ郢ｧ・ｩ郢晢ｽｫ郢晏沺蟋ｶ騾｡・･
         """
         self.local_agent = local_agent
         self.cloud_agent = cloud_agent
         self.error_classifier = error_classifier or ErrorClassifier()
         self.default_strategy = default_strategy
         
-        # 邨ｱ險域ュ蝣ｱ
+        # 驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ
         self.stats = {
             "total_tasks": 0,
             "local_fixes": 0,
@@ -73,10 +73,10 @@ class HybridFixOrchestrator:
             "strategy_usage": {strategy.value: 0 for strategy in FixStrategy}
         }
         
-        # 菫ｮ豁｣螻･豁ｴ
+        # 闖ｫ・ｮ雎・ｽ｣陞ｻ・･雎・ｽｴ
         self.fix_history = []
         
-        logger.info(f"笨・HybridFixOrchestrator 蛻晄悄蛹門ｮ御ｺ・(謌ｦ逡･={default_strategy.value})")
+        logger.info(f"隨ｨ繝ｻHybridFixOrchestrator 陋ｻ譎・ｄ陋ｹ髢・ｮ蠕｡・ｺ繝ｻ(隰鯉ｽｦ騾｡・･={default_strategy.value})")
     
     async def execute_fix_task(
         self, 
@@ -84,36 +84,36 @@ class HybridFixOrchestrator:
         strategy: Optional[FixStrategy] = None
     ) -> FixResult:
         """
-        菫ｮ豁｣繧ｿ繧ｹ繧ｯ繧貞ｮ溯｡・
+        闖ｫ・ｮ雎・ｽ｣郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ郢ｧ雋橸ｽｮ貅ｯ・｡繝ｻ
         
         Args:
-            bug_fix_task: 繝舌げ菫ｮ豁｣繧ｿ繧ｹ繧ｯ
-            strategy: 菫ｮ豁｣謌ｦ逡･・育怐逡･譎ゅ・繝・ヵ繧ｩ繝ｫ繝茨ｼ・
+            bug_fix_task: 郢晁・縺定将・ｮ雎・ｽ｣郢ｧ・ｿ郢ｧ・ｹ郢ｧ・ｯ
+            strategy: 闖ｫ・ｮ雎・ｽ｣隰鯉ｽｦ騾｡・･繝ｻ閧ｲ諤宣｡・･隴弱ｅ繝ｻ郢昴・繝ｵ郢ｧ・ｩ郢晢ｽｫ郢晁肩・ｼ繝ｻ
             
         Returns:
-            FixResult: 菫ｮ豁｣邨先棡
+            FixResult: 闖ｫ・ｮ雎・ｽ｣驍ｨ蜈域｣｡
         """
         start_time = datetime.now()
         task_id = bug_fix_task.task_id
         
         self.stats["total_tasks"] += 1
         
-        # 謌ｦ逡･縺ｮ豎ｺ螳・
+        # 隰鯉ｽｦ騾｡・･邵ｺ・ｮ雎趣ｽｺ陞ｳ繝ｻ
         selected_strategy = strategy or self.default_strategy
         
-        # 驕ｩ蠢懃噪謌ｦ逡･縺ｮ蝣ｴ蜷医√お繝ｩ繝ｼ蛻・梵縺ｫ蝓ｺ縺･縺・※豎ｺ螳・
+        # 鬩包ｽｩ陟｢諛・飭隰鯉ｽｦ騾｡・･邵ｺ・ｮ陜｣・ｴ陷ｷ蛹ｻﾂ竏壹♀郢晢ｽｩ郢晢ｽｼ陋ｻ繝ｻ譴ｵ邵ｺ・ｫ陜難ｽｺ邵ｺ・･邵ｺ繝ｻ窶ｻ雎趣ｽｺ陞ｳ繝ｻ
         if selected_strategy == FixStrategy.ADAPTIVE:
             selected_strategy = await self._select_adaptive_strategy(bug_fix_task.error_context)
         
         self.stats["strategy_usage"][selected_strategy.value] += 1
         
         logger.info("=" * 80)
-        logger.info(f"識 繝上う繝悶Μ繝・ラ菫ｮ豁｣髢句ｧ・ {task_id}")
-        logger.info(f"投 驕ｸ謚樊姶逡･: {selected_strategy.value}")
+        logger.info(f"﨟櫁ｭ・郢昜ｸ翫≧郢晄じﾎ懃ｹ昴・繝ｩ闖ｫ・ｮ雎・ｽ｣鬮｢蜿･・ｧ繝ｻ {task_id}")
+        logger.info(f"﨟樊兜 鬩包ｽｸ隰壽ｨ雁ｧｶ騾｡・･: {selected_strategy.value}")
         logger.info("=" * 80)
         
         try:
-            # 謌ｦ逡･縺ｫ蠢懊§縺溷ｮ溯｡・
+            # 隰鯉ｽｦ騾｡・･邵ｺ・ｫ陟｢諛環ｧ邵ｺ貅ｷ・ｮ貅ｯ・｡繝ｻ
             if selected_strategy == FixStrategy.LOCAL_ONLY:
                 result = await self._execute_local_only(bug_fix_task)
                 
@@ -132,7 +132,7 @@ class HybridFixOrchestrator:
             else:
                 result = await self._execute_local_first(bug_fix_task)
             
-            # 邨ｱ險域ュ蝣ｱ縺ｮ譖ｴ譁ｰ
+            # 驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ邵ｺ・ｮ隴厄ｽｴ隴・ｽｰ
             if result.success:
                 self.stats["successful_fixes"] += 1
             else:
@@ -141,7 +141,7 @@ class HybridFixOrchestrator:
             execution_time = (datetime.now() - start_time).total_seconds()
             self._update_avg_execution_time(execution_time)
             
-            # 螻･豁ｴ縺ｫ霑ｽ蜉
+            # 陞ｻ・･雎・ｽｴ邵ｺ・ｫ髴托ｽｽ陷会｣ｰ
             self.fix_history.append({
                 "task_id": task_id,
                 "timestamp": datetime.now().isoformat(),
@@ -151,12 +151,12 @@ class HybridFixOrchestrator:
                 "agent_used": result.agent_used if hasattr(result, 'agent_used') else "unknown"
             })
             
-            logger.info(f"{'笨・ if result.success else '笶・} 菫ｮ豁｣{'謌仙粥' if result.success else '螟ｱ謨・}: {task_id} ({execution_time:.2f}遘・")
+            logger.info(f"{'隨ｨ繝ｻ if result.success else '隨ｶ繝ｻ} 闖ｫ・ｮ雎・ｽ｣{'隰御ｻ咏ｲ･' if result.success else '陞滂ｽｱ隰ｨ繝ｻ}: {task_id} ({execution_time:.2f}驕倥・")
             
             return result
             
         except Exception as e:
-            logger.error(f"徴 菫ｮ豁｣螳溯｡後お繝ｩ繝ｼ: {e}", exc_info=True)
+            logger.error(f"﨟槫ｾｴ 闖ｫ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡蠕後♀郢晢ｽｩ郢晢ｽｼ: {e}", exc_info=True)
             self.stats["failed_fixes"] += 1
             
             return FixResult(
@@ -171,72 +171,72 @@ class HybridFixOrchestrator:
     
     async def _select_adaptive_strategy(self, error_context: ErrorContextModel) -> FixStrategy:
         """
-        繧ｨ繝ｩ繝ｼ繧ｳ繝ｳ繝・く繧ｹ繝医↓蝓ｺ縺･縺・※驕ｩ蠢懃噪縺ｫ謌ｦ逡･繧帝∈謚・
+        郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ郢ｧ・ｳ郢晢ｽｳ郢昴・縺冗ｹｧ・ｹ郢晏現竊楢搏・ｺ邵ｺ・･邵ｺ繝ｻ窶ｻ鬩包ｽｩ陟｢諛・飭邵ｺ・ｫ隰鯉ｽｦ騾｡・･郢ｧ蟶昶・隰壹・
         
         Args:
-            error_context: 繧ｨ繝ｩ繝ｼ繧ｳ繝ｳ繝・く繧ｹ繝・
+            error_context: 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ郢ｧ・ｳ郢晢ｽｳ郢昴・縺冗ｹｧ・ｹ郢昴・
             
         Returns:
-            FixStrategy: 驕ｸ謚槭＆繧後◆謌ｦ逡･
+            FixStrategy: 鬩包ｽｸ隰壽ｧｭ・・ｹｧ蠕娯螺隰鯉ｽｦ騾｡・･
         """
-        # 繧ｨ繝ｩ繝ｼ蛻・｡・
+        # 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ陋ｻ繝ｻ・｡繝ｻ
         classification = self.error_classifier.classify(error_context)
         
         complexity = classification.get("complexity", "medium")
         error_type = classification.get("error_type", "unknown")
         confidence = classification.get("confidence", 0.5)
         
-        logger.info(f"投 繧ｨ繝ｩ繝ｼ蛻・｡・ 隍・尅蠎ｦ={complexity}, 繧ｿ繧､繝・{error_type}, 菫｡鬆ｼ蠎ｦ={confidence:.2f}")
+        logger.info(f"﨟樊兜 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ陋ｻ繝ｻ・｡繝ｻ 髫阪・蟆・趣ｽｦ={complexity}, 郢ｧ・ｿ郢ｧ・､郢昴・{error_type}, 闖ｫ・｡鬯・ｽｼ陟趣ｽｦ={confidence:.2f}")
         
-        # 隍・尅蠎ｦ縺ｫ蝓ｺ縺･縺乗姶逡･驕ｸ謚・
+        # 髫阪・蟆・趣ｽｦ邵ｺ・ｫ陜難ｽｺ邵ｺ・･邵ｺ荵怜ｧｶ騾｡・･鬩包ｽｸ隰壹・
         if complexity == "simple":
-            # 蜊倡ｴ斐↑繧ｨ繝ｩ繝ｼ縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ縺ｧ霑・溘↓蜃ｦ逅・
+            # 陷雁｡・ｴ譁絶・郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ邵ｺ・ｯ郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｧ髴代・ﾂ貅倪・陷・ｽｦ騾・・
             return FixStrategy.LOCAL_FIRST
             
         elif complexity == "medium":
-            # 荳ｭ遞句ｺｦ縺ｮ隍・尅縺輔・繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈医∝､ｱ謨玲凾繧ｯ繝ｩ繧ｦ繝・
+            # 闕ｳ・ｭ驕槫唱・ｺ・ｦ邵ｺ・ｮ髫阪・蟆・ｸｺ霈斐・郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ陷・ｽｪ陷亥現ﾂ竏晢ｽ､・ｱ隰ｨ邇ｲ蜃ｾ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢昴・
             if confidence > 0.7:
                 return FixStrategy.LOCAL_FIRST
             else:
                 return FixStrategy.CLOUD_FIRST
                 
         else:  # complex
-            # 隍・尅縺ｪ繧ｨ繝ｩ繝ｼ縺ｯ譛蛻昴°繧峨け繝ｩ繧ｦ繝・
+            # 髫阪・蟆・ｸｺ・ｪ郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ邵ｺ・ｯ隴崢陋ｻ譏ｴﾂｰ郢ｧ蟲ｨ縺醍ｹ晢ｽｩ郢ｧ・ｦ郢昴・
             if error_type in ["design_flaw", "architectural", "multi_file"]:
                 return FixStrategy.CLOUD_ONLY
             else:
                 return FixStrategy.CLOUD_FIRST
     
     async def _execute_local_only(self, bug_fix_task: BugFixTask) -> FixResult:
-        """繝ｭ繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ縺ｧ螳溯｡・""
-        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣螳溯｡・)
+        """郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｮ邵ｺ・ｿ邵ｺ・ｧ陞ｳ貅ｯ・｡繝ｻ""
+        logger.info("﨟樊漉 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡繝ｻ)
         self.stats["local_fixes"] += 1
         result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
         result.agent_used = "local"
         return result
     
     async def _execute_cloud_only(self, bug_fix_task: BugFixTask) -> FixResult:
-        """繧ｯ繝ｩ繧ｦ繝峨・縺ｿ縺ｧ螳溯｡・""
-        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螳溯｡・)
+        """郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晏ｳｨ繝ｻ邵ｺ・ｿ邵ｺ・ｧ陞ｳ貅ｯ・｡繝ｻ""
+        logger.info("隨倥・・ｸ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡繝ｻ)
         self.stats["cloud_fixes"] += 1
         result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         result.agent_used = "cloud"
         return result
     
     async def _execute_local_first(self, bug_fix_task: BugFixTask) -> FixResult:
-        """繝ｭ繝ｼ繧ｫ繝ｫ蜆ｪ蜈医∝､ｱ謨玲凾繧ｯ繝ｩ繧ｦ繝峨↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ"""
-        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣繧定ｩｦ陦・)
+        """郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ陷・ｽｪ陷亥現ﾂ竏晢ｽ､・ｱ隰ｨ邇ｲ蜃ｾ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晏ｳｨ竊鍋ｹ晁ｼ斐°郢晢ｽｼ郢晢ｽｫ郢晁・繝｣郢ｧ・ｯ"""
+        logger.info("﨟樊漉 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣郢ｧ螳夲ｽｩ・ｦ髯ｦ繝ｻ)
         self.stats["local_fixes"] += 1
         
         local_result = await self.local_agent.execute_bug_fix_task(bug_fix_task)
         
         if local_result.success and local_result.confidence_score >= 0.7:
-            logger.info("笨・繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣謌仙粥")
+            logger.info("隨ｨ繝ｻ郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣隰御ｻ咏ｲ･")
             local_result.agent_used = "local"
             return local_result
         
-        logger.warning("笞・・繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣荳榊香蛻・√け繝ｩ繧ｦ繝峨↓繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ")
-        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螳溯｡・)
+        logger.warning("隨橸｣ｰ繝ｻ繝ｻ郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣闕ｳ讎企ｦ呵崕繝ｻﾂ竏壹￠郢晢ｽｩ郢ｧ・ｦ郢晏ｳｨ竊鍋ｹ晁ｼ斐°郢晢ｽｼ郢晢ｽｫ郢晁・繝｣郢ｧ・ｯ")
+        logger.info("隨倥・・ｸ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡繝ｻ)
         self.stats["cloud_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
@@ -246,19 +246,19 @@ class HybridFixOrchestrator:
         return cloud_result
     
     async def _execute_cloud_first(self, bug_fix_task: BugFixTask) -> FixResult:
-        """繧ｯ繝ｩ繧ｦ繝牙━蜈医∝､ｱ謨玲凾繝ｭ繝ｼ繧ｫ繝ｫ縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ"""
-        logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣繧定ｩｦ陦・)
+        """郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晉甥笏∬怦蛹ｻﾂ竏晢ｽ､・ｱ隰ｨ邇ｲ蜃ｾ郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｫ郢晁ｼ斐°郢晢ｽｼ郢晢ｽｫ郢晁・繝｣郢ｧ・ｯ"""
+        logger.info("隨倥・・ｸ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣郢ｧ螳夲ｽｩ・ｦ髯ｦ繝ｻ)
         self.stats["cloud_fixes"] += 1
         
         cloud_result = await self.cloud_agent.execute_bug_fix_task(bug_fix_task)
         
         if cloud_result.success:
-            logger.info("笨・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣謌仙粥")
+            logger.info("隨ｨ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣隰御ｻ咏ｲ･")
             cloud_result.agent_used = "cloud"
             return cloud_result
         
-        logger.warning("笞・・繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣螟ｱ謨励√Ο繝ｼ繧ｫ繝ｫ縺ｫ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ")
-        logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣螳溯｡・)
+        logger.warning("隨橸｣ｰ繝ｻ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣陞滂ｽｱ隰ｨ蜉ｱﾂ竏墅溽ｹ晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｫ郢晁ｼ斐°郢晢ｽｼ郢晢ｽｫ郢晁・繝｣郢ｧ・ｯ")
+        logger.info("﨟樊漉 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡繝ｻ)
         self.stats["local_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
@@ -268,13 +268,13 @@ class HybridFixOrchestrator:
         return local_result
     
     async def _execute_parallel(self, bug_fix_task: BugFixTask) -> FixResult:
-        """繝ｭ繝ｼ繧ｫ繝ｫ縺ｨ繧ｯ繝ｩ繧ｦ繝峨ｒ荳ｦ蛻怜ｮ溯｡後＠縲∵怙濶ｯ縺ｮ邨先棡繧帝∈謚・""
-        logger.info("楳 荳ｦ蛻嶺ｿｮ豁｣螳溯｡鯉ｼ医Ο繝ｼ繧ｫ繝ｫ & 繧ｯ繝ｩ繧ｦ繝会ｼ・)
+        """郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｨ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晏ｳｨ・定叉・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡蠕鯉ｼ邵ｲ竏ｵ諤呎ｿｶ・ｯ邵ｺ・ｮ驍ｨ蜈域｣｡郢ｧ蟶昶・隰壹・""
+        logger.info("﨟樊･ｳ 闕ｳ・ｦ陋ｻ蠍ｺ・ｿ・ｮ雎・ｽ｣陞ｳ貅ｯ・｡魃会ｽｼ蛹ｻﾎ溽ｹ晢ｽｼ郢ｧ・ｫ郢晢ｽｫ & 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢昜ｼ夲ｽｼ繝ｻ)
         self.stats["local_fixes"] += 1
         self.stats["cloud_fixes"] += 1
         self.stats["hybrid_fixes"] += 1
         
-        # 荳ｦ蛻怜ｮ溯｡・
+        # 闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡繝ｻ
         results = await asyncio.gather(
             self.local_agent.execute_bug_fix_task(bug_fix_task),
             self.cloud_agent.execute_bug_fix_task(bug_fix_task),
@@ -283,25 +283,25 @@ class HybridFixOrchestrator:
         
         local_result, cloud_result = results
         
-        # 繧ｨ繝ｩ繝ｼ繝上Φ繝峨Μ繝ｳ繧ｰ
+        # 郢ｧ・ｨ郢晢ｽｩ郢晢ｽｼ郢昜ｸ莞ｦ郢晏ｳｨﾎ懃ｹ晢ｽｳ郢ｧ・ｰ
         if isinstance(local_result, Exception):
-            logger.error(f"笶・繝ｭ繝ｼ繧ｫ繝ｫ荳ｦ蛻怜ｮ溯｡後お繝ｩ繝ｼ: {local_result}")
+            logger.error(f"隨ｶ繝ｻ郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡蠕後♀郢晢ｽｩ郢晢ｽｼ: {local_result}")
             local_result = None
         
         if isinstance(cloud_result, Exception):
-            logger.error(f"笶・繧ｯ繝ｩ繧ｦ繝我ｸｦ蛻怜ｮ溯｡後お繝ｩ繝ｼ: {cloud_result}")
+            logger.error(f"隨ｶ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｸ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡蠕後♀郢晢ｽｩ郢晢ｽｼ: {cloud_result}")
             cloud_result = None
         
-        # 譛濶ｯ縺ｮ邨先棡繧帝∈謚・
+        # 隴崢豼ｶ・ｯ邵ｺ・ｮ驍ｨ蜈域｣｡郢ｧ蟶昶・隰壹・
         best_result = self._select_best_result(local_result, cloud_result)
         
         if best_result:
             best_result.agent_used = "parallel"
-            logger.info(f"笨・荳ｦ蛻怜ｮ溯｡悟ｮ御ｺ・∵怙濶ｯ邨先棡繧帝∈謚橸ｼ医お繝ｼ繧ｸ繧ｧ繝ｳ繝・{best_result.agent_used}・・)
+            logger.info(f"隨ｨ繝ｻ闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡謔滂ｽｮ蠕｡・ｺ繝ｻﾂ竏ｵ諤呎ｿｶ・ｯ驍ｨ蜈域｣｡郢ｧ蟶昶・隰壽ｩｸ・ｼ蛹ｻ縺顔ｹ晢ｽｼ郢ｧ・ｸ郢ｧ・ｧ郢晢ｽｳ郢昴・{best_result.agent_used}繝ｻ繝ｻ)
             return best_result
         else:
-            # 荳｡譁ｹ螟ｱ謨・
-            logger.error("笶・荳ｦ蛻怜ｮ溯｡悟､ｱ謨暦ｼ井ｸ｡繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝亥､ｱ謨暦ｼ・)
+            # 闕ｳ・｡隴・ｽｹ陞滂ｽｱ隰ｨ繝ｻ
+            logger.error("隨ｶ繝ｻ闕ｳ・ｦ陋ｻ諤懶ｽｮ貅ｯ・｡謔滂ｽ､・ｱ隰ｨ證ｦ・ｼ莠包ｽｸ・｡郢ｧ・ｨ郢晢ｽｼ郢ｧ・ｸ郢ｧ・ｧ郢晢ｽｳ郢昜ｺ･・､・ｱ隰ｨ證ｦ・ｼ繝ｻ)
             return FixResult(
                 task_id=bug_fix_task.task_id,
                 success=False,
@@ -319,55 +319,55 @@ class HybridFixOrchestrator:
         cloud_result: Optional[FixResult]
     ) -> Optional[FixResult]:
         """
-        2縺､縺ｮ邨先棡縺九ｉ譛濶ｯ縺ｮ繧ゅ・繧帝∈謚・
+        2邵ｺ・､邵ｺ・ｮ驍ｨ蜈域｣｡邵ｺ荵晢ｽ芽ｭ崢豼ｶ・ｯ邵ｺ・ｮ郢ｧ繧・・郢ｧ蟶昶・隰壹・
         
         Args:
-            local_result: 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡
-            cloud_result: 繧ｯ繝ｩ繧ｦ繝臥ｵ先棡
+            local_result: 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ驍ｨ蜈域｣｡
+            cloud_result: 郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晁・・ｵ蜈域｣｡
             
         Returns:
-            Optional[FixResult]: 譛濶ｯ縺ｮ邨先棡
+            Optional[FixResult]: 隴崢豼ｶ・ｯ邵ｺ・ｮ驍ｨ蜈域｣｡
         """
-        # 縺ｩ縺｡繧峨°縺君one縺ｮ蝣ｴ蜷・
+        # 邵ｺ・ｩ邵ｺ・｡郢ｧ蟲ｨﾂｰ邵ｺ蜷孃ne邵ｺ・ｮ陜｣・ｴ陷ｷ繝ｻ
         if local_result is None:
             return cloud_result
         if cloud_result is None:
             return local_result
         
-        # 荳｡譁ｹ謌仙粥縺ｮ蝣ｴ蜷医∽ｿ｡鬆ｼ蠎ｦ縺ｧ豈碑ｼ・
+        # 闕ｳ・｡隴・ｽｹ隰御ｻ咏ｲ･邵ｺ・ｮ陜｣・ｴ陷ｷ蛹ｻﾂ竏ｽ・ｿ・｡鬯・ｽｼ陟趣ｽｦ邵ｺ・ｧ雎育｢托ｽｼ繝ｻ
         if local_result.success and cloud_result.success:
             local_score = local_result.confidence_score or 0.5
             cloud_score = cloud_result.confidence_score or 0.5
             
             if cloud_score > local_score:
-                logger.info(f"笘・ｸ・繧ｯ繝ｩ繧ｦ繝臥ｵ先棡繧帝∈謚橸ｼ井ｿ｡鬆ｼ蠎ｦ: {cloud_score:.2f} > {local_score:.2f}・・)
+                logger.info(f"隨倥・・ｸ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晁・・ｵ蜈域｣｡郢ｧ蟶昶・隰壽ｩｸ・ｼ莠包ｽｿ・｡鬯・ｽｼ陟趣ｽｦ: {cloud_score:.2f} > {local_score:.2f}繝ｻ繝ｻ)
                 return cloud_result
             else:
-                logger.info(f"捗 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡繧帝∈謚橸ｼ井ｿ｡鬆ｼ蠎ｦ: {local_score:.2f} >= {cloud_score:.2f}・・)
+                logger.info(f"﨟樊漉 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ驍ｨ蜈域｣｡郢ｧ蟶昶・隰壽ｩｸ・ｼ莠包ｽｿ・｡鬯・ｽｼ陟趣ｽｦ: {local_score:.2f} >= {cloud_score:.2f}繝ｻ繝ｻ)
                 return local_result
         
-        # 縺ｩ縺｡繧峨°荳譁ｹ縺ｮ縺ｿ謌仙粥
+        # 邵ｺ・ｩ邵ｺ・｡郢ｧ蟲ｨﾂｰ闕ｳﾂ隴・ｽｹ邵ｺ・ｮ邵ｺ・ｿ隰御ｻ咏ｲ･
         if local_result.success:
-            logger.info("捗 繝ｭ繝ｼ繧ｫ繝ｫ邨先棡繧帝∈謚橸ｼ医Ο繝ｼ繧ｫ繝ｫ縺ｮ縺ｿ謌仙粥・・)
+            logger.info("﨟樊漉 郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ驍ｨ蜈域｣｡郢ｧ蟶昶・隰壽ｩｸ・ｼ蛹ｻﾎ溽ｹ晢ｽｼ郢ｧ・ｫ郢晢ｽｫ邵ｺ・ｮ邵ｺ・ｿ隰御ｻ咏ｲ･繝ｻ繝ｻ)
             return local_result
         if cloud_result.success:
-            logger.info("笘・ｸ・繧ｯ繝ｩ繧ｦ繝臥ｵ先棡繧帝∈謚橸ｼ医け繝ｩ繧ｦ繝峨・縺ｿ謌仙粥・・)
+            logger.info("隨倥・・ｸ繝ｻ郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晁・・ｵ蜈域｣｡郢ｧ蟶昶・隰壽ｩｸ・ｼ蛹ｻ縺醍ｹ晢ｽｩ郢ｧ・ｦ郢晏ｳｨ繝ｻ邵ｺ・ｿ隰御ｻ咏ｲ･繝ｻ繝ｻ)
             return cloud_result
         
-        # 荳｡譁ｹ螟ｱ謨励・蝣ｴ蜷医∽ｿ｡鬆ｼ蠎ｦ縺碁ｫ倥＞譁ｹ
+        # 闕ｳ・｡隴・ｽｹ陞滂ｽｱ隰ｨ蜉ｱ繝ｻ陜｣・ｴ陷ｷ蛹ｻﾂ竏ｽ・ｿ・｡鬯・ｽｼ陟趣ｽｦ邵ｺ遒・ｽｫ蛟･・櫁ｭ・ｽｹ
         local_score = local_result.confidence_score or 0.0
         cloud_score = cloud_result.confidence_score or 0.0
         
         return cloud_result if cloud_score > local_score else local_result
     
     def _update_avg_execution_time(self, execution_time: float):
-        """蟷ｳ蝮・ｮ溯｡梧凾髢薙ｒ譖ｴ譁ｰ"""
+        """陝ｷ・ｳ陜ｮ繝ｻ・ｮ貅ｯ・｡譴ｧ蜃ｾ鬮｢阮呻ｽ定ｭ厄ｽｴ隴・ｽｰ"""
         total = self.stats["total_tasks"]
         current_avg = self.stats["avg_execution_time"]
         self.stats["avg_execution_time"] = (current_avg * (total - 1) + execution_time) / total
     
     def get_stats(self) -> Dict[str, Any]:
-        """邨ｱ險域ュ蝣ｱ繧貞叙蠕・""
+        """驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ郢ｧ雋槫徐陟輔・""
         success_rate = 0.0
         if self.stats["total_tasks"] > 0:
             success_rate = self.stats["successful_fixes"] / self.stats["total_tasks"]
@@ -380,20 +380,20 @@ class HybridFixOrchestrator:
         }
     
     def print_stats(self):
-        """邨ｱ險域ュ蝣ｱ繧定｡ｨ遉ｺ"""
+        """驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ郢ｧ螳夲ｽ｡・ｨ驕会ｽｺ"""
         stats = self.get_stats()
         
         print("\n" + "=" * 80)
-        print("投 繝上う繝悶Μ繝・ラ菫ｮ豁｣繧ｪ繝ｼ繧ｱ繧ｹ繝医Ξ繝ｼ繧ｿ繝ｼ 邨ｱ險域ュ蝣ｱ")
+        print("﨟樊兜 郢昜ｸ翫≧郢晄じﾎ懃ｹ昴・繝ｩ闖ｫ・ｮ雎・ｽ｣郢ｧ・ｪ郢晢ｽｼ郢ｧ・ｱ郢ｧ・ｹ郢晏現ﾎ樒ｹ晢ｽｼ郢ｧ・ｿ郢晢ｽｼ 驍ｨ・ｱ髫ｪ蝓溘Η陜｣・ｱ")
         print("=" * 80)
-        print(f"邱上ち繧ｹ繧ｯ謨ｰ: {stats['total_tasks']}")
-        print(f"謌仙粥謨ｰ: {stats['successful_fixes']} ({stats['success_rate']:.1%})")
-        print(f"螟ｱ謨玲焚: {stats['failed_fixes']}")
-        print(f"蟷ｳ蝮・ｮ溯｡梧凾髢・ {stats['avg_execution_time']:.2f}遘・)
-        print(f"\n繝ｭ繝ｼ繧ｫ繝ｫ菫ｮ豁｣: {stats['local_fixes']}蝗・)
-        print(f"繧ｯ繝ｩ繧ｦ繝我ｿｮ豁｣: {stats['cloud_fixes']}蝗・)
-        print(f"繝上う繝悶Μ繝・ラ菫ｮ豁｣: {stats['hybrid_fixes']}蝗・)
-        print("\n謌ｦ逡･菴ｿ逕ｨ迥ｶ豕・")
+        print(f"驍ｱ荳翫■郢ｧ・ｹ郢ｧ・ｯ隰ｨ・ｰ: {stats['total_tasks']}")
+        print(f"隰御ｻ咏ｲ･隰ｨ・ｰ: {stats['successful_fixes']} ({stats['success_rate']:.1%})")
+        print(f"陞滂ｽｱ隰ｨ邇ｲ辟・ {stats['failed_fixes']}")
+        print(f"陝ｷ・ｳ陜ｮ繝ｻ・ｮ貅ｯ・｡譴ｧ蜃ｾ鬮｢繝ｻ {stats['avg_execution_time']:.2f}驕倥・)
+        print(f"\n郢晢ｽｭ郢晢ｽｼ郢ｧ・ｫ郢晢ｽｫ闖ｫ・ｮ雎・ｽ｣: {stats['local_fixes']}陜励・)
+        print(f"郢ｧ・ｯ郢晢ｽｩ郢ｧ・ｦ郢晄・・ｿ・ｮ雎・ｽ｣: {stats['cloud_fixes']}陜励・)
+        print(f"郢昜ｸ翫≧郢晄じﾎ懃ｹ昴・繝ｩ闖ｫ・ｮ雎・ｽ｣: {stats['hybrid_fixes']}陜励・)
+        print("\n隰鯉ｽｦ騾｡・･闖ｴ・ｿ騾包ｽｨ霑･・ｶ雎輔・")
         for strategy, count in stats['strategy_usage'].items():
-            print(f"  - {strategy}: {count}蝗・)
+            print(f"  - {strategy}: {count}陜励・)
         print("=" * 80 + "\n")

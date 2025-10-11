@@ -8,7 +8,7 @@ python test_tasks.py
 POC
 cd C:\Users\color\Documents\gemini_AI_Agent_POC
 cd C:\Users\color\Documents
-
+py POC_maker_only_python.py
 
 cd "C:\Users\KMH SHOP\Videos\mvp\gemini_AI_Agent"
 python run_multi_agent.py --pc-id 3 --auto
