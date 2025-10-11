@@ -1,364 +1,538 @@
 """
-強化版エラーハンドラー - マルチエージェントシステム用
+error_handler_enhanced.py - 自律修正システム用エラーハンドラ
+スタックトレース捕捉、構造化、バグ修正タスク生成機能を提供
 """
 
 import logging
-import asyncio
 import traceback
 import sys
-from typing import Optional, Callable, Any
-from functools import wraps
+import inspect
+from typing import Optional, Dict, Any, List, Tuple
+from datetime import datetime
 from pathlib import Path
-import time
+from enum import Enum
+from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
 
-class RetryConfig:
-    """リトライ設定"""
-    MAX_RETRIES = 3
-    INITIAL_DELAY = 2.0  # 秒
-    MAX_DELAY = 30.0
-    BACKOFF_FACTOR = 2.0
+# データモデル定義
+class ErrorSeverity(Enum):
+    """エラーの深刻度"""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class ErrorCategory(Enum):
+    """エラーカテゴリ"""
+    SYNTAX = "syntax"
+    IMPORT = "import"
+    RUNTIME = "runtime"
+    LOGIC = "logic"
+    DESIGN = "design"
+    PERFORMANCE = "performance"
+    SECURITY = "security"
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class CodeLocation:
+    """コード位置情報"""
+    file_path: str
+    line_number: int
+    function_name: Optional[str] = None
+    class_name: Optional[str] = None
+
+
+@dataclass
+class StackTraceFrame:
+    """スタックトレースフレーム"""
+    file_path: str
+    line_number: int
+    function_name: str
+    code_context: Optional[str] = None
+    local_variables: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class ErrorContextModel:
+    """エラーコンテキストモデル"""
+    error_id: str
+    timestamp: datetime
+    task_id: str
+    agent_name: Optional[str] = None
+    error_type: str = "UnknownError"
+    error_message: Optional[str] = None
+    full_traceback: Optional[str] = None
+    stack_frames: List[StackTraceFrame] = field(default_factory=list)
+    error_location: Optional[CodeLocation] = None
+    problematic_code: Optional[str] = None
+    surrounding_code: Optional[str] = None
+    local_variables: Dict[str, Any] = field(default_factory=dict)
+    severity: ErrorSeverity = ErrorSeverity.MEDIUM
+    task_description: Optional[str] = None
+    task_parameters: Optional[Dict[str, Any]] = None
+
+
+@dataclass
+class BugFixTask:
+    """バグ修正タスク"""
+    task_id: str
+    original_task_id: str
+    error_context: ErrorContextModel
+    priority: str = "medium"
+    required_role: str = "quick_fix"
+    target_files: List[str] = field(default_factory=list)
+    status: str = "pending"
+    created_at: datetime = field(default_factory=datetime.now)
+    assigned_agent: Optional[str] = None
 
 
 class EnhancedErrorHandler:
-    """強化版エラーハンドラー"""
+    """
+    強化版エラーハンドラ - 自律修正システム用
     
-    @staticmethod
-    def log_error_with_context(error: Exception, context: str = "", 
-                               include_traceback: bool = True) -> None:
-        """コンテキスト付きエラーログ"""
-        logger.error("="*60)
-        logger.error(f"❌ エラー発生: {context}")
-        logger.error(f"エラータイプ: {type(error).__name__}")
-        logger.error(f"エラー内容: {str(error)}")
-        
-        if include_traceback:
-            logger.error("トレースバック:")
-            logger.error(traceback.format_exc())
-        
-        logger.error("="*60)
+    機能:
+    1. エラー情報の詳細な捕捉
+    2. スタックトレースの構造化
+    3. エラーコンテキストの構築
+    4. バグ修正タスクの自動生成
+    """
     
-    @staticmethod
-    async def retry_async(
-        func: Callable,
-        *args,
-        max_retries: int = RetryConfig.MAX_RETRIES,
-        delay: float = RetryConfig.INITIAL_DELAY,
-        backoff: float = RetryConfig.BACKOFF_FACTOR,
-        exceptions: tuple = (Exception,),
-        on_retry: Optional[Callable] = None,
-        **kwargs
-    ) -> Any:
+    def __init__(self):
+        """初期化"""
+        # メモリバッファ(最新100件のエラーを保持)
+        self.error_buffer: List[ErrorContextModel] = []
+        self.max_buffer_size = 100
+        
+        # エラーカウンタ
+        self.error_counter = 0
+        
+        logger.info("✅ EnhancedErrorHandler 初期化完了")
+    
+    def capture_error(
+        self,
+        exception: Exception,
+        task_id: Optional[str] = None,
+        agent_name: Optional[str] = None,
+        task_context: Optional[Dict[str, Any]] = None
+    ) -> ErrorContextModel:
         """
-        非同期関数のリトライラッパー
+        エラーを捕捉して構造化されたコンテキストを生成
         
         Args:
-            func: 実行する非同期関数
-            max_retries: 最大リトライ回数
-            delay: 初期遅延時間（秒）
-            backoff: バックオフ係数
-            exceptions: キャッチする例外のタプル
-            on_retry: リトライ時のコールバック関数
+            exception: 捕捉された例外
+            task_id: 実行中のタスクID
+            agent_name: 実行中のエージェント名
+            task_context: タスクコンテキスト情報
+            
+        Returns:
+            ErrorContextModel: 構造化されたエラーコンテキスト
         """
-        current_delay = delay
-        last_exception = None
-        
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f"試行 {attempt}/{max_retries}: {func.__name__}")
-                result = await func(*args, **kwargs)
-                
-                if attempt > 1:
-                    logger.info(f"✅ 成功（試行 {attempt}）")
-                
-                return result
-                
-            except exceptions as e:
-                last_exception = e
-                
-                if attempt == max_retries:
-                    logger.error(f"❌ 全リトライ失敗: {func.__name__}")
-                    EnhancedErrorHandler.log_error_with_context(
-                        e, f"{func.__name__} (試行 {attempt}/{max_retries})"
-                    )
-                    raise
-                
-                logger.warning(f"⚠️ 失敗（試行 {attempt}）: {str(e)}")
-                logger.info(f"🔄 {current_delay:.1f}秒後に再試行...")
-                
-                if on_retry:
-                    try:
-                        await on_retry(attempt, e)
-                    except Exception as callback_error:
-                        logger.warning(f"リトライコールバック失敗: {callback_error}")
-                
-                await asyncio.sleep(current_delay)
-                current_delay = min(current_delay * backoff, RetryConfig.MAX_DELAY)
-        
-        raise last_exception
+        try:
+            # エラーIDを生成
+            self.error_counter += 1
+            error_id = f"ERROR_{task_id or 'UNKNOWN'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{self.error_counter}"
+            
+            # エラー型とメッセージ
+            error_type = type(exception).__name__
+            error_message = str(exception)
+            
+            # スタックトレースの取得
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            full_traceback = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
+            
+            # スタックフレームの構造化
+            stack_frames = self._extract_stack_frames(exc_tb) if exc_tb else []
+            
+            # エラー発生位置の特定
+            error_location = self._extract_error_location(exc_tb) if exc_tb else None
+            
+            # 問題のあるコードスニペットを取得
+            problematic_code, surrounding_code = self._extract_code_snippets(
+                error_location.file_path if error_location else None,
+                error_location.line_number if error_location else None
+            )
+            
+            # ローカル変数の取得
+            local_vars = self._extract_local_variables(exc_tb) if exc_tb else {}
+            
+            # 深刻度を判定
+            severity = self._determine_severity(error_type, error_message)
+            
+            # ErrorContextModelを構築
+            error_context = ErrorContextModel(
+                error_id=error_id,
+                timestamp=datetime.now(),
+                task_id=task_id or "UNKNOWN",
+                agent_name=agent_name,
+                error_type=error_type,
+                error_message=error_message,
+                full_traceback=full_traceback,
+                stack_frames=stack_frames,
+                error_location=error_location,
+                problematic_code=problematic_code,
+                surrounding_code=surrounding_code,
+                local_variables=local_vars,
+                severity=severity,
+                task_description=task_context.get('description') if task_context else None,
+                task_parameters=task_context.get('parameters') if task_context else None
+            )
+            
+            # バッファに追加
+            self._add_to_buffer(error_context)
+            
+            # ログ出力
+            logger.error(f"❌ エラー捕捉: {error_id}")
+            logger.error(f"   タイプ: {error_type}")
+            logger.error(f"   メッセージ: {error_message}")
+            logger.error(f"   深刻度: {severity.value}")
+            
+            if error_location:
+                logger.error(f"   場所: {error_location.file_path}:{error_location.line_number}")
+            
+            return error_context
+            
+        except Exception as e:
+            logger.error(f"💥 エラー捕捉中にエラー: {e}")
+            # フォールバック: 最小限のエラーコンテキスト
+            return self._create_minimal_error_context(exception, task_id, agent_name)
     
-    @staticmethod
-    def retry_decorator(
-        max_retries: int = RetryConfig.MAX_RETRIES,
-        delay: float = RetryConfig.INITIAL_DELAY,
-        backoff: float = RetryConfig.BACKOFF_FACTOR,
-        exceptions: tuple = (Exception,)
-    ):
-        """リトライデコレーター"""
-        def decorator(func):
-            @wraps(func)
-            async def wrapper(*args, **kwargs):
-                return await EnhancedErrorHandler.retry_async(
-                    func, *args,
-                    max_retries=max_retries,
-                    delay=delay,
-                    backoff=backoff,
-                    exceptions=exceptions,
-                    **kwargs
+    def _extract_stack_frames(self, traceback_obj) -> List[StackTraceFrame]:
+        """スタックトレースからフレーム情報を抽出"""
+        frames = []
+        
+        try:
+            tb_list = traceback.extract_tb(traceback_obj)
+            
+            for frame_summary in tb_list:
+                # コード文脈を取得(前後1行)
+                code_context = self._get_code_context(
+                    frame_summary.filename,
+                    frame_summary.lineno,
+                    context_lines=1
                 )
-            return wrapper
-        return decorator
-    
-    @staticmethod
-    async def safe_cleanup(cleanup_func: Callable, context: str = "") -> bool:
-        """安全なクリーンアップ実行"""
-        try:
-            logger.info(f"🧹 クリーンアップ: {context}")
-            
-            if asyncio.iscoroutinefunction(cleanup_func):
-                await cleanup_func()
-            else:
-                cleanup_func()
-            
-            logger.info(f"✅ クリーンアップ完了: {context}")
-            return True
-            
-        except Exception as e:
-            logger.warning(f"⚠️ クリーンアップ失敗（無視）: {context}")
-            logger.warning(f"理由: {str(e)}")
-            return False
-    
-    @staticmethod
-    def validate_file_path(path: Any, must_exist: bool = False) -> Optional[Path]:
-        """ファイルパスのバリデーション"""
-        try:
-            if not path:
-                return None
-            
-            # 文字列に変換
-            path_str = str(path).strip()
-            
-            # URLの場合はNone
-            if path_str.lower().startswith(('http://', 'https://')):
-                logger.warning(f"URLが指定されました（ファイルパスではありません）: {path_str}")
-                return None
-            
-            # Pathオブジェクトに変換
-            path_obj = Path(path_str)
-            
-            # 存在確認が必要な場合
-            if must_exist and not path_obj.exists():
-                logger.error(f"❌ パスが存在しません: {path_obj}")
-                return None
-            
-            # 正規化して返す
-            return path_obj.resolve()
-            
-        except Exception as e:
-            logger.error(f"パスバリデーションエラー: {path}")
-            EnhancedErrorHandler.log_error_with_context(e, "パスバリデーション")
-            return None
-    
-    @staticmethod
-    def handle_import_error(module_name: str, optional: bool = True) -> bool:
-        """インポートエラーのハンドリング"""
-        try:
-            __import__(module_name)
-            logger.info(f"✅ モジュールインポート成功: {module_name}")
-            return True
-            
-        except ImportError as e:
-            if optional:
-                logger.warning(f"⚠️ オプショナルモジュール未検出（スキップ）: {module_name}")
-                return False
-            else:
-                logger.error(f"❌ 必須モジュールが見つかりません: {module_name}")
-                EnhancedErrorHandler.log_error_with_context(e, f"インポート: {module_name}")
-                raise
-    
-    @staticmethod
-    async def timeout_wrapper(
-        coro,
-        timeout: float,
-        context: str = ""
-    ) -> Any:
-        """タイムアウト付き実行"""
-        try:
-            result = await asyncio.wait_for(coro, timeout=timeout)
-            return result
-            
-        except asyncio.TimeoutError:
-            logger.error(f"⏱️ タイムアウト（{timeout}秒）: {context}")
-            raise TimeoutError(f"{context} がタイムアウトしました（{timeout}秒）")
+                
+                frame = StackTraceFrame(
+                    file_path=frame_summary.filename,
+                    line_number=frame_summary.lineno,
+                    function_name=frame_summary.name,
+                    code_context=code_context
+                )
+                frames.append(frame)
         
         except Exception as e:
-            EnhancedErrorHandler.log_error_with_context(e, context)
-            raise
-
-
-class BrowserErrorHandler:
-    """ブラウザ専用エラーハンドラー"""
+            logger.warning(f"⚠️ スタックフレーム抽出エラー: {e}")
+        
+        return frames
     
-    @staticmethod
-    async def handle_browser_crash(browser_controller, max_retries: int = 3):
-        """ブラウザクラッシュのハンドリング"""
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f"🌐 ブラウザ再起動試行 {attempt}/{max_retries}")
-                
-                # 既存インスタンスのクリーンアップ
+    def _extract_error_location(self, traceback_obj) -> Optional[CodeLocation]:
+        """エラー発生位置を抽出"""
+        try:
+            tb_list = traceback.extract_tb(traceback_obj)
+            
+            if not tb_list:
+                return None
+            
+            # 最後のフレーム(エラー発生箇所)を取得
+            last_frame = tb_list[-1]
+            
+            return CodeLocation(
+                file_path=last_frame.filename,
+                line_number=last_frame.lineno,
+                function_name=last_frame.name
+            )
+        
+        except Exception as e:
+            logger.warning(f"⚠️ エラー位置抽出エラー: {e}")
+            return None
+    
+    def _extract_code_snippets(
+        self, 
+        file_path: Optional[str], 
+        line_number: Optional[int]
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """問題のあるコードと周辺コードを抽出"""
+        if not file_path or not line_number:
+            return None, None
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 問題のある行(1行)
+            if 1 <= line_number <= len(lines):
+                problematic_code = lines[line_number - 1].rstrip()
+            else:
+                problematic_code = None
+            
+            # 周辺コード(前後10行)
+            start_line = max(0, line_number - 11)
+            end_line = min(len(lines), line_number + 10)
+            surrounding_lines = lines[start_line:end_line]
+            
+            # 行番号付きで整形
+            surrounding_code = '\n'.join([
+                f"{start_line + i + 1:4d} | {line.rstrip()}"
+                for i, line in enumerate(surrounding_lines)
+            ])
+            
+            return problematic_code, surrounding_code
+        
+        except Exception as e:
+            logger.warning(f"⚠️ コードスニペット抽出エラー: {e}")
+            return None, None
+    
+    def _get_code_context(
+        self, 
+        file_path: str, 
+        line_number: int, 
+        context_lines: int = 1
+    ) -> Optional[str]:
+        """指定行の前後のコードコンテキストを取得"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            start = max(0, line_number - context_lines - 1)
+            end = min(len(lines), line_number + context_lines)
+            
+            context = ''.join(lines[start:end])
+            return context.strip()
+        
+        except:
+            return None
+    
+    def _extract_local_variables(self, traceback_obj) -> Dict[str, Any]:
+        """ローカル変数の状態を抽出(安全に)"""
+        local_vars = {}
+        
+        try:
+            frame = traceback_obj.tb_frame
+            
+            for var_name, var_value in frame.f_locals.items():
                 try:
-                    await browser_controller.cleanup()
+                    # シリアライズ可能な値のみ保存
+                    if isinstance(var_value, (str, int, float, bool, type(None))):
+                        local_vars[var_name] = var_value
+                    elif isinstance(var_value, (list, tuple, dict)):
+                        # 複雑な構造は文字列表現に変換
+                        local_vars[var_name] = str(var_value)[:200]  # 最大200文字
+                    else:
+                        local_vars[var_name] = f"<{type(var_value).__name__} object>"
                 except:
-                    pass
-                
-                # 少し待機
-                await asyncio.sleep(3)
-                
-                # 再初期化
-                await browser_controller.setup_browser()
-                
-                # 動作確認
-                if browser_controller.page:
-                    test_result = await browser_controller.page.evaluate("1 + 1")
-                    if test_result == 2:
-                        logger.info(f"✅ ブラウザ復旧成功（試行 {attempt}）")
-                        return True
-                
-            except Exception as e:
-                logger.warning(f"ブラウザ再起動失敗（試行 {attempt}）: {e}")
-                
-                if attempt == max_retries:
-                    logger.error("❌ ブラウザ復旧不可能")
-                    raise Exception("ブラウザの再起動に失敗しました")
-                
-                await asyncio.sleep(5)
+                    local_vars[var_name] = "<unprintable>"
         
-        return False
-    
-    @staticmethod
-    async def safe_page_action(page, action_func, context: str = "", timeout: float = 30.0):
-        """安全なページ操作"""
-        try:
-            return await EnhancedErrorHandler.timeout_wrapper(
-                action_func(),
-                timeout=timeout,
-                context=context
-            )
-            
         except Exception as e:
-            logger.error(f"ページ操作失敗: {context}")
-            EnhancedErrorHandler.log_error_with_context(e, context)
-            raise
-
-
-class SheetErrorHandler:
-    """Google Sheets専用エラーハンドラー"""
+            logger.warning(f"⚠️ ローカル変数抽出エラー: {e}")
+        
+        return local_vars
     
-    @staticmethod
-    async def safe_sheet_operation(operation_func, *args, **kwargs):
-        """安全なシート操作"""
-        try:
-            return await EnhancedErrorHandler.retry_async(
-                operation_func,
-                *args,
-                max_retries=3,
-                delay=2.0,
-                exceptions=(Exception,),
-                **kwargs
-            )
-            
-        except Exception as e:
-            logger.error("Google Sheets操作が全リトライ失敗")
-            EnhancedErrorHandler.log_error_with_context(e, "Sheets操作")
-            
-            # フォールバック: ローカルキャッシュなど
-            logger.warning("⚠️ オフラインモードに切り替え（データ未保存）")
-            return None
+    def _determine_severity(self, error_type: str, error_message: str) -> ErrorSeverity:
+        """エラーの深刻度を判定"""
+        error_lower = (error_type + error_message).lower()
+        
+        # CRITICAL: システム停止レベル
+        if any(kw in error_lower for kw in [
+            'systemerror', 'memoryerror', 'recursionerror',
+            'keyboardinterrupt', 'syntaxerror'
+        ]):
+            return ErrorSeverity.CRITICAL
+        
+        # HIGH: 機能不全
+        if any(kw in error_lower for kw in [
+            'attributeerror', 'importerror', 'modulenotfound',
+            'typeerror', 'valueerror'
+        ]):
+            return ErrorSeverity.HIGH
+        
+        # MEDIUM: 部分的な問題
+        if any(kw in error_lower for kw in [
+            'keyerror', 'indexerror', 'filenotfounderror'
+        ]):
+            return ErrorSeverity.MEDIUM
+        
+        # LOW: 軽微な問題
+        return ErrorSeverity.LOW
+    
+    def _add_to_buffer(self, error_context: ErrorContextModel):
+        """エラーコンテキストをバッファに追加"""
+        self.error_buffer.append(error_context)
+        
+        # バッファサイズ制限
+        if len(self.error_buffer) > self.max_buffer_size:
+            self.error_buffer.pop(0)  # 最古のエラーを削除
+    
+    def _create_minimal_error_context(
+        self,
+        exception: Exception,
+        task_id: Optional[str],
+        agent_name: Optional[str]
+    ) -> ErrorContextModel:
+        """最小限のエラーコンテキストを作成(フォールバック)"""
+        return ErrorContextModel(
+            error_id=f"ERROR_MINIMAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            timestamp=datetime.now(),
+            task_id=task_id or "UNKNOWN",
+            agent_name=agent_name,
+            error_type=type(exception).__name__,
+            error_message=str(exception),
+            full_traceback=traceback.format_exc(),
+            severity=ErrorSeverity.MEDIUM
+        )
+    
+    def get_recent_errors(self, count: int = 10) -> List[ErrorContextModel]:
+        """最近のエラーを取得"""
+        return self.error_buffer[-count:]
+    
+    def get_error_by_id(self, error_id: str) -> Optional[ErrorContextModel]:
+        """IDでエラーを検索"""
+        for error in reversed(self.error_buffer):
+            if error.error_id == error_id:
+                return error
+        return None
+    
+    def clear_buffer(self):
+        """バッファをクリア"""
+        self.error_buffer.clear()
+        logger.info("🧹 エラーバッファをクリアしました")
 
 
 class TaskErrorHandler:
-    """タスク実行専用エラーハンドラー"""
+    """
+    タスク実行用エラーハンドラ - バグ修正タスク生成機能付き
+    """
     
-    @staticmethod
-    async def handle_task_failure(
-        task: dict,
-        error: Exception,
-        sheets_manager,
-        retry: bool = True
-    ) -> bool:
-        """タスク失敗のハンドリング"""
+    def __init__(self, error_handler: EnhancedErrorHandler):
+        """
+        初期化
+        
+        Args:
+            error_handler: EnhancedErrorHandlerインスタンス
+        """
+        self.error_handler = error_handler
+        self.bug_fix_tasks: List[BugFixTask] = []
+        
+        logger.info("✅ TaskErrorHandler 初期化完了")
+    
+    def handle_task_error(
+        self,
+        exception: Exception,
+        task: Dict[str, Any],
+        agent_name: Optional[str] = None,
+        auto_generate_fix_task: bool = True
+    ) -> Optional[BugFixTask]:
+        """
+        タスク実行エラーを処理し、必要に応じてバグ修正タスクを生成
+        
+        Args:
+            exception: 捕捉された例外
+            task: 失敗したタスク情報
+            agent_name: エージェント名
+            auto_generate_fix_task: バグ修正タスク自動生成フラグ
+            
+        Returns:
+            BugFixTask: 生成されたバグ修正タスク(生成しない場合はNone)
+        """
         try:
-            logger.error(f"❌ タスク失敗: {task.get('task_id', 'UNKNOWN')}")
-            EnhancedErrorHandler.log_error_with_context(
-                error,
-                f"タスク {task.get('description', 'N/A')[:50]}"
+            task_id = task.get('task_id', 'UNKNOWN')
+            
+            # エラーコンテキストを捕捉
+            error_context = self.error_handler.capture_error(
+                exception=exception,
+                task_id=task_id,
+                agent_name=agent_name,
+                task_context=task
             )
             
-            # ステータス更新
-            try:
-                await sheets_manager.update_task_status(
-                    task['task_id'],
-                    'failed',
-                    error_message=str(error)
-                )
-            except Exception as update_error:
-                logger.warning(f"ステータス更新失敗: {update_error}")
+            # 自動修正が不要な場合は終了
+            if not auto_generate_fix_task:
+                return None
             
-            # リトライ可能かチェック
-            if retry and TaskErrorHandler.is_retryable_error(error):
-                logger.info("🔄 リトライ可能なエラー")
-                return True
+            # 致命的なエラーのみバグ修正タスクを生成
+            if error_context.severity in [ErrorSeverity.CRITICAL, ErrorSeverity.HIGH]:
+                bug_fix_task = self._generate_bug_fix_task(error_context, task)
+                self.bug_fix_tasks.append(bug_fix_task)
+                
+                logger.info(f"🔧 バグ修正タスク生成: {bug_fix_task.task_id}")
+                return bug_fix_task
             
-            return False
+            return None
             
         except Exception as e:
-            logger.error(f"タスク失敗ハンドリング中のエラー: {e}")
-            return False
+            logger.error(f"💥 タスクエラーハンドリング中にエラー: {e}")
+            return None
     
-    @staticmethod
-    def is_retryable_error(error: Exception) -> bool:
-        """リトライ可能なエラーか判定"""
-        retryable_patterns = [
-            "timeout",
-            "network",
-            "connection",
-            "temporary",
-            "rate limit"
-        ]
+    def _generate_bug_fix_task(
+        self,
+        error_context: ErrorContextModel,
+        original_task: Dict[str, Any]
+    ) -> BugFixTask:
+        """バグ修正タスクを生成"""
         
-        error_str = str(error).lower()
-        return any(pattern in error_str for pattern in retryable_patterns)
+        # バグ修正タスクIDを生成
+        fix_task_id = f"FIX_BUG_{error_context.task_id}_{datetime.now().strftime('%H%M%S')}"
+        
+        # 修正対象ファイルを特定
+        target_files = []
+        if error_context.error_location:
+            target_files.append(error_context.error_location.file_path)
+        
+        bug_fix_task = BugFixTask(
+            task_id=fix_task_id,
+            original_task_id=error_context.task_id,
+            error_context=error_context,
+            priority="critical" if error_context.severity == ErrorSeverity.CRITICAL else "high",
+            required_role="quick_fix",
+            target_files=target_files,
+            status="pending"
+        )
+        
+        return bug_fix_task
+    
+    def get_pending_fix_tasks(self) -> List[BugFixTask]:
+        """未処理のバグ修正タスクを取得"""
+        return [task for task in self.bug_fix_tasks if task.status == "pending"]
+    
+    def get_all_fix_tasks(self) -> List[BugFixTask]:
+        """全バグ修正タスクを取得"""
+        return self.bug_fix_tasks.copy()
 
 
 # 使用例
 if __name__ == "__main__":
-    async def example_usage():
-        # リトライデコレーターの使用例
-        @EnhancedErrorHandler.retry_decorator(max_retries=3)
-        async def unstable_operation():
-            # 不安定な処理
-            import random
-            if random.random() < 0.7:
-                raise Exception("一時的なエラー")
-            return "成功"
-        
-        try:
-            result = await unstable_operation()
-            print(f"結果: {result}")
-        except Exception as e:
-            print(f"失敗: {e}")
+    # テスト用のエラーハンドラ
+    error_handler = EnhancedErrorHandler()
+    task_handler = TaskErrorHandler(error_handler)
     
-    asyncio.run(example_usage())
+    # テスト用の例外
+    try:
+        # 意図的にエラーを発生
+        result = 1 / 0
+    except Exception as e:
+        # エラーを捕捉
+        error_context = error_handler.capture_error(
+            exception=e,
+            task_id="TEST_TASK_001",
+            agent_name="TestAgent",
+            task_context={
+                "description": "テストタスク",
+                "parameters": {"param1": "value1"}
+            }
+        )
+        
+        print(f"捕捉されたエラー: {error_context.error_type}")
+        print(f"エラーメッセージ: {error_context.error_message}")
+        print(f"深刻度: {error_context.severity.value}")
+        
+        # バグ修正タスク生成
+        bug_task = task_handler.handle_task_error(
+            exception=e,
+            task={"task_id": "TEST_TASK_001", "description": "テストタスク"},
+            agent_name="TestAgent"
+        )
+        
+        if bug_task:
+            print(f"生成された修正タスク: {bug_task.task_id}")

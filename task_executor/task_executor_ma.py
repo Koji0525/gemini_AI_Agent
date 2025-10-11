@@ -1,8 +1,6 @@
-"""
-task_executor_ma.py
-M&A/企業検索専用のタスク実行モジュール（完全版）
-task_executor.pyから分離
-"""
+# task_executor_ma.py
+# M&A/企業検索専用のタスク実行モジュール（完全版）
+
 import asyncio
 import logging
 from typing import Dict, Optional, Any, List
@@ -13,50 +11,101 @@ logger = logging.getLogger(__name__)
 
 
 class MATaskExecutor:
-    """M&A/企業検索タスク専用の実行クラス"""
+    """M&A/企業検索タスク専用の実行クラス（依存関係注入対応版）"""
 
-    def __init__(self, sheets_manager, browser, max_iterations: int = 30):
+    def __init__(self, sheets_manager, browser, max_iterations: int = 30, 
+                 wp_agent=None, plugin_agent=None):
         """
-        MATaskExecutorの初期化
+        MATaskExecutorの初期化（緩和版 - 必須チェックを削除）
     
         Args:
             sheets_manager: Google Sheetsマネージャー
             browser: ブラウザコントローラー
-            max_iterations: 最大イテレーション数（デフォルト30）
+            max_iterations: 最大イテレーション数
+            wp_agent: WordPressエージェント（後で設定可能）
+            plugin_agent: プラグインエージェント（後で設定可能）
         """
         # === パート1: 基本プロパティの設定 ===
         self.sheets_manager = sheets_manager
         self.browser = browser
         self.max_iterations = max_iterations
         self.agents = {}  # エージェント辞書を空で初期化
-        self.review_agent = None  # レビューエージェント用の属性
+        self.review_agent = None
     
-        logger.info(f"MATaskExecutor initialized (max_iterations={max_iterations})")
+        # === パート2: エージェントの設定（必須チェックを削除）===
+        self.wp_agent = wp_agent
+        self.plugin_agent = plugin_agent
     
+        # === パート3: 遅延初期化フラグ ===
+        self._initialized = False
+    
+        logger.info(f"✅ MATaskExecutor 基本初期化完了 (max_iterations={max_iterations})")
+        logger.info(f"   - wp_agent: {'✅ 設定済み' if wp_agent else '⚠️ 未設定（後で設定可能）'}")
+        logger.info(f"   - plugin_agent: {'✅ 設定済み' if plugin_agent else '⚠️ 未設定（後で設定可能）'}")
+
+    def set_wordpress_agent(self, wp_agent):
+        """WordPressエージェントを後から設定"""
+        if not wp_agent:
+            logger.error("❌ 設定するWordPressエージェントがNoneです")
+            return False
+    
+        self.wp_agent = wp_agent
+        self.agents['wordpress'] = wp_agent
+        logger.info("✅ WordPressエージェントを後から設定しました")
+    
+        # プラグインマネージャーも自動登録
+        if hasattr(wp_agent, 'plugin_manager') and wp_agent.plugin_manager:
+            self.plugin_agent = wp_agent.plugin_manager
+            self.agents['plugin'] = wp_agent.plugin_manager
+            logger.info("✅ プラグインマネージャーを自動登録しました")
+    
+        self._initialized = True
+        return True
+
+    def set_plugin_agent(self, plugin_agent):
+        """プラグインエージェントを後から設定"""
+        if not plugin_agent:
+            logger.error("❌ 設定するプラグインエージェントがNoneです")
+            return False
+    
+        self.plugin_agent = plugin_agent
+        self.agents['plugin'] = plugin_agent
+        logger.info("✅ プラグインエージェントを後から設定しました")
+        return True
+
+    def ensure_agents_ready(self):
+        """エージェントが準備できているか確認"""
+        if not self.wp_agent:
+            logger.error("❌ WordPressエージェントがまだ設定されていません")
+            return False
+        return True
+    
+    def _register_core_agents(self):
+        """コアエージェントを自動登録"""
+        # WordPressエージェント登録
+        self.agents['wordpress'] = self.wp_agent
+        logger.info("✅ WordPressエージェントを登録しました")
+        
+        # プラグインエージェント登録（存在する場合）
+        if self.plugin_agent:
+            self.agents['plugin'] = self.plugin_agent
+            logger.info("✅ プラグインエージェントを登録しました")
+        elif hasattr(self.wp_agent, 'plugin_manager') and self.wp_agent.plugin_manager:
+            self.agents['plugin'] = self.wp_agent.plugin_manager
+            logger.info("✅ WordPressエージェントからプラグインマネージャーを登録しました")
+        else:
+            logger.warning("⚠️ プラグインエージェントが見つかりませんでした")
+            
     # === 追加メソッド: エージェント登録機能 ===
     def register_agent(self, agent_name: str, agent):
-        """
-        エージェントを登録
-        
-        Args:
-            agent_name: エージェント名（例: 'wordpress', 'plugin'）
-            agent: エージェントインスタンス
-        """
+        """エージェントを登録"""
         self.agents[agent_name] = agent
         logger.info(f"✅ エージェント '{agent_name}' を登録しました")
     
-    # ========================================
-    # ✅ ここに追加: レビューエージェント登録メソッド
-    # ========================================
     def register_review_agent(self, review_agent):
-        """
-        レビューエージェントを登録
-        
-        Args:
-            review_agent: ReviewAgentインスタンス
-        """
+        """レビューエージェントを登録"""
         self.review_agent = review_agent
-        self.agents['review'] = review_agent  # agentsディクショナリにも登録
+        self.agents['review'] = review_agent
         logger.info("✅ レビューエージェントを登録しました")
     
     # ========================================
@@ -412,26 +461,46 @@ class MATaskExecutor:
         
         return result
     
+    # === 修正: M&A案件投稿メソッド ===
     async def _execute_ma_case_post(self, task: Dict) -> Dict:
-        """M&A案件投稿タスクを実行"""
+        """M&A案件投稿タスクを実行（完全修正版）"""
         logger.info("【M&A案件投稿】")
 
-        wp_agent = self.agents.get('wordpress')
-        if not wp_agent:
-            # === パート1: WordPressエージェント未登録エラー ===
-            logger.error("❌ WordPressエージェントが登録されていません")
-            logger.error("登録済みエージェント一覧:")
-            for agent_name in self.agents.keys():
-                logger.error(f"  - {agent_name}")
+        # === パート1: 複数の方法でWordPressエージェントを取得 ===
+        wp_agent = None
         
+        # 方法1: 直接属性から取得
+        if hasattr(self, 'wp_agent') and self.wp_agent:
+            wp_agent = self.wp_agent
+            logger.info("✅ wp_agent 属性から取得")
+        
+        # 方法2: agents辞書から取得
+        elif 'wordpress' in self.agents and self.agents['wordpress']:
+            wp_agent = self.agents['wordpress']
+            logger.info("✅ agents辞書から取得")
+        
+        # 方法3: フォールバック - 登録済みエージェントから検索
+        else:
+            logger.error("❌ WordPressエージェントが見つかりません。登録状況:")
+            for agent_name, agent_instance in self.agents.items():
+                logger.error(f"  - {agent_name}: {agent_instance}")
+            
             return {
                 'success': False,
-                'error': 'WordPressエージェントが登録されていません。test_tasks.pyでエージェント登録を確認してください。'
+                'error': 'WordPressエージェントが登録されていません。以下のエージェントのみ登録されています: ' + 
+                        ', '.join(self.agents.keys())
             }
-        
+
+        if not wp_agent:
+            logger.error("❌ WordPressエージェントの取得に失敗")
+            return {
+                'success': False,
+                'error': 'WordPressエージェントの取得に失敗しました'
+            }
+
+        # === パート2: タスクパラメータの構築 ===
         parameters = task.get('parameters', {})
         
-        # タスクパラメータを構築
         task_params = {
             'post_type': 'ma_case',
             'post_title': parameters.get('post_title', '新規M&A案件'),
@@ -441,41 +510,74 @@ class MATaskExecutor:
             'post_status': parameters.get('post_status', 'draft')
         }
         
-        # WordPressエージェントで実行
-        if hasattr(wp_agent, 'create_ma_case_post'):
-            result = await wp_agent.create_ma_case_post(task_params)
-        else:
-            logger.warning("create_ma_case_post メソッドが見つかりません")
-            # フォールバック: 通常の投稿作成
-            result = await wp_agent.process_task(task)
-        
-        return result
+        # === パート3: WordPressエージェントで実行 ===
+        try:
+            logger.info(f"📝 WordPressエージェントでタスク実行: {task_params['post_title']}")
+            
+            if hasattr(wp_agent, 'create_ma_case_post'):
+                result = await wp_agent.create_ma_case_post(task_params)
+            else:
+                logger.warning("⚠️ create_ma_case_post メソッドが見つからないため、process_task を使用")
+                modified_task = task.copy()
+                modified_task['parameters'] = task_params
+                result = await wp_agent.process_task(modified_task)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ M&A案件投稿実行エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     async def _execute_search_setup(self, task: Dict) -> Dict:
-        """検索機能設定タスクを実行"""
+        """検索機能設定タスクを実行（完全修正版）"""
         logger.info("【検索機能設定】")
 
-        # === パート1: プラグインエージェント取得（フォールバック付き） ===
-        plugin_agent = self.agents.get('plugin')
-
-        # プラグインエージェントがない場合、WordPressエージェントから取得を試みる
-        if not plugin_agent:
-            logger.warning("⚠️ plugin エージェントが直接登録されていません")
+        # === パート1: 複数の方法でプラグインエージェントを取得 ===
+        plugin_agent = None
         
-            wp_agent = self.agents.get('wordpress')
-            if wp_agent and hasattr(wp_agent, 'plugin_manager'):
-                plugin_agent = wp_agent.plugin_manager
-                logger.info("✅ WordPressエージェントからplugin_managerを取得しました")
+        # 方法1: 直接属性から取得
+        if hasattr(self, 'plugin_agent') and self.plugin_agent:
+            plugin_agent = self.plugin_agent
+            logger.info("✅ plugin_agent 属性から取得")
+        
+        # 方法2: agents辞書から取得
+        elif 'plugin' in self.agents and self.agents['plugin']:
+            plugin_agent = self.agents['plugin']
+            logger.info("✅ agents辞書から取得")
+        
+        # 方法3: WordPressエージェントから取得
+        elif hasattr(self, 'wp_agent') and self.wp_agent and hasattr(self.wp_agent, 'plugin_manager'):
+            plugin_agent = self.wp_agent.plugin_manager
+            logger.info("✅ WordPressエージェントからplugin_managerを取得")
+        
+        # 方法4: フォールバック
+        else:
+            logger.error("❌ プラグインエージェントが見つかりません。代替方法を試行...")
+            
+            # WordPressエージェントで直接処理を試みる
+            if hasattr(self, 'wp_agent') and self.wp_agent:
+                logger.info("🔧 WordPressエージェントで直接処理")
+                return await self.wp_agent.process_task(task)
             else:
-                logger.error("❌ プラグインエージェントが見つかりません")
+                logger.error("❌ 代替方法も失敗")
                 return {
                     'success': False,
-                    'error': 'プラグインエージェントが登録されていません。WordPressエージェントを確認してください。'
+                    'error': 'プラグインエージェントが見つかりません。WordPressエージェントも利用できません。'
                 }
-        
+
+        if not plugin_agent:
+            logger.error("❌ プラグインエージェントの取得に失敗")
+            return {
+                'success': False,
+                'error': 'プラグインエージェントの取得に失敗しました'
+            }
+
+        # === パート2: タスク実行 ===
         parameters = task.get('parameters', {})
         
-        # FacetWP設定タスクとして実行
         task_params = {
             'plugin_name': 'facetwp',
             'action': 'configure',
@@ -486,29 +588,30 @@ class MATaskExecutor:
                     'source': 'tax/industry_category'
                 },
                 {
-                    'name': '価格帯フィルター',
+                    'name': '価格帯フィルター', 
                     'type': 'slider',
-                    'source': 'cf/desired_price',
-                    'min': 0,
-                    'max': 1000000000,
-                    'step': 10000000
-                },
-                {
-                    'name': '地域フィルター',
-                    'type': 'dropdown',
-                    'source': 'tax/region'
+                    'source': 'cf/desired_price'
                 }
             ])
         }
         
-        # プラグインエージェントで実行
-        if hasattr(plugin_agent, 'configure_facetwp'):
-            result = await plugin_agent.configure_facetwp(task_params)
-        else:
-            logger.warning("configure_facetwp メソッドが見つかりません")
-            result = await plugin_agent.change_plugin_settings(None, task)
-        
-        return result
+        try:
+            logger.info("🔧 プラグインエージェントで設定実行")
+            
+            if hasattr(plugin_agent, 'configure_facetwp'):
+                result = await plugin_agent.configure_facetwp(task_params)
+            else:
+                logger.warning("⚠️ configure_facetwp メソッドが見つからないため、change_plugin_settings を使用")
+                result = await plugin_agent.change_plugin_settings(None, task)
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ 検索機能設定実行エラー: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     async def _execute_user_role_setup(self, task: Dict) -> Dict:
         """ユーザーロール設定タスクを実行"""

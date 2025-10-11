@@ -1,0 +1,214 @@
+# docker-compose.yml
+# ハイブリッド型自律コード修正システム
+
+version: '3.8'
+
+services:
+  # ========================================
+  # メインアプリケーション
+  # ========================================
+  hybrid-fix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hybrid-fix-system
+    restart: unless-stopped
+    
+    environment:
+      # 実行モード
+      - RUN_MODE=hybrid
+      - DEFAULT_STRATEGY=ADAPTIVE
+      
+      # ローカルエージェント
+      - USE_LOCAL_AI=true
+      - LOCAL_TIMEOUT=30
+      
+      # クラウドエージェント
+      - CLOUD_PROVIDER=openai
+      - CLOUD_MODEL=gpt-4o
+      - CLOUD_TIMEOUT=120
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      
+      # テスト
+      - ENABLE_AUTO_TESTS=true
+      - WP_PATH=/var/www/html
+      - TEST_TIMEOUT=60
+      
+      # GitHub
+      - ENABLE_AUTO_PR=false
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - REPO_OWNER=${REPO_OWNER}
+      - REPO_NAME=${REPO_NAME}
+      
+      # ストレージ
+      - STORAGE_PROVIDER=local
+      - AUTO_SYNC_STORAGE=true
+      
+      # バックアップ
+      - BACKUP_DIR=/app/backups
+      - MAX_BACKUPS=10
+      
+      # ログ
+      - LOG_LEVEL=INFO
+      - LOG_FILE=/app/logs/hybrid_fix.log
+      
+      # パフォーマンス
+      - MAX_PARALLEL_FIXES=3
+      - ENABLE_CACHE=true
+      
+      # デバッグ
+      - DEBUG_MODE=false
+      - DRY_RUN=false
+    
+    volumes:
+      # アプリケーションコード
+      - ./:/app
+      
+      # WordPress（既存環境と共有）
+      - wordpress_data:/var/www/html
+      
+      # バックアップ
+      - ./backups:/app/backups
+      
+      # ログ
+      - ./logs:/app/logs
+      
+      # キャッシュ
+      - ./storage_cache:/app/storage_cache
+      
+      # セッション
+      - ./session:/app/session
+    
+    networks:
+      - hybrid-fix-network
+    
+    depends_on:
+      - wordpress
+      - mysql
+    
+    # ヘルスチェック
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  
+  # ========================================
+  # WordPress（テスト環境）
+  # ========================================
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress-test
+    restart: unless-stopped
+    
+    environment:
+      - WORDPRESS_DB_HOST=mysql:3306
+      - WORDPRESS_DB_NAME=wordpress
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=wordpress_password
+    
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
+    
+    ports:
+      - "8080:80"
+    
+    networks:
+      - hybrid-fix-network
+    
+    depends_on:
+      mysql:
+        condition: service_healthy
+  
+  # ========================================
+  # MySQL
+  # ========================================
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-wordpress
+    restart: unless-stopped
+    
+    environment:
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=wordpress_password
+      - MYSQL_ROOT_PASSWORD=root_password
+    
+    volumes:
+      - mysql_data:/var/lib/mysql
+    
+    networks:
+      - hybrid-fix-network
+    
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  
+  # ========================================
+  # Redis（キャッシュ - オプション）
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    
+    volumes:
+      - redis_data:/data
+    
+    networks:
+      - hybrid-fix-network
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# ========================================
+# ネットワーク
+# ========================================
+networks:
+  hybrid-fix-network:
+    driver: bridge
+
+# ========================================
+# ボリューム
+# ========================================
+volumes:
+  wordpress_data:
+    driver: local
+  
+  mysql_data:
+    driver: local
+  
+  redis_data:
+    driver: local
+
+# ========================================
+# 使用方法
+# ========================================
+# 
+# # 起動
+# docker-compose up -d
+# 
+# # ログ確認
+# docker-compose logs -f hybrid-fix
+# 
+# # 停止
+# docker-compose down
+# 
+# # 再ビルド
+# docker-compose build --no-cache
+# 
+# # シェルに入る
+# docker-compose exec hybrid-fix bash
+# 
+# # WordPressにアクセス
+# http://localhost:8080

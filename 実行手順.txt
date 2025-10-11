@@ -5,6 +5,10 @@ python run_multi_agent.py --auto
 テストモードの立ち上げ手順
 python test_tasks.py
 
+POC
+cd C:\Users\color\Documents\gemini_AI_Agent_POC
+cd C:\Users\color\Documents
+
 
 cd "C:\Users\KMH SHOP\Videos\mvp\gemini_AI_Agent"
 python run_multi_agent.py --pc-id 3 --auto
