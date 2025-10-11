@@ -11,7 +11,7 @@ if 'task_executor' in sys.modules:
     print("🔄 task_executor モジュールをリロード中...")
     importlib.reload(sys.modules['task_executor'])
 
-from task_executor import TaskExecutor
+from task_executor import MATaskExecutor
 
 # メソッド確認
 print("\n" + "="*60)
