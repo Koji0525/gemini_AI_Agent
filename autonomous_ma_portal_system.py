@@ -27,7 +27,7 @@ from browser_ai_chat_agent import AIChatAgent
 from review_agent import ReviewAgent
 from github_agent import GitHubAgent
 from main_hybrid_fix import HybridFixSystem
-from wordpress.wp_agent import WPAgent
+from wordpress.wp_agent import WordPressAgent
 from wordpress.wp_tester_agent import WPTesterAgent
 
 # ロギング設定
@@ -96,7 +96,7 @@ class MAPortalAutonomousSystem:
             
             # 3. WordPressエージェント初期化
             logger.info("🌐 WordPressエージェント初期化中...")
-            self.wp_agent = WPAgent(
+            self.wp_agent = WordPressAgent(
                 wp_url=self.wp_url,
                 username=self.wp_admin_user,
                 password=self.wp_admin_pass,
