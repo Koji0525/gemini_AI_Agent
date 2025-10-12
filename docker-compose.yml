@@ -1,0 +1,58 @@
+services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  wordpress:
+    image: wordpress:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./custom-wp-config.php:/tmp/custom-wp-config.php:ro
+    command: >
+      bash -c "
+      docker-entrypoint.sh apache2-foreground &
+      sleep 20 &&
+      if [ -f /var/www/html/wp-config.php ]; then
+        echo \"define('WP_HOME', 'https://cautious-space-lamp-pjjvv7wp5r6356g-8080.app.github.dev');\" >> /var/www/html/wp-config.php &&
+        echo \"define('WP_SITEURL', 'https://cautious-space-lamp-pjjvv7wp5r6356g-8080.app.github.dev');\" >> /var/www/html/wp-config.php
+      fi &&
+      tail -f /dev/null
+      "
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+
+volumes:
+  wordpress_data:
+  db_data:
