@@ -1,0 +1,18 @@
+```bash
+# 1. README.mdの存在確認
+ls -la README.md
+
+# 2. logs/ディレクトリの確認とファイル数カウント
+if [ -d "logs" ]; then
+    echo "logs/ディレクトリが存在します"
+    ls -la logs/
+    echo "ファイル数: $(find logs/ -type f | wc -l)"
+else
+    echo "logs/ディレクトリは存在しません"
+fi
+
+# 3. 結果の簡潔な報告
+echo "=== 実行結果報告 ==="
+echo "README.md: $(if [ -f README.md ]; then echo '存在'; else echo '不存在'; fi)"
+echo "logs/ディレクトリ: $(if [ -d logs ]; then echo '存在'; else echo '不存在'; fi)"
+```
