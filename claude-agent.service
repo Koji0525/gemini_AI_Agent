@@ -1,0 +1,13 @@
+[Unit]
+Description=Claude Agent Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/gemini_AI_Agent
+ExecStart=/usr/bin/python3 /path/to/gemini_AI_Agent/claude_agent_daemon.py --monitor --check 5 --interval 3600
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

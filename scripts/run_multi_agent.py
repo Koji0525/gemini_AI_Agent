@@ -24,7 +24,6 @@ from scripts.task_executor import MATaskExecutor
 print("\n" + "="*60)
 print("🔍 MATaskExecutor クラスの確認")
 print("="*60)
-print("\n📋 利用可能なメソッド:")
 methods = [m for m in dir(MATaskExecutor) if not m.startswith('_')]
 for method in methods:
     print(f"  - {method}")
@@ -36,7 +35,9 @@ else:
     print("\n🚨 緊急パッチを適用します...")
     
     # 緊急パッチを動的にインポート
-    exec(open('task_executor.py').read())
+    # # exec(open('../task_executor/task_executor_ma.py').read())  # パス修正中
+pass  # 一時的にスキップ  # パス修正中
+pass  # 一時的にスキップ
 
 print("="*60 + "\n")
 

@@ -1,0 +1,12 @@
+--- main_hybrid_fix.py
++++ main_hybrid_fix.py
+@@ -41,6 +41,9 @@
+ async def main():
+     try:
+         # 擬似的なエラーコンテキストを定義 (本来は実行結果から取得)
+         error_context = ErrorContextModel(
++            error_id="temp_error_id",
++            task_id="temp_task_id", 
++            full_traceback="Temporary Traceback content.",
+             error_type="ModuleNotFoundError",
+             code_location=CodeLocation(file_path="scripts/run_multi_agent.py", line_number=0),

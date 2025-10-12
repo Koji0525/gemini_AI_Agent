@@ -42,9 +42,6 @@ async def main():
     if args.file:
         # エラーコンテキストを作成
         error_context = ErrorContextModel(
-            error_id="temp_error_id",
-            task_id="temp_task_id",
-            full_traceback="Temporary Traceback content.",
             error_type="ModuleNotFoundError",
             error_message=args.error or "モジュールインポートエラー",
             file_path=args.file,

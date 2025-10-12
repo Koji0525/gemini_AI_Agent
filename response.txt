@@ -1,0 +1,11 @@
+【エラー検出】
+ファイル: logs/autonomous_20251012_085849.log
+
+【エラー内容】
+Traceback (most recent call last):...（中略）...
+pydantic_core._pydantic_core.ValidationError: 3 validation errors for ErrorContextModel
+error_id
+  Field required [type=missing, input_value={'error_type': 'ModuleNot...: 0, 'code_snippet': ''}, input_type=dict]
+  ...（中略）...
+
+次の修正コマンドを ```bash で提案:```

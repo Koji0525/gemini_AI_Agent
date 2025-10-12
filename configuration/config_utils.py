@@ -137,8 +137,8 @@ class SmartLogFormatter(logging.Formatter):
             current_date = time.strftime('%Y-%m-%d')
             show_date = (SmartLogFormatter._last_date_display != current_date)
             show_timestamp = (
-                SmartLogFormatter._message_count % 30 == 1 or 
-                current_time - SmartLogFormatter._last_timestamp_display > 300 or
+                SmartLogFormatter._message_count % 50 == 1 or 
+                current_time - SmartLogFormatter._last_timestamp_display > 600 or
                 show_date
             )
             

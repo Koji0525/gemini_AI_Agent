@@ -1,0 +1,23 @@
+次のコマンドを以下から選んでください：
+
+```bash
+# ディレクトリの内容を確認
+ls -la agents/
+
+# または Python ファイルを確認
+ls -la *.py
+
+# または特定のファイルの内容を表示
+cat .env
+
+# または Git の状態を確認
+git status
+
+# または Python スクリプトを実行
+python add_fix_limit.py
+
+# または agents ディレクトリに移動
+cd agents/
+```
+
+どのコマンドを実行したいですか？目的を教えていただければ、最適なコマンドを提案します。
