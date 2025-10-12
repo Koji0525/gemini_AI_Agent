@@ -188,7 +188,7 @@ def setup_optimized_logging():
     
     # ルートロガー
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)  # ← INFO を DEBUG に変更
+    logger.setLevel(logging.INFO)  # ← INFO を DEBUG に変更
     
     # 既存のハンドラをクリア
     for handler in logger.handlers[:]:
