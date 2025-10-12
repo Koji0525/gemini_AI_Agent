@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-WordPress タスクエグゼキューター
-- wp_post_creator.py で下書き作成
-- wp_post_editor.py で記事編集
-- BrowserController を使用（headless対応）
+WordPress タスクエグゼキューター（修正版）
+- タスクデータ構造の柔軟な対応
+- エラーハンドリング強化
 """
 import asyncio
 import logging
@@ -31,7 +30,6 @@ class WordPressTaskExecutor:
         try:
             self.browser = BrowserController(download_folder="./downloads")
             
-            # Pageオブジェクトを取得
             if hasattr(self.browser, 'get_page'):
                 self.page = await self.browser.get_page()
             elif hasattr(self.browser, 'page'):
@@ -56,18 +54,83 @@ class WordPressTaskExecutor:
             except:
                 pass
     
+    def _extract_task_info(self, task: dict) -> tuple:
+        """タスク情報を柔軟に抽出"""
+        # 複数のキー名に対応
+        title_keys = ['title', 'description', 'task_name', 'name']
+        content_keys = ['content', 'body', 'text', 'description']
+        
+        title = None
+        for key in title_keys:
+            if key in task and task[key]:
+                title = str(task[key])
+                break
+        
+        content = None
+        for key in content_keys:
+            if key in task and task[key]:
+                content = str(task[key])
+                break
+        
+        # デフォルト値
+        if not title:
+            title = f"タスク {task.get('task_id', 'unknown')}"
+        
+        if not content:
+            content = title  # タイトルをコンテンツとして使用
+        
+        logger.info(f"📝 抽出結果:")
+        logger.info(f"   タイトル: {title[:50]}...")
+        logger.info(f"   コンテンツ: {content[:50]}...")
+        
+        return title, content
+    
     async def create_draft(self, task: dict) -> dict:
         """下書き作成"""
         logger.info("=" * 80)
-        logger.info(f"📝 下書き作成: {task.get('title', 'Untitled')}")
+        logger.info(f"📝 下書き作成タスク")
         logger.info("=" * 80)
         
+        # タスクデータの内容をログ出力
+        logger.info("📋 受け取ったタスクデータ:")
+        for key, value in task.items():
+            if isinstance(value, str) and len(value) > 100:
+                logger.info(f"   {key}: {value[:100]}...")
+            else:
+                logger.info(f"   {key}: {value}")
+        
         try:
+            # タイトルとコンテンツを抽出
+            title, content = self._extract_task_info(task)
+            
             # WordPressPostCreator 初期化
             creator = WordPressPostCreator(wp_url=self.wp_url, sheets_manager=None)
             
+            # タスクデータを wp_post_creator が期待する形式に変換
+            wp_task = {
+                'title': title[:200],  # 200文字制限
+                'content': f'''
+<h2>{title}</h2>
+
+<p>{content}</p>
+
+<h3>タスク情報</h3>
+<ul>
+    <li><strong>タスクID:</strong> {task.get('task_id', 'N/A')}</li>
+    <li><strong>実行日時:</strong> {datetime.now().strftime("%Y年%m月%d日 %H時%M分")}</li>
+    <li><strong>ロール:</strong> {task.get('required_role', 'N/A')}</li>
+    <li><strong>優先度:</strong> {task.get('priority', 'N/A')}</li>
+</ul>
+                ''',
+                'post_status': 'draft',
+                'category': 'Auto Generated',
+                'tags': ['自動生成', f"task_{task.get('task_id', 'unknown')}"]
+            }
+            
+            logger.info(f"🚀 WordPress記事作成実行...")
+            
             # 記事作成
-            result = await creator.create_post(self.page, task)
+            result = await creator.create_post(self.page, wp_task)
             
             logger.info("✅ 下書き作成成功")
             return {'success': True, 'result': result}
@@ -81,14 +144,12 @@ class WordPressTaskExecutor:
     async def edit_post(self, task: dict) -> dict:
         """記事編集"""
         logger.info("=" * 80)
-        logger.info(f"✏️ 記事編集: {task.get('title', 'Untitled')}")
+        logger.info(f"✏️ 記事編集タスク")
         logger.info("=" * 80)
         
         try:
-            # WordPressPostEditor 初期化
             editor = WordPressPostEditor(wp_url=self.wp_url, sheets_manager=None)
             
-            # 記事編集
             result = await editor.edit_post(self.page, task)
             
             logger.info("✅ 記事編集成功")
@@ -101,7 +162,7 @@ class WordPressTaskExecutor:
             return {'success': False, 'error': str(e)}
 
 async def test_create_draft():
-    """下書き作成テスト"""
+    """テスト実行"""
     executor = WordPressTaskExecutor()
     
     if not await executor.initialize():
@@ -109,42 +170,20 @@ async def test_create_draft():
         return
     
     try:
-        # テスト記事データ
+        # テストタスク
         task = {
-            'title': f'🤖 自動生成テスト記事 - {datetime.now().strftime("%Y/%m/%d %H:%M")}',
-            'content': f'''
-<h2>これは自動生成されたテスト記事です</h2>
-
-<p>このコンテンツは <strong>wp_post_creator.py</strong> によって自動的に作成されました。</p>
-
-<h3>システムの特徴</h3>
-<ul>
-    <li>✅ エラー自動検出</li>
-    <li>✅ 自動修正機能</li>
-    <li>✅ Google Sheets連携</li>
-    <li>✅ WordPress自動投稿</li>
-</ul>
-
-<p><strong>作成日時:</strong> {datetime.now().strftime("%Y年%m月%d日 %H時%M分")}</p>
-            ''',
-            'post_status': 'draft',
-            'category': 'Test',
-            'tags': ['自動生成', 'AI', 'Test']
+            'task_id': 'TEST_001',
+            'description': '【タクソノミー】業種カテゴリ作成（industry_category）ワードプレス内でお願いします。',
+            'required_role': 'wp_dev',
+            'priority': 'high'
         }
         
-        # 下書き作成実行
         result = await executor.create_draft(task)
         
         if result['success']:
-            logger.info("\n" + "=" * 80)
-            logger.info("🎉 下書き作成成功！")
-            logger.info("=" * 80)
-            logger.info("📝 確認方法:")
-            logger.info("   1. https://uzbek-ma.com/wp-admin/ にアクセス")
-            logger.info("   2. 投稿 → 投稿一覧")
-            logger.info("   3. ステータス: 下書き でフィルター")
+            logger.info("\n🎉 テスト成功！")
         else:
-            logger.error(f"\n❌ 下書き作成失敗: {result.get('error')}")
+            logger.error(f"\n❌ テスト失敗: {result.get('error')}")
             
     finally:
         await executor.cleanup()
