@@ -115,363 +115,44 @@ class WordPressAgent:
     
     def _initialize_sub_agents(self):
         """
-        サブエージェント初期化（引数統一版）
-        
-        重要: 全てのサブエージェントに browser_controller と wp_credentials を渡す
+        サブエージェントの初期化
+        重要: 各サブエージェントの実際の__init__シグネチャに合わせる
         """
         try:
-            # ✅ 投稿編集エージェント
+            # ✅ 投稿編集エージェント (wp_url, sheets_manager)
             self.post_editor = WordPressPostEditor(
-                browser_controller=self.browser,
-                wp_credentials=self.wp_credentials
+                wp_url=self.wp_credentials.get('wp_url', '') if self.wp_credentials else '',
+                sheets_manager=None
             )
             logger.info("🌐 wp-agent ✅ INFO WordPressPostEditor初期化完了")
             
-            # ✅ 投稿作成エージェント
+            # ✅ 投稿作成エージェント (wp_url, sheets_manager)
             self.post_creator = WordPressPostCreator(
-                browser_controller=self.browser,
-                wp_credentials=self.wp_credentials
+                wp_url=self.wp_credentials.get('wp_url', '') if self.wp_credentials else '',
+                sheets_manager=None
             )
             logger.info("🌐 wp-agent ✅ INFO WordPressPostCreator初期化完了")
             
-            # ✅ プラグインマネージャー
-            self.plugin_manager = WordPressPluginManager(
-                browser_controller=self.browser,
-                wp_credentials=self.wp_credentials
-            )
-            logger.info("🌐 wp-agent ✅ INFO WordPressPluginManager初期化完了")
-            
-            # ✅ 設定マネージャー
+            # ✅ 設定マネージャー (wp_url のみ)
             self.settings_manager = WordPressSettingsManager(
-                browser_controller=self.browser,
-                wp_credentials=self.wp_credentials
+                wp_url=self.wp_credentials.get('wp_url', '') if self.wp_credentials else ''
             )
             logger.info("🌐 wp-agent ✅ INFO WordPressSettingsManager初期化完了")
             
-            # ✅ テスター
+            # ✅ テスター (wp_url のみ)
             self.tester = WordPressTester(
-                browser_controller=self.browser,
-                wp_credentials=self.wp_credentials
+                wp_url=self.wp_credentials.get('wp_url', '') if self.wp_credentials else ''
             )
             logger.info("🌐 wp-agent ✅ INFO WordPressTester初期化完了")
-        
+            
+            logger.info("🌐 wp-agent ✅ INFO 全サブエージェント初期化完了")
+            
         except Exception as e:
             logger.error(f"🌐 wp-agent ❌ ERROR サブエージェント初期化エラー: {e}")
             import traceback
-            logger.error(traceback.format_exc())
+            logger.error(f"🌐 wp-agent ❌ ERROR {traceback.format_exc()}")
             raise
-    
-    async def initialize_wp_session(self) -> bool:
-        """
-        WordPressセッション初期化（完全修正版 - クッキー強制ナビゲーション対応）
-        
-        改善点:
-        1. 新しいタブ作成（Geminiセッションと完全独立）
-        2. クッキー適用 + 管理画面への強制ナビゲーション
-        3. ログイン状態の厳格な検証
-        4. 失敗時の手動ログインフォールバック
-        
-        Returns:
-            bool: 初期化成功時 True
-        """
-        try:
-            logger.info("=" * 60)
-            logger.info("🌐 wp-agent ✅ INFO WordPressセッション初期化中...")
-            logger.info("=" * 60)
-            
-            # ✅ Phase 1: 新しいタブを作成
-            if not self.browser.context:
-                logger.error("🌐 wp-agent ❌ ERROR ブラウザコンテキストが初期化されていません")
-                return False
-            
-            self.wp_page = await self.browser.context.new_page()
-            logger.info("🌐 wp-agent ✅ INFO WordPress専用タブを作成しました")
-            
-            # ✅ Phase 2: 認証情報の検証
-            if not self.auth:
-                logger.error("🌐 wp-agent ❌ ERROR WordPress認証モジュールが初期化されていません")
-                return False
-            
-            # ✅ Phase 3: ログイン実行（クッキー優先 + 強制ナビゲーション）
-            logger.info("🌐 wp-agent ✅ INFO WordPress認証を実行中...")
-            login_success = await self.auth.login(self.wp_page)
-            
-            if login_success:
-                self.is_logged_in = True
-                logger.info("=" * 60)
-                logger.info("🌐 wp-agent ✅ INFO WordPressセッション初期化完了")
-                logger.info(f"  認証方法: クッキー or 手動ログイン")
-                logger.info(f"  ページURL: {self.wp_page.url}")
-                logger.info("=" * 60)
-                return True
-            else:
-                logger.error("=" * 60)
-                logger.error("🌐 wp-agent ❌ ERROR WordPressログイン失敗")
-                logger.error("  原因: 認証情報またはネットワークの問題")
-                logger.error("  対策: 認証情報を確認してください")
-                logger.error("=" * 60)
-                
-                # デバッグ用: 失敗時のスクリーンショット
-                try:
-                    await self.wp_page.screenshot(path="wp_session_init_failed.png")
-                    logger.info("🌐 wp-agent 📸 INFO デバッグ用スクリーンショット: wp_session_init_failed.png")
-                except:
-                    pass
-                
-                return False
-        
-        except Exception as e:
-            logger.error(f"🌐 wp-agent ❌ ERROR WordPressセッション初期化エラー: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return False
-    
-    async def ensure_logged_in(self) -> bool:
-        """
-        ログイン状態を保証
-        
-        Returns:
-            bool: ログイン済みまたはログイン成功時 True
-        """
-        if self.is_logged_in and self.wp_page:
-            # 定期的にログイン状態を確認
-            if await self.auth._verify_login_status(self.wp_page):
-                return True
-        
-        # ログインしていない場合は再初期化
-        logger.info("🌐 wp-agent ✅ INFO WordPress再ログインを試行します")
-        return await self.initialize_wp_session()
-    
-    async def _try_cookie_login(self, wp_url: str) -> bool:
-        """クッキーを使用したログイン試行"""
-        try:
-            if not wp_url:
-                logger.warning("🌐 wp-agent ⚠️ WARN WordPress URLが設定されていません")
-                return False
-            
-            # WordPressクッキーをロード
-            cookie_loaded = await self.browser.load_wordpress_cookies(wp_url)
-            if not cookie_loaded:
-                return False
-            
-            # 管理画面にアクセスしてログイン状態を確認
-            admin_url = f"{wp_url.rstrip('/')}/wp-admin/"
-            await self.browser.page.goto(admin_url, wait_until='networkidle')
-            await asyncio.sleep(2)
-            
-            # ログイン状態を詳細チェック
-            return await self._verify_wordpress_login_status()
-        
-        except Exception as e:
-            logger.warning(f"🌐 wp-agent ⚠️ WARN クッキーログイン試行エラー: {e}")
-            return False
-    
-    async def _verify_wordpress_login_status(self) -> bool:
-        """WordPressログイン状態を詳細検証"""
-        try:
-            page = self.browser.page
-            
-            # 複数の方法でログイン状態を確認
-            checks = []
-            
-            # 1. 管理バーの存在チェック
-            admin_bar = await page.query_selector('#wpadminbar')
-            checks.append(('管理バー', bool(admin_bar)))
-            
-            # 2. ダッシュボード要素チェック
-            dashboard = await page.query_selector('#wpbody-content')
-            checks.append(('ダッシュボード', bool(dashboard)))
-            
-            # 3. ログインフォームの不在チェック
-            login_form = await page.query_selector('#loginform')
-            checks.append(('ログインフォーム不在', not bool(login_form)))
-            
-            # 4. URLチェック（リダイレクトされていないか）
-            current_url = page.url
-            is_admin_page = '/wp-admin/' in current_url and 'wp-login.php' not in current_url
-            checks.append(('管理ページURL', is_admin_page))
-            
-            # 結果の集計
-            passed_checks = [name for name, passed in checks if passed]
-            total_passed = len(passed_checks)
-            
-            logger.info(f"🌐 wp-agent ✅ INFO ログイン状態検証: {total_passed}/4 合格")
-            if total_passed >= 3:  # 4つのうち3つ以上合格ならログイン成功
-                logger.info(f"  合格項目: {', '.join(passed_checks)}")
-                return True
-            else:
-                logger.warning(f"🌐 wp-agent ⚠️ WARN 不合格項目が多すぎます")
-                return False
-        
-        except Exception as e:
-            logger.warning(f"🌐 wp-agent ⚠️ WARN ログイン状態検証エラー: {e}")
-            return False
-    
-    async def _manual_wordpress_login(self) -> bool:
-        """手動WordPressログイン"""
-        try:
-            wp_url = self.wp_credentials.get('wp_url', '')
-            wp_user = self.wp_credentials.get('wp_user', '')
-            wp_pass = self.wp_credentials.get('wp_pass', '')
-            
-            if not all([wp_url, wp_user, wp_pass]):
-                logger.error("🌐 wp-agent ❌ ERROR WordPress認証情報が不足しています")
-                return False
-            
-            # ログインページに移動
-            login_url = f"{wp_url.rstrip('/')}/wp-login.php"
-            await self.browser.page.goto(login_url, wait_until='networkidle')
-            await asyncio.sleep(2)
-            
-            # ユーザー名入力
-            user_field = await self.browser.page.query_selector('#user_login')
-            if user_field:
-                await user_field.fill(wp_user)
-                logger.info("🌐 wp-agent ✅ INFO ユーザー名入力完了")
-            else:
-                logger.error("🌐 wp-agent ❌ ERROR ユーザー名入力フィールドが見つかりません")
-                return False
-            
-            # パスワード入力
-            pass_field = await self.browser.page.query_selector('#user_pass')
-            if pass_field:
-                await pass_field.fill(wp_pass)
-                logger.info("🌐 wp-agent ✅ INFO パスワード入力完了")
-            else:
-                logger.error("🌐 wp-agent ❌ ERROR パスワード入力フィールドが見つかりません")
-                return False
-            
-            # ログインボタンクリック
-            login_button = await self.browser.page.query_selector('#wp-submit')
-            if login_button:
-                await login_button.click()
-                logger.info("🌐 wp-agent ✅ INFO ログインボタンクリック")
-            else:
-                logger.error("🌐 wp-agent ❌ ERROR ログインボタンが見つかりません")
-                return False
-            
-            # ログイン完了待機
-            await self.browser.page.wait_for_load_state('networkidle')
-            await asyncio.sleep(3)
-            
-            # ログイン成功確認
-            if await self._verify_wordpress_login_status():
-                logger.info("🌐 wp-agent ✅ INFO 手動ログイン成功")
-                return True
-            else:
-                logger.error("🌐 wp-agent ❌ ERROR 手動ログイン失敗 - 認証情報またはネットワークの問題")
-                return False
-        
-        except Exception as e:
-            logger.error(f"🌐 wp-agent ❌ ERROR 手動ログインエラー: {e}")
-            return False
-    
-    async def process_task(self, task: Dict) -> Dict:
-        """
-        WordPressタスクを処理
-        
-        Args:
-            task: タスク情報（description, task_id等）
-        
-        Returns:
-            処理結果の辞書
-        """
-        try:
-            # ログイン状態を確認
-            if not await self.ensure_logged_in():
-                return {
-                    'success': False,
-                    'error': 'WordPressにログインできませんでした'
-                }
-            
-            logger.info("=" * 60)
-            logger.info("🌐 wp-agent ✅ INFO WordPressタスク実行開始")
-            logger.info(f"タスク: {task['description']}")
-            logger.info("=" * 60)
-            
-            # シートマネージャー設定
-            self.post_editor.sheets_manager = self.sheets_manager
-            self.post_creator.sheets_manager = self.sheets_manager
-            
-            # タスクタイプ解析
-            task_type = TaskTypeAnalyzer.analyze(task['description'])
-            logger.info(f"🌐 wp-agent ✅ INFO 解析されたタスクタイプ: {task_type}")
-            
-            # タスクタイプに応じた処理実行
-            result = await self._execute_task_by_type(task, task_type)
-            
-            return result
-        
-        except Exception as e:
-            ErrorHandler.log_error(e, "🌐 wp-agent WordPressタスク処理")
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
-    async def _execute_task_by_type(self, task: Dict, task_type: str) -> Dict:
-        """タスクタイプに応じて適切なモジュールに処理を委譲"""
-        try:
-            # プラグイン関連タスク
-            if task_type == 'plugin_install':
-                result = await self.plugin_manager.install_plugin(self.wp_page, task)
-            elif task_type == 'plugin_settings':
-                result = await self.plugin_manager.change_plugin_settings(self.wp_page, task)
-            
-            # 投稿関連タスク
-            elif task_type == 'edit_post':
-                result = await self.post_editor.edit_post(self.wp_page, task)
-            elif task_type == 'content_create':
-                result = await self.post_creator.create_post(self.wp_page, task)
-            
-            # 設定関連タスク
-            elif task_type == 'theme_change':
-                result = await self.settings_manager.change_theme(self.wp_page, task)
-            elif task_type == 'setting_change':
-                result = await self.settings_manager.change_settings(self.wp_page, task)
-            
-            # テストタスク
-            elif task_type == 'test_functionality':
-                result = await self.tester.test_functionality(self.wp_page, task)
-            
-            # その他のタスク
-            else:
-                result = await self._generic_execution(task)
-            
-            return result
-        
-        except Exception as e:
-            ErrorHandler.log_error(e, "🌐 wp-agent タスクタイプ別実行")
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
-    async def _generic_execution(self, task: Dict) -> Dict:
-        """汎用的なタスク実行（Geminiに確認しながら実行）"""
-        try:
-            logger.info("🌐 wp-agent ✅ INFO 汎用タスクを実行中...")
-            
-            # Geminiプロンプト作成
-            gemini_prompt = self._build_gemini_prompt(task)
-            
-            # Geminiに送信
-            await self.browser.send_prompt(gemini_prompt)
-            await self.browser.wait_for_text_generation(max_wait=120)
-            response = await self.browser.extract_latest_text_response()
-            
-            logger.info(f"🌐 wp-agent ✅ INFO Geminiから実行手順を取得しました")
-            logger.info(f"手順:\n{response[:500]}...")
-            
-            return self._build_generic_result(task, response)
-        
-        except Exception as e:
-            ErrorHandler.log_error(e, "🌐 wp-agent 汎用タスク実行")
-            return {
-                'success': False,
-                'error': str(e)
-            }
-    
+
     def _build_gemini_prompt(self, task: Dict) -> str:
         """Gemini用プロンプトを構築"""
         return f"""
