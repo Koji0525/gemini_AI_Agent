@@ -1,0 +1,35 @@
+プロジェクトの構造を把握しました。`safe_browser_manager.py` の機能テストを実行します。まず、このファイルの存在を確認し、内容を確認してからテストを実行します。
+
+```bash
+# safe_browser_manager.py ファイルの確認
+find . -name "safe_browser_manager.py" -type f
+```
+
+```bash
+# ファイルが見つからない場合、Python関連ファイルを探す
+ls -la *.py | grep -E "(browser|manager)"
+```
+
+```bash
+# agents ディレクトリの内容を確認
+ls -la agents/
+```
+
+```bash
+# プロジェクト全体でbrowser関連のファイルを検索
+find . -name "*browser*" -type f
+```
+
+```bash
+# safe_browser_manager.py が見つかった場合、内容を確認
+if [ -f "safe_browser_manager.py" ]; then
+    echo "=== safe_browser_manager.py の内容 ==="
+    cat safe_browser_manager.py
+elif [ -f "agents/safe_browser_manager.py" ]; then
+    echo "=== agents/safe_browser_manager.py の内容 ==="
+    cat agents/safe_browser_manager.py
+else
+    echo "safe_browser_manager.py が見つかりません。関連ファイルを探します..."
+    find . -type f -name "*.py" -exec grep -l "browser" {} \;
+fi
+```
