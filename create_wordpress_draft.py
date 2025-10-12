@@ -5,7 +5,7 @@ WordPress下書き作成テスト（実際にブラウザで操作）
 import asyncio
 import logging
 from datetime import datetime
-from browser_controller import BrowserController
+from browser_control.browser_controller import BrowserController
 from wordpress.wp_agent import WordPressAgent
 
 logging.basicConfig(level=logging.INFO)

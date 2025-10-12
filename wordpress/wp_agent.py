@@ -16,8 +16,8 @@ from pathlib import Path
 from playwright.async_api import Page
 from datetime import datetime
 
-from config_utils import ErrorHandler
-from browser_controller import BrowserController
+from configuration.config_utils import ErrorHandler
+from browser_control.browser_controller import BrowserController
 
 # WordPressサブモジュール
 from .wp_auth import WordPressAuth

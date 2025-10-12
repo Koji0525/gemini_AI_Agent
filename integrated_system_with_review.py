@@ -10,13 +10,13 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-from sheets_manager import GoogleSheetsManager
+from tools.sheets_manager import GoogleSheetsManager
 from safe_wordpress_executor import SafeWordPressExecutor as WordPressTaskExecutor
 from error_auto_fix_system import auto_fix_system
 
 # レビューエージェントのインポート
 try:
-    from review_agent import ReviewAgent
+    from core_agents.review_agent import ReviewAgent
     REVIEW_AGENT_AVAILABLE = True
 except ImportError:
     REVIEW_AGENT_AVAILABLE = False

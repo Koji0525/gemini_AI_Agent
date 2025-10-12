@@ -102,7 +102,7 @@ class AutonomousAgentSystem:
         self.log("📝 STEP 1: test_tasks.py を実行", "INFO")
         self.log("=" * 60, "INFO")
         
-        result = self.run_command("python3 test_tasks.py", "テストタスク実行")
+        result = self.run_command("python3 test/test_tasks.py", "テストタスク実行")
         self.stats["tasks_executed"] += 1
         
         if not result["success"]:
@@ -110,8 +110,8 @@ class AutonomousAgentSystem:
             self.log("🔍 エラーを検出しました。自動修正を試みます...", "WARN")
             
             # エラーファイルを特定（簡易版）
-            if "test_tasks.py" in result["error"]:
-                if self.auto_fix_error("test_tasks.py", result["error"]):
+            if "test/test_tasks.py" in result["error"]:
+                if self.auto_fix_error("test/test_tasks.py", result["error"]):
                     # 再実行
                     self.log("🔄 修正後に再実行します...", "INFO")
                     return self.run_test_tasks()
@@ -126,7 +126,7 @@ class AutonomousAgentSystem:
         self.log("🤖 STEP 2: run_multi_agent.py を実行", "INFO")
         self.log("=" * 60, "INFO")
         
-        result = self.run_command("python3 run_multi_agent.py", "マルチエージェント実行")
+        result = self.run_command("python3 scripts/run_multi_agent.py", "マルチエージェント実行")
         self.stats["tasks_executed"] += 1
         
         if not result["success"]:
@@ -134,8 +134,8 @@ class AutonomousAgentSystem:
             self.log("🔍 エラーを検出しました。自動修正を試みます...", "WARN")
             
             # エラーファイルを特定
-            if "run_multi_agent.py" in result["error"]:
-                if self.auto_fix_error("run_multi_agent.py", result["error"]):
+            if "scripts/run_multi_agent.py" in result["error"]:
+                if self.auto_fix_error("scripts/run_multi_agent.py", result["error"]):
                     # 再実行
                     self.log("🔄 修正後に再実行します...", "INFO")
                     return self.run_multi_agent()

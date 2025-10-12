@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Optional
 from pathlib import Path
 
-from config_utils import ErrorHandler
+from configuration.config_utils import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
