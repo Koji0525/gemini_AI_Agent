@@ -1,0 +1,56 @@
+```bash
+# まずsafe_browser_manager.pyがあるか確認
+ls -la *.py | grep safe_browser_manager
+```
+
+```bash
+# safe_browser_manager.pyの内容を確認
+cat safe_browser_manager.py
+```
+
+```bash
+# Pythonでsafe_browser_manager.pyの機能テストを実行
+python3 -c "
+import sys
+import os
+
+# safe_browser_manager.pyが存在するかチェック
+if os.path.exists('safe_browser_manager.py'):
+    print('✅ safe_browser_manager.py ファイルが見つかりました')
+    
+    # モジュールをインポートしてテスト
+    try:
+        import safe_browser_manager
+        print('✅ safe_browser_manager モジュールのインポート成功')
+        
+        # クラスや関数の存在確認
+        if hasattr(safe_browser_manager, 'SafeBrowserManager'):
+            print('✅ SafeBrowserManager クラスが存在します')
+            
+            # インスタンス作成テスト
+            try:
+                manager = safe_browser_manager.SafeBrowserManager()
+                print('✅ SafeBrowserManager インスタンス作成成功')
+                
+                # 利用可能なメソッドを表示
+                methods = [method for method in dir(manager) if not method.startswith('_')]
+                print(f'📋 利用可能なメソッド: {methods}')
+                
+            except Exception as e:
+                print(f'❌ インスタンス作成エラー: {e}')
+        else:
+            print('❌ SafeBrowserManager クラスが見つかりません')
+            
+    except ImportError as e:
+        print(f'❌ インポートエラー: {e}')
+    except Exception as e:
+        print(f'❌ 予期しないエラー: {e}')
+else:
+    print('❌ safe_browser_manager.py ファイルが見つかりません')
+    print('📁 現在のディレクトリの.pyファイル一覧:')
+    import glob
+    py_files = glob.glob('*.py')
+    for file in py_files:
+        print(f'  - {file}')
+"
+```
