@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# プロジェクトルートをパスに追加
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 """
 test_tasks.py - 既存タスクのテスト実行用スクリプト
 """
