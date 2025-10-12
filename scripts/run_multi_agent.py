@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+# プロジェクトルートをパスに追加
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 # run_multi_agent.py
 """マルチエージェントシステムの統合オーケストレーター（完全修正版）"""
 # ========================================
@@ -17,7 +24,6 @@ from scripts.task_executor import MATaskExecutor
 print("\n" + "="*60)
 print("🔍 MATaskExecutor クラスの確認")
 print("="*60)
-print(f"📁 モジュール場所: {sys.modules['task_executor'].__file__}")
 print("\n📋 利用可能なメソッド:")
 methods = [m for m in dir(MATaskExecutor) if not m.startswith('_')]
 for method in methods:

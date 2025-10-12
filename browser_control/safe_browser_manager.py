@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ブラウザを確実に初期化・管理する基盤クラス"""
 import asyncio
+from pathlib import Path
 import logging
 from typing import Optional
 from browser_control.browser_controller import BrowserController
@@ -29,10 +30,10 @@ class SafeBrowserManager:
     @classmethod
     async def _initialize(cls):
         try:
-            cls._controller = BrowserController()
-            await cls._controller.initialize()
+            cls._controller = BrowserController(download_folder=Path("downloads"))
+            await cls._controller.setup_browser()
             
-            if cls._controller.browser is None:
+            if cls._controller.context is None:
                 raise RuntimeError("ブラウザ起動失敗")
             
             cls._is_initialized = True

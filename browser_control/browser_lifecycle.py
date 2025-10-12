@@ -46,14 +46,19 @@ class BrowserLifecycleManager:
             y_position = 0
             
             # ブラウザ起動（位置とサイズ指定）
+            # BROWSER_CONFIG から headless を除外（明示的に指定するため）
+            browser_config = {k: v for k, v in config.BROWSER_CONFIG.items() if k != 'headless'}
+            
             self.context = await self.playwright.chromium.launch_persistent_context(
+            headless=True,  # Codespaces 対応
+
                 user_data_dir=str(self.browser_data_dir),
                 viewport={'width': window_width, 'height': window_height},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 accept_downloads=True,
                 ignore_https_errors=True,
                 no_viewport=False,
-                **config.BROWSER_CONFIG
+                **browser_config
             )
             
             logger.info("✅ ブラウザコンテキスト作成成功")

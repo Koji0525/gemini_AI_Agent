@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """
+main_hybrid_fix.py を最終修正
+BugFixTask の必須フィールドを追加
+"""
+
+content = '''#!/usr/bin/env python3
+"""
 ハイブリッド修正システムのメインエントリーポイント
 """
 import sys
@@ -76,3 +82,9 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+'''
+
+with open('main_hybrid_fix.py', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print("✅ main_hybrid_fix.py を最終修正しました")
