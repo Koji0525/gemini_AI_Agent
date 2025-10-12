@@ -1,7 +1,7 @@
 # run_multi_agent.py
 """マルチエージェントシステムの統合オーケストレーター（完全修正版）"""
 # ========================================
-# デバッグ: TaskExecutor の確認
+# デバッグ: MATaskExecutor の確認
 # ========================================
 import sys
 import importlib
@@ -15,11 +15,11 @@ from task_executor import MATaskExecutor
 
 # メソッド確認
 print("\n" + "="*60)
-print("🔍 TaskExecutor クラスの確認")
+print("🔍 MATaskExecutor クラスの確認")
 print("="*60)
 print(f"📁 モジュール場所: {sys.modules['task_executor'].__file__}")
 print("\n📋 利用可能なメソッド:")
-methods = [m for m in dir(TaskExecutor) if not m.startswith('_')]
+methods = [m for m in dir(MATaskExecutor) if not m.startswith('_')]
 for method in methods:
     print(f"  - {method}")
 
@@ -68,7 +68,7 @@ except ImportError:
 from sheets_manager import GoogleSheetsManager
 from browser_controller import BrowserController
 from pm_agent import PMAgent
-from task_executor import TaskExecutor
+from task_executor import MATaskExecutor
 from design_agent import DesignAgent
 from dev_agent import DevAgent
 from review_agent import ReviewAgent
@@ -226,7 +226,7 @@ class MultiAgentOrchestrator:
             logger.info("="*60)
     
             self.pm_agent = PMAgent(self.sheets_manager, self.browser)
-            self.task_executor = TaskExecutor(
+            self.task_executor = MATaskExecutor(
                 self.sheets_manager, 
                 self.browser,
                 max_iterations=self.max_iterations
@@ -566,7 +566,7 @@ class MultiAgentOrchestrator:
             logger.info("="*60)
         
             self.pm_agent = PMAgent(self.sheets_manager, self.browser)
-            self.task_executor = TaskExecutor(
+            self.task_executor = MATaskExecutor(
                 self.sheets_manager, 
                 self.browser,
                 max_iterations=self.max_iterations
