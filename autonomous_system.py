@@ -25,6 +25,8 @@ class AutonomousAgentSystem:
     def __init__(self, max_retry=3, auto_fix_enabled=True):
         self.max_retry = max_retry
         self.auto_fix_enabled = auto_fix_enabled
+        self.fix_attempt_count = 0
+        self.max_fix_attempts = 3
         self.log_file = Path(f"logs/autonomous_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
         self.log_file.parent.mkdir(parents=True, exist_ok=True)
         
@@ -37,14 +39,36 @@ class AutonomousAgentSystem:
         }
     
     def log(self, message, level="INFO"):
-        """ログを記録"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_msg = f"[{timestamp}] [{level}] {message}"
-        print(log_msg)
+        """ログ出力（簡潔版・タイムスタンプ30回に1回）"""
+        # カウンター初期化
+        if not hasattr(self, '_log_count'):
+            self._log_count = 0
+            self._last_timestamp = 0
         
-        with open(self.log_file, "a") as f:
-            f.write(log_msg + "\n")
-    
+        self._log_count += 1
+        
+        # 30回に1回タイムスタンプ表示
+        import time
+        current_time = time.time()
+        show_timestamp = (
+            self._log_count % 30 == 1 or
+            current_time - self._last_timestamp > 600  # 10分経過
+        )
+        
+        if show_timestamp:
+            from datetime import datetime
+            timestamp = datetime.now().strftime('[%H:%M]')
+            self._last_timestamp = current_time
+            print(f"{timestamp} {message}")
+        else:
+            print(message)
+        
+        # ログファイルには完全な情報を記録
+        if hasattr(self, 'log_file'):
+            from datetime import datetime
+            timestamp_full = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+            with open(self.log_file, 'a', encoding='utf-8') as f:
+                f.write(f"{timestamp_full} [{level}] {message}\n")
     def run_command(self, command, description=""):
         """コマンドを実行してエラーをチェック"""
         self.log(f"🚀 実行開始: {description or command}", "INFO")

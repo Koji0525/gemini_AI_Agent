@@ -86,6 +86,15 @@ class CloudFixAgent:
     
     def _init_api_client(self):
         """APIクライアントを初期化"""
+        # .env から API キーを読み込む
+        import os
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+        
+        # API キーが設定されていない場合は環境変数から取得
+        if not self.api_key:
+            self.api_key = os.getenv('OPENAI_API_KEY')
+        
         if self.api_provider == "openai":
             try:
                 import openai

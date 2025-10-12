@@ -1,0 +1,60 @@
+
+【エラー検出】
+ファイル: logs/autonomous_20251012_085849.log
+
+【エラー内容】
+Traceback (most recent call last):[2025-10-12 08:58:51] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 08:58:51] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 08:58:51] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 08:58:54] [ERROR] ❌ エラー検出: マルチエージェント実行[2025-10-12 08:58:54] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 08:58:55] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 08:58:55] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 08:58:55] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 08:58:58] [ERROR] ❌ エラー検出: マルチエージェント実行[2025-10-12 08:58:58] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 08:58:59] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 08:58:59] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 08:58:59] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 08:59:01] [ERROR] ❌ 最大リトライ回数に到達しました。手動介入が必要です。
+
+【完全ログ（最後の50行）】
+[2025-10-12 08:58:58] [INFO] 🔧 自動修正を開始: scripts/run_multi_agent.py
+[2025-10-12 08:58:58] [INFO] 🚀 実行開始: ハイブリッド修正: scripts/run_multi_agent.py
+[2025-10-12 08:58:59] [DEBUG] 📊 終了コード: 1
+[2025-10-12 08:58:59] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py
+[2025-10-12 08:58:59] [ERROR] エラー内容:
+Traceback (most recent call last):
+  File "/workspaces/gemini_AI_Agent/main_hybrid_fix.py", line 78, in <module>
+    asyncio.run(main())
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/base_events.py", line 684, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspaces/gemini_AI_Agent/main_hybrid_fix.py", line 44, in main
+    error_context = ErrorContextModel(
+                    ^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/pydantic/main.py", line 250, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+pydantic_core._pydantic_core.ValidationError: 3 validation errors for ErrorContextModel
+error_id
+  Field required [type=missing, input_value={'error_type': 'ModuleNot...: 0, 'code_snippet': ''}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+task_id
+  Field required [type=missing, input_value={'error_type': 'ModuleNot...: 0, 'code_snippet': ''}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+full_traceback
+  Field required [type=missing, input_value={'error_type': 'ModuleNot...: 0, 'code_snippet': ''}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.12/v/missing
+
+[2025-10-12 08:58:59] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py
+[2025-10-12 08:58:59] [WARN] ⚠️ run_multi_agent.py が失敗しました（リトライ 3/3）
+[2025-10-12 08:59:01] [ERROR] ❌ 最大リトライ回数に到達しました。手動介入が必要です。
+[2025-10-12 08:59:01] [INFO] 
+============================================================
+[2025-10-12 08:59:01] [INFO] 📊 実行統計
+[2025-10-12 08:59:01] [INFO] ============================================================
+[2025-10-12 08:59:01] [INFO] 実行タスク数: 6
+[2025-10-12 08:59:01] [INFO] 検出エラー数: 3
+[2025-10-12 08:59:01] [INFO] 自動修正成功: 0
+[2025-10-12 08:59:01] [INFO] 手動介入必要: 3
+[2025-10-12 08:59:01] [INFO] 総実行時間: 11.80秒
+[2025-10-12 08:59:01] [INFO] ============================================================
+[2025-10-12 08:59:01] [INFO] 📄 統計情報を保存: logs/stats_20251012_085901.json
+[2025-10-12 08:59:01] [INFO] 📄 ログファイル: logs/autonomous_20251012_085849.log
+
+
+次の修正コマンドを ```bash で提案:

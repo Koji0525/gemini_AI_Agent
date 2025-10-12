@@ -1,0 +1,60 @@
+
+【エラー検出】
+ファイル: logs/autonomous_20251012_122935.log
+
+【エラー内容】
+Traceback (most recent call last):[2025-10-12 12:29:38] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 12:29:38] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 12:29:38] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 12:29:41] [ERROR] ❌ エラー検出: マルチエージェント実行[2025-10-12 12:29:41] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 12:29:41] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 12:29:41] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 12:29:41] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 12:29:44] [ERROR] ❌ エラー検出: マルチエージェント実行[2025-10-12 12:29:44] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 12:29:45] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py[2025-10-12 12:29:45] [ERROR] エラー内容:Traceback (most recent call last):[2025-10-12 12:29:45] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py[2025-10-12 12:29:47] [ERROR] ❌ 最大リトライ回数に到達しました。手動介入が必要です。
+
+【完全ログ（最後の50行）】
+    exec(open('task_executor.py').read())
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'task_executor.py'
+
+[2025-10-12 12:29:44] [WARN] 🔍 エラーを検出しました。自動修正を試みます...
+[2025-10-12 12:29:44] [INFO] 🔧 自動修正を開始: scripts/run_multi_agent.py
+[2025-10-12 12:29:44] [INFO] 🚀 実行開始: ハイブリッド修正: scripts/run_multi_agent.py
+[2025-10-12 12:29:45] [DEBUG] 📊 終了コード: 1
+[2025-10-12 12:29:45] [ERROR] ❌ エラー検出: ハイブリッド修正: scripts/run_multi_agent.py
+[2025-10-12 12:29:45] [ERROR] エラー内容:
+Traceback (most recent call last):
+  File "/workspaces/gemini_AI_Agent/main_hybrid_fix.py", line 81, in <module>
+    asyncio.run(main())
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.python/current/lib/python3.12/asyncio/base_events.py", line 684, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/workspaces/gemini_AI_Agent/main_hybrid_fix.py", line 32, in main
+    cloud_agent = CloudFixAgent(config)
+                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/workspaces/gemini_AI_Agent/fix_agents/cloud_fix_agent.py", line 74, in __init__
+    self._init_api_client()
+  File "/workspaces/gemini_AI_Agent/fix_agents/cloud_fix_agent.py", line 92, in _init_api_client
+    self.client = openai.OpenAI(api_key=self.api_key)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/openai/_client.py", line 137, in __init__
+    raise OpenAIError(
+openai.OpenAIError: The api_key client option must be set either by passing api_key to the client or by setting the OPENAI_API_KEY environment variable
+
+[2025-10-12 12:29:45] [ERROR] ❌ 自動修正失敗: scripts/run_multi_agent.py
+[2025-10-12 12:29:45] [WARN] ⚠️ run_multi_agent.py が失敗しました（リトライ 3/3）
+[2025-10-12 12:29:47] [ERROR] ❌ 最大リトライ回数に到達しました。手動介入が必要です。
+[2025-10-12 12:29:47] [INFO] 
+============================================================
+[2025-10-12 12:29:47] [INFO] 📊 実行統計
+[2025-10-12 12:29:47] [INFO] ============================================================
+[2025-10-12 12:29:47] [INFO] 実行タスク数: 6
+[2025-10-12 12:29:47] [INFO] 検出エラー数: 3
+[2025-10-12 12:29:47] [INFO] 自動修正成功: 0
+[2025-10-12 12:29:47] [INFO] 手動介入必要: 3
+[2025-10-12 12:29:47] [INFO] 総実行時間: 12.07秒
+[2025-10-12 12:29:47] [INFO] ============================================================
+[2025-10-12 12:29:47] [INFO] 📄 統計情報を保存: logs/stats_20251012_122947.json
+[2025-10-12 12:29:47] [INFO] 📄 ログファイル: logs/autonomous_20251012_122935.log
+
+
+次の修正コマンドを ```bash で提案:

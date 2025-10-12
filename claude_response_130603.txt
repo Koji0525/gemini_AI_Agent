@@ -1,0 +1,7 @@
+次のファイル内容を確認するために、以下のコマンドを実行してください：
+
+```bash
+ls -la agents/
+```
+
+現在のディレクトリ構造を見ると、Windowsパスが混在している異常なディレクトリ（`C:\Users\color\Documents\gemini_AI_Agent\agent_outputs`）や、`None`という名前のディレクトリがあります。まず、agentsディレクトリの内容を確認して、プロジェクトの構造を把握しましょう。
