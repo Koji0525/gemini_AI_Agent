@@ -23,3 +23,17 @@ error_logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# === サービスアカウント（機密情報） ===
+service_account.json
+*service_account*.json
+*.json.old
+service_account_b64.txt
+
+# === Python ===
+__pycache__/
+*.py[cod]
+error_logs/
+
+# === IDE ===
+.vscode/settings.json
