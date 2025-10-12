@@ -62,3 +62,9 @@ test_autonomous_*.py
 autonomous_*_v2.py
 simple_test.sh
 wait_and_test.sh
+
+# サービスアカウント（機密情報）
+service_account.json
+service_account.json.old
+service_account_b64.txt
+*service_account*.json
