@@ -37,3 +37,28 @@ error_logs/
 
 # === IDE ===
 .vscode/settings.json
+
+# === バックアップファイル ===
+*.backup
+*.bak
+*_backup.py
+backups/
+
+# === ログとキャッシュ ===
+logs/
+*.log
+error_logs/
+
+# === テンポラリファイル ===
+service_account_b64.txt
+.env
+
+# === Docker ===
+docker-compose.override.yml
+
+# === テストファイル（オプション） ===
+test_autonomous_*.py
+*_test.py
+autonomous_*_v2.py
+simple_test.sh
+wait_and_test.sh
