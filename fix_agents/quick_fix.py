@@ -184,7 +184,7 @@ def fix_task_executor_imports(base_dir: Path) -> bool:
         content = f.read()
     
     # 既に修正済みかチェック
-    if 'from sheets_manager import GoogleSheetsManager' in content:
+    if 'from tools.sheets_manager import GoogleSheetsManager' in content:
         print("✅ 既に修正済みです")
         return True
     
@@ -199,14 +199,14 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 # ===== 設定とユーティリティ =====
-from config_utils import ErrorHandler, config
+from configuration.config_utils import ErrorHandler, config
 
 # ===== データ管理 =====
-from sheets_manager import GoogleSheetsManager
+from tools.sheets_manager import GoogleSheetsManager
 
 # ===== エラーハンドラー（オプション） =====
 try:
-    from error_handler_enhanced import (
+    from tools.error_handler_enhanced import (
         EnhancedErrorHandler,
         TaskErrorHandler
     )

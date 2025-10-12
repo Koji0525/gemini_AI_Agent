@@ -11,10 +11,10 @@ from pathlib import Path
 from datetime import datetime
 
 # 設定
-from config_utils import ErrorHandler, config
+from configuration.config_utils import ErrorHandler, config
 
 # データ管理
-from sheets_manager import GoogleSheetsManager
+from tools.sheets_manager import GoogleSheetsManager
 
 # コマンド監視エージェント
 try:

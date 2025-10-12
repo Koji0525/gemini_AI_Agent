@@ -4,10 +4,10 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional
 
-from safe_browser_manager import get_browser_controller
+from browser_control.safe_browser_manager import get_browser_controller
 from wordpress.wp_post_creator import WordPressPostCreator
 from wordpress.wp_post_editor import WordPressPostEditor
-from config_utils import setup_optimized_logging
+from configuration.config_utils import setup_optimized_logging
 
 logger = setup_optimized_logging("safe_wp")
 

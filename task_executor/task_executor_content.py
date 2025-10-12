@@ -5,7 +5,7 @@ task_executor.pyから分離
 """
 import logging
 from typing import Dict, List
-from config_utils import ErrorHandler
+from configuration.config_utils import ErrorHandler
 
 logger = logging.getLogger(__name__)
 

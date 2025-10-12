@@ -5,7 +5,7 @@ import asyncio
 import logging
 from typing import Dict, Optional, Any, List
 from datetime import datetime
-from config_utils import ErrorHandler
+from configuration.config_utils import ErrorHandler
 
 logger = logging.getLogger(__name__)
 

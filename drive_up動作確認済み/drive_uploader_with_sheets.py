@@ -6,7 +6,7 @@ from datetime import datetime
 import sys
 
 from drive_manager import GoogleDriveManager
-from sheets_manager import GoogleSheetsManager  # 既存のsheets_managerを使用
+from tools.sheets_manager import GoogleSheetsManager  # 既存のsheets_managerを使用
 
 # ロガー設定
 logging.basicConfig(

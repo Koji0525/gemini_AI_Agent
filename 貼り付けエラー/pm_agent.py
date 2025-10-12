@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
 
-from config_utils import config, ErrorHandler
-from sheets_manager import GoogleSheetsManager
-from browser_controller import BrowserController
+from configuration.config_utils import config, ErrorHandler
+from tools.sheets_manager import GoogleSheetsManager
+from browser_control.browser_controller import BrowserController
 
 logger = logging.getLogger(__name__)
 

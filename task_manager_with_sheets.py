@@ -31,7 +31,7 @@ class TaskManagerWithSheets:
         logger.info(f"📊 スプレッドシートID: {self.spreadsheet_id}")
         
         try:
-            from sheets_manager import GoogleSheetsManager
+            from tools.sheets_manager import GoogleSheetsManager
             self.sheets = GoogleSheetsManager(spreadsheet_id=self.spreadsheet_id)
             logger.info("✅ Google Sheets接続完了")
             return True

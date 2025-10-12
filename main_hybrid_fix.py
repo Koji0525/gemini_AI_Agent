@@ -1,11 +1,20 @@
-logger.info("\n🧪 テストエラーを生成して自動修正をテスト")
+#!/usr/bin/env python3
+"""
+ハイブリッド修正システムのメインエントリーポイント
+"""
+
+from fix_agents.hybrid_fix_orchestrator import HybridFixOrchestrator
+from configuration.config_hybrid import HybridFixConfig
+
+def main():
+    """メイン実行関数"""
+    config = HybridFixConfig()
+    orchestrator = HybridFixOrchestrator(config)
     
-    try:
-        # 意図的にエラーを発生させる
-        test_data = None
-        result = getattr(test_data, 'get', None)  # Fixed: safe attribute access('key')  # AttributeError
+    # 修正プロセスを実行
+    result = orchestrator.run()
     
-    except Exception as e:
-        # エラーを自動修正システムに送信
-        handle_result = await system.handle_error(
-            error=e,
+    return result
+
+if __name__ == "__main__":
+    main()

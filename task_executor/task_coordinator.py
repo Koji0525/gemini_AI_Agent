@@ -9,13 +9,13 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 # 設定とユーティリティ
-from config_utils import ErrorHandler, config
+from configuration.config_utils import ErrorHandler, config
 
 # データ管理
-from sheets_manager import GoogleSheetsManager
+from tools.sheets_manager import GoogleSheetsManager
 
 # 既存のTaskExecutor
-from task_executor import TaskExecutor
+from scripts.task_executor import TaskExecutor
 
 # 専門実行モジュール（新規）
 try:

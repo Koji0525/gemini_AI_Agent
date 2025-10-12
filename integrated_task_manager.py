@@ -11,8 +11,8 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-from sheets_manager import GoogleSheetsManager
-from wordpress_task_executor import WordPressTaskExecutor
+from tools.sheets_manager import GoogleSheetsManager
+from scripts.wordpress_task_executor import WordPressTaskExecutor
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
