@@ -1,0 +1,10 @@
+```bash
+ls -la *.py | head -5
+```
+
+【結果】
+-rw-rw-rw- 1 codespace codespace   984 Oct 12 08:24 add_browser_config.py
+-rw-rw-rw- 1 codespace codespace  1034 Oct 12 12:51 add_fix_limit.py
+-rw-rw-rw- 1 codespace codespace   953 Oct 12 07:43 add_return_to_logging.py
+-rw-rw-rw- 1 codespace codespace  1576 Oct 12 13:00 agent_context_manager.py
+-rw-rw-rw- 1 codespace codespace 13878 Oct 12 12:59 agent_core.py
