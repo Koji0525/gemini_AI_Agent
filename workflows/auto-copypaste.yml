@@ -1,0 +1,87 @@
+name: 🤖 自動コピペシステム
+
+on:
+  workflow_dispatch:  # 手動実行
+    inputs:
+      task:
+        description: '実行するタスク'
+        required: true
+        default: 'プロジェクトのREADME.mdを確認して、不足があれば追加してください'
+        type: string
+      max_iterations:
+        description: '最大反復回数'
+        required: false
+        default: '5'
+        type: string
+
+jobs:
+  auto-copypaste:
+    name: 🚀 自動コピペ実行
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: 📥 チェックアウト
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Python セットアップ
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 📦 依存関係インストール
+      run: |
+        pip install --upgrade pip
+        pip install google-generativeai requests pyyaml
+    
+    - name: 🔐 Codespace名を取得
+      id: get-codespace
+      run: |
+        # GitHub CLIをインストール
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+        sudo apt update
+        sudo apt install gh -y
+        
+        # Codespace一覧を取得
+        echo "${{ secrets.GITHUB_PAT }}" | gh auth login --with-token
+        CODESPACE_NAME=$(gh codespace list --json name --jq '.[0].name' 2>/dev/null || echo "")
+        
+        if [ -z "$CODESPACE_NAME" ]; then
+          echo "⚠️ Codespaceが見つかりません。新規作成します..."
+          CODESPACE_NAME=$(gh codespace create --repo ${{ github.repository }} --machine basicLinux32gb --retention-period 1h --json name --jq '.name')
+          echo "✅ Codespace作成: $CODESPACE_NAME"
+        else
+          echo "✅ 既存のCodespace使用: $CODESPACE_NAME"
+        fi
+        
+        echo "codespace_name=$CODESPACE_NAME" >> $GITHUB_OUTPUT
+    
+    - name: 🤖 自動コピペロボット実行
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+        CODESPACE_NAME: ${{ steps.get-codespace.outputs.codespace_name }}
+        TASK: ${{ github.event.inputs.task }}
+        MAX_ITERATIONS: ${{ github.event.inputs.max_iterations }}
+      run: |
+        python scripts/auto_copypaste_api.py
+    
+    - name: 📊 結果を表示
+      if: always()
+      run: |
+        echo "🎉 実行完了"
+        if [ -f results.txt ]; then
+          echo "📝 結果:"
+          cat results.txt
+        fi
+    
+    - name: 💾 ログ保存
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: execution-logs
+        path: |
+          *.log
+          *.txt
+        retention-days: 7
