@@ -60,7 +60,7 @@ jobs:
     - name: 🤖 自動コピペロボット実行
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        GITHUB_PAT: ${{ secrets.GITHUB_PAT }}
+        GITHUB_PAT: ${{ secrets.GH_PAT }}
         CODESPACE_NAME: ${{ steps.get-codespace.outputs.codespace_name }}
         TASK: ${{ github.event.inputs.task }}
         MAX_ITERATIONS: ${{ github.event.inputs.max_iterations }}
