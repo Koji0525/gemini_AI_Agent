@@ -44,7 +44,7 @@ jobs:
         sudo apt install gh -y
         
         # Codespace一覧を取得
-        echo "${{ secrets.GITHUB_PAT }}" | gh auth login --with-token
+        echo "${{ secrets.GH_PAT }}" | gh auth login --with-token
         CODESPACE_NAME=$(gh codespace list --json name --jq '.[0].name' 2>/dev/null || echo "")
         
         if [ -z "$CODESPACE_NAME" ]; then
