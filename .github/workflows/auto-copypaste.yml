@@ -1,4 +1,4 @@
-name: 🤖 自動コピペシステム
+name: Auto CopyPaste System
 
 on:
   workflow_dispatch:
