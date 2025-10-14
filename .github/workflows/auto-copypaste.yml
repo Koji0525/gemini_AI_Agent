@@ -1,4 +1,5 @@
 name: 🤖 自動コピペシステム
+
 on:
   workflow_dispatch:
     inputs:
