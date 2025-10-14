@@ -1,4 +1,4 @@
-name: Auto CopyPaste System
+nameAutoCopyPasteSystem
 
 on:
   workflow_dispatch:
