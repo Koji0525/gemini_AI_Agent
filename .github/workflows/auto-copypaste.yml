@@ -1,5 +1,4 @@
 name: Auto CopyPaste System
-
 on:
   workflow_dispatch:
     inputs:
