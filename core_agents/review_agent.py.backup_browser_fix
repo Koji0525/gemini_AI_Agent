@@ -42,8 +42,8 @@ class ReviewAgent:
             self.output_folder = Path("agent_outputs/review")
         
         self.output_folder.mkdir(parents=True, exist_ok=True)
-        
-        # その他の初期化
+        """コンストラクタ - 後でプロパティを設定する"""
+        self.browser = None
         self.sheets_manager = None
         self.system_prompt = REVIEW_SYSTEM_PROMPT
 
