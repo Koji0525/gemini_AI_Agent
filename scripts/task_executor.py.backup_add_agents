@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from pathlib import Path
 
 # ===== 設定とユーティリティ =====
 from configuration.config_utils import ErrorHandler, config
@@ -167,41 +166,6 @@ class TaskExecutor:
         logger.info("="*60)
         
         # レビューエージェント (review) の初期化
-
-        # DesignAgent の初期化
-        self.design_agent = None
-        try:
-            from core_agents.design_agent import DesignAgent
-            if self.browser:
-                self.design_agent = DesignAgent(
-                    browser_controller=self.browser,
-                    output_folder=Path("agent_outputs/design")
-                )
-                self.agents['design'] = self.design_agent
-                logger.info("✅ DesignAgent 初期化完了")
-            else:
-                logger.warning("⚠️ ブラウザ未設定のためDesignAgentを初期化できません")
-        except Exception as e:
-            logger.warning(f"⚠️ DesignAgent 初期化失敗: {e}")
-            self.design_agent = None
-
-        # DevAgent の初期化
-        self.dev_agent = None
-        try:
-            from core_agents.dev_agent import DevAgent
-            if self.browser:
-                self.dev_agent = DevAgent(
-                    browser_controller=self.browser,
-                    output_folder=Path("agent_outputs/dev")
-                )
-                self.agents['dev'] = self.dev_agent
-                logger.info("✅ DevAgent 初期化完了")
-            else:
-                logger.warning("⚠️ ブラウザ未設定のためDevAgentを初期化できません")
-        except Exception as e:
-            logger.warning(f"⚠️ DevAgent 初期化失敗: {e}")
-            self.dev_agent = None
-
 
         # DesignAgent の初期化
         self.design_agent = None
