@@ -68,3 +68,56 @@ service_account.json
 service_account.json.old
 service_account_b64.txt
 *service_account*.json
+
+# ===== ブラウザ関連（自動生成） =====
+browser_data/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# ===== ログファイル =====
+*.log
+*.pid
+
+# ===== 一時ファイル =====
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ===== バックアップファイル =====
+*.backup
+*.bak
+*.old
+*.orig
+*.rej
+
+# ===== OS関連 =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE関連 =====
+.vscode/
+.idea/
+*.sublime-*
+
+# ===== Python関連 =====
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ===== 環境変数 =====
+.env
+.env.local
+
+# ===== Playwright =====
+playwright-report/
+test-results/
+
+# ===== その他 =====
+node_modules/
+*.db
+*.db-journal
