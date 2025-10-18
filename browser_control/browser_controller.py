@@ -1,46 +1,16 @@
-#!/usr/bin/env python3
 """
-EnhancedBrowserController - 完全版
-- タイムアウト管理統一
-- エラーハンドリング強化
-- リトライ機能
-- フォールバック機能
+BrowserController - 完全修正版
+- Pathオブジェクト使用
+- VNC解像度 1150x600
+- 既存モジュール正しく統合
 """
 
 import asyncio
-import logging
+import os
 from pathlib import Path
-from typing import Optional, Dict, Callable
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page
-
-logger = logging.getLogger(__name__)
-
-class BrowserConfig:
-    """ブラウザ設定の一元管理"""
-    
-    # タイムアウト設定（ミリ秒）
-    NAVIGATION_TIMEOUT = 60000  # ページ移動: 60秒
-    ELEMENT_WAIT_TIMEOUT = 30000  # 要素待機: 30秒
-    TEXT_GENERATION_TIMEOUT = 180  # テキスト生成待機: 180秒（秒単位）
-    BROWSER_LAUNCH_TIMEOUT = 30000  # ブラウザ起動: 30秒
-    
-    # リトライ設定
-    MAX_RETRIES = 3  # 最大リトライ回数
-    RETRY_DELAY = 2  # リトライ間隔（秒）
-    
-    # ブラウザ設定
-    VIEWPORT = {'width': 1150, 'height': 650}
-    HEADLESS = True
-    
-    @classmethod
-    def get_launch_args(cls) -> list:
-        """ブラウザ起動引数取得"""
-        return [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-blink-features=AutomationControlled'
-        ]
+from typing import Optional, Dict
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
+from dataclasses import dataclass
 
 
 class BrowserOperationError(Exception):
@@ -48,457 +18,242 @@ class BrowserOperationError(Exception):
     pass
 
 
-class EnhancedBrowserController:
-    """
-    強化版BrowserController
-    - 完全非同期化
-    - 統一されたタイムアウト管理
-    - エラーハンドリング強化
-    - リトライ機能
-    """
+@dataclass
+class BrowserConfig:
+    """ブラウザ設定"""
+    GEMINI_URL: str = "https://gemini.google.com/app"
+    NAVIGATION_TIMEOUT: int = 60000
+    VIEWPORT: Dict[str, int] = None
     
-    def __init__(
-        self,
-        download_folder: Path,
-        mode: str = "image",
-        service: str = "google",
-        credentials: Dict = None
-    ):
-        """
-        初期化
-        
-        Args:
-            download_folder: ダウンロードフォルダ
-            mode: 動作モード ("image", "text", "hybrid")
-            service: 使用サービス ("google", "deepseek")
-            credentials: 認証情報
-        """
-        self.download_folder = Path(download_folder)
-        self.download_folder.mkdir(parents=True, exist_ok=True)
-        
-        self.mode = mode
-        self.service = service
-        self.credentials = credentials or {}
-        
-        # Playwright インスタンス
-        self._playwright = None
-        self._browser: Optional[Browser] = None
-        self._context: Optional[BrowserContext] = None
-        self._page: Optional[Page] = None
-        
-        # 状態管理
-        self._is_initialized = False
-        self._is_logged_in = False
-        self._operation_count = 0  # 操作カウント（デバッグ用）
-        
-        logger.info(f"✅ EnhancedBrowserController 初期化")
-        logger.info(f"   Mode: {mode}, Service: {service}")
+    def __post_init__(self):
+        if self.VIEWPORT is None:
+            # 正しい解像度: 1150x600
+            self.VIEWPORT = {"width": 1150, "height": 600}
+
+
+class BrowserController:
+    """ブラウザ制御のファサード（完全修正版）"""
     
-    async def _retry_operation(
-        self,
-        operation: Callable,
-        operation_name: str,
-        max_retries: int = None,
-        *args,
-        **kwargs
-    ):
-        """
-        リトライ機能付き操作実行
+    def __init__(self, download_folder: str = None):
+        self.config = BrowserConfig()
+        self.download_folder = download_folder or "./downloads"
         
-        Args:
-            operation: 実行する操作（async関数）
-            operation_name: 操作名（ログ用）
-            max_retries: 最大リトライ回数
-            *args, **kwargs: 操作に渡す引数
-            
-        Returns:
-            操作の結果
-            
-        Raises:
-            BrowserOperationError: 全てのリトライが失敗
-        """
-        max_retries = max_retries or BrowserConfig.MAX_RETRIES
-        last_error = None
+        # Playwright関連
+        self.playwright: Optional[Playwright] = None
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
         
-        for attempt in range(max_retries):
-            try:
-                result = await operation(*args, **kwargs)
-                if attempt > 0:
-                    logger.info(f"✅ {operation_name} 成功（{attempt + 1}回目）")
-                return result
-                
-            except Exception as e:
-                last_error = e
-                logger.warning(
-                    f"⚠️ {operation_name} 失敗（{attempt + 1}/{max_retries}回目）: {e}"
-                )
-                
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(BrowserConfig.RETRY_DELAY)
+        # 専門モジュール（後で初期化）
+        self.cookie_manager = None
+        self.wp_session = None
         
-        # 全てのリトライが失敗
-        logger.error(f"❌ {operation_name} 完全失敗: {last_error}")
-        raise BrowserOperationError(
-            f"{operation_name} failed after {max_retries} attempts: {last_error}"
-        )
+        os.makedirs(self.download_folder, exist_ok=True)
     
     async def setup_browser(self) -> None:
-        """ブラウザセットアップ（リトライ付き）"""
-        if self._is_initialized:
-            logger.info("⚠️ ブラウザ既に初期化済み")
-            return
-        
-        async def _setup():
-            logger.info("🚀 ブラウザ起動中...")
-            
-            # Playwright起動
-            self._playwright = await async_playwright().start()
-            
-            # ブラウザ起動
-            self._browser = await self._playwright.chromium.launch(
-                headless=BrowserConfig.HEADLESS,
-                args=BrowserConfig.get_launch_args(),
-                timeout=BrowserConfig.BROWSER_LAUNCH_TIMEOUT
-            )
-            
-            # コンテキスト作成
-            self._context = await self._browser.new_context(
-                viewport=BrowserConfig.VIEWPORT,
-                accept_downloads=True
-            )
-            
-            # ページ作成
-            self._page = await self._context.new_page()
-            
-            # タイムアウト設定
-            self._page.set_default_timeout(BrowserConfig.NAVIGATION_TIMEOUT)
-            
-            self._is_initialized = True
-            logger.info("✅ ブラウザ起動完了")
+        """ブラウザを初期化"""
+        print("🌐 ブラウザを初期化中...")
         
         try:
-            await self._retry_operation(_setup, "ブラウザセットアップ")
-        except BrowserOperationError as e:
+            self.playwright = await async_playwright().start()
+            
+            self.browser = await self.playwright.chromium.launch(
+                headless=False,
+                args=[
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-blink-features=AutomationControlled'
+                ]
+            )
+            
+            self.context = await self.browser.new_context(
+                viewport=self.config.VIEWPORT,
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            )
+            
+            # 専門モジュール初期化
+            await self._initialize_managers()
+            
+            self.page = await self.context.new_page()
+            self.page.set_default_timeout(self.config.NAVIGATION_TIMEOUT)
+            
+            print("✅ ブラウザ初期化完了")
+            
+        except Exception as e:
+            print(f"❌ ブラウザ初期化エラー: {e}")
             await self.cleanup()
-            raise
+            raise BrowserOperationError(f"ブラウザ初期化失敗: {e}")
     
-    @property
-    def page(self) -> Optional[Page]:
-        """現在のページ取得"""
-        return self._page
-    
-    @property
-    def context(self) -> Optional[BrowserContext]:
-        """現在のコンテキスト取得"""
-        return self._context
-    
-    @property
-    def is_initialized(self) -> bool:
-        """初期化状態"""
-        return self._is_initialized
-    
-    async def navigate_to_gemini(self) -> None:
-        """Gemini AIに移動（リトライ付き）"""
-        if not self._page:
-            raise BrowserOperationError("ブラウザ未初期化")
-        
-        async def _navigate():
-            logger.info("🔗 Gemini AIに移動中...")
-            await self._page.goto(
-                "https://gemini.google.com/",
-                timeout=BrowserConfig.NAVIGATION_TIMEOUT,
-                wait_until="domcontentloaded"
-            )
-            logger.info("✅ Gemini AI到達")
-        
-        await self._retry_operation(_navigate, "Gemini AI移動")
-    
-    async def navigate_to_deepseek(self) -> None:
-        """DeepSeekに移動（リトライ付き）"""
-        if not self._page:
-            raise BrowserOperationError("ブラウザ未初期化")
-        
-        async def _navigate():
-            logger.info("🔗 DeepSeekに移動中...")
-            await self._page.goto(
-                "https://chat.deepseek.com/",
-                timeout=BrowserConfig.NAVIGATION_TIMEOUT,
-                wait_until="domcontentloaded"
-            )
-            logger.info("✅ DeepSeek到達")
-        
-        await self._retry_operation(_navigate, "DeepSeek移動")
-    
-    async def send_prompt(self, prompt: str) -> bool:
-        """
-        プロンプト送信（リトライ付き）
-        
-        Args:
-            prompt: 送信するプロンプト
-            
-        Returns:
-            送信成功: True, 失敗: False
-        """
-        if not self._page:
-            logger.error("❌ ブラウザ未初期化")
-            return False
-        
+    async def _initialize_managers(self):
+        """専門モジュールを初期化（修正版：Pathオブジェクト使用）"""
         try:
-            logger.info(f"📝 プロンプト送信: {prompt[:50]}...")
+            from .brower_cookie_and_session import CookieSessionManager
             
-            # サービスに応じた処理
-            if self.service == "google":
-                await self._retry_operation(
-                    self._send_prompt_gemini,
-                    "Geminiプロンプト送信",
-                    max_retries=2,
-                    prompt=prompt
-                )
-            elif self.service == "deepseek":
-                await self._retry_operation(
-                    self._send_prompt_deepseek,
-                    "DeepSeekプロンプト送信",
-                    max_retries=2,
-                    prompt=prompt
-                )
-            else:
-                logger.error(f"❌ 未対応サービス: {self.service}")
+            # 重要：Pathオブジェクトとして渡す
+            cookies_file = Path("./gemini_cookies.json")
+            
+            self.cookie_manager = CookieSessionManager(
+                context=self.context,
+                cookies_file=cookies_file  # Pathオブジェクト
+            )
+            
+            # クッキーを読み込む
+            await self.cookie_manager.load_cookies()
+            print("✅ CookieSessionManager 初期化完了")
+            
+        except ImportError as e:
+            print(f"⚠️  CookieSessionManager インポートエラー: {e}")
+        except Exception as e:
+            print(f"⚠️  CookieSessionManager 初期化エラー: {e}")
+    
+    async def navigate_to_gemini(self) -> bool:
+        """Gemini AIに移動"""
+        try:
+            print("📱 Gemini AIに移動中...")
+            await self.page.goto(self.config.GEMINI_URL, wait_until="domcontentloaded", timeout=30000)
+            await asyncio.sleep(3)
+            
+            is_logged_in = await self._check_login_status()
+            print(f"{'✅' if is_logged_in else '⚠️ '} ログイン状態: {is_logged_in}")
+            
+            return is_logged_in
+        except Exception as e:
+            print(f"❌ Gemini移動エラー: {e}")
+            raise BrowserOperationError(f"Gemini移動失敗: {e}")
+    
+    async def _check_login_status(self) -> bool:
+        """ログイン状態をチェック（修正版）"""
+        try:
+            # Geminiの新しいUI: contenteditable div
+            contenteditable = await self.page.locator("[contenteditable='true']").count()
+            if contenteditable > 0:
+                return True
+            
+            # 古いUI: textarea（念のため）
+            textarea = await self.page.locator("div[contenteditable='true']").count()
+            if textarea > 0:
+                return True
+            
+            # ログインボタンがあれば未ログイン
+            login_button = await self.page.locator("text=Sign in").count()
+            if login_button > 0:
                 return False
             
-            self._operation_count += 1
-            return True
-                
-        except BrowserOperationError as e:
-            logger.error(f"❌ プロンプト送信完全失敗: {e}")
+            return False
+        except:
             return False
     
-    async def _send_prompt_gemini(self, prompt: str) -> None:
-        """Gemini用プロンプト送信（エラー時は例外を投げる）"""
-        # 入力欄を探す（優先度順）
-        selectors = [
-            'div[contenteditable="true"]',
-            'textarea.ql-editor',
-            'textarea[placeholder*="Enter"]',
-            'div.ql-editor[contenteditable="true"]',
-            'rich-textarea'
-        ]
-        
-        input_box = None
-        for selector in selectors:
-            try:
-                input_box = await self._page.wait_for_selector(
-                    selector,
-                    timeout=BrowserConfig.ELEMENT_WAIT_TIMEOUT
-                )
-                if input_box:
-                    logger.debug(f"   入力欄検出: {selector}")
-                    break
-            except:
-                continue
-        
-        if not input_box:
-            # デバッグスクショ
-            await self._page.screenshot(path='logs/browser/debug_no_input.png')
-            raise BrowserOperationError("入力欄が見つかりません")
-        
-        # プロンプト入力
-        await input_box.click()
-        await asyncio.sleep(0.3)
-        await input_box.fill(prompt)
-        await asyncio.sleep(0.5)
-        
-        # 送信（Enterキー）
-        await input_box.press('Enter')
-        logger.info("✅ プロンプト送信完了")
-    
-    async def _send_prompt_deepseek(self, prompt: str) -> None:
-        """DeepSeek用プロンプト送信"""
-        raise BrowserOperationError("DeepSeek送信は未実装")
-    
-    async def wait_for_text_generation(self, max_wait: int = None) -> bool:
-        """
-        テキスト生成完了を待機
-        
-        Args:
-            max_wait: 最大待機時間（秒）
-            
-        Returns:
-            完了: True, タイムアウト: False
-        """
-        max_wait = max_wait or BrowserConfig.TEXT_GENERATION_TIMEOUT
-        
-        if not self._page:
-            logger.error("❌ ブラウザ未初期化")
-            return False
-        
-        logger.info(f"⏳ テキスト生成待機中（最大{max_wait}秒）...")
-        
+    async def send_prompt(self, prompt: str) -> bool:
+        """プロンプトを送信"""
         try:
-            start_time = asyncio.get_event_loop().time()
+            print(f"📝 プロンプト送信: {prompt[:50]}...")
+            textarea = self.page.locator("div[contenteditable='true']").first
+            await textarea.fill(prompt)
+            await asyncio.sleep(0.5)
+            await textarea.press("Enter")
+            print("✅ プロンプト送信完了")
+            return True
+        except Exception as e:
+            print(f"❌ プロンプト送信エラー: {e}")
+            raise BrowserOperationError(f"プロンプト送信失敗: {e}")
+    
+    async def wait_for_text_generation(self, max_wait: int = 60) -> bool:
+        """テキスト生成完了を待機"""
+        try:
+            print("⏳ レスポンス生成を待機中...")
             
-            while True:
-                elapsed = asyncio.get_event_loop().time() - start_time
-                if elapsed > max_wait:
-                    logger.warning(f"⚠️ タイムアウト（{max_wait}秒）")
-                    return False
-                
-                # 生成中インジケータ確認
-                generating_selectors = [
-                    'button[aria-label*="Stop"]',
-                    'button[aria-label*="stop"]',
-                    '.generating-indicator',
-                    '[data-test-id="stop-button"]'
-                ]
-                
-                is_generating = False
-                for selector in generating_selectors:
-                    try:
-                        element = await self._page.query_selector(selector)
-                        if element and await element.is_visible():
-                            is_generating = True
-                            break
-                    except:
-                        pass
+            for i in range(max_wait):
+                await asyncio.sleep(1)
+                is_generating = await self.page.locator("[data-test-id='generation-in-progress']").count() > 0
                 
                 if not is_generating:
-                    logger.info("✅ テキスト生成完了")
+                    print("✅ レスポンス生成完了")
                     return True
                 
-                await asyncio.sleep(1)
-                
+                if i % 10 == 0 and i > 0:
+                    print(f"   待機中... ({i}秒)")
+            
+            print("⚠️  タイムアウト")
+            return False
         except Exception as e:
-            logger.error(f"❌ 待機エラー: {e}")
+            print(f"❌ 待機エラー: {e}")
             return False
     
-    async def extract_latest_text_response(
-        self,
-        allow_partial: bool = True
-    ) -> Optional[str]:
+    async def extract_latest_text_response(self):
         """
-        最新のテキストレスポンス抽出
+        最新のレスポンステキストを取得
         
-        Args:
-            allow_partial: 部分的なレスポンスも許可
-            
         Returns:
-            抽出されたテキスト、失敗時None
+            str: レスポンステキスト（取得できない場合は空文字列）
         """
-        if not self._page:
-            logger.error("❌ ブラウザ未初期化")
-            return None
-        
         try:
-            logger.info("📄 レスポンステキスト抽出中...")
+            print("📖 レスポンステキスト取得中...")
             
-            # レスポンス要素を探す（優先度順）
+            # 優先順位の高いセレクタから順に試行
             selectors = [
-                'div[data-message-author-role="assistant"]',
-                'div.model-response-text',
-                'div.markdown-content',
-                'div.message-content',
-                '[data-test-id="model-response"]'
+                ".model-response-text",  # 最も確実
+                ".markdown",             # マークダウンレンダラー
+                ".response-container",   # レスポンスコンテナ
+                "message-content",       # カスタム要素
             ]
             
             for selector in selectors:
                 try:
-                    elements = await self._page.query_selector_all(selector)
+                    elements = await self.page.locator(selector).all()
                     if elements:
+                        # 最後の要素（最新のレスポンス）を取得
                         last_element = elements[-1]
-                        text = await last_element.inner_text()
                         
-                        if text and text.strip():
-                            logger.info(f"✅ テキスト抽出成功（{len(text)}文字, {selector}）")
-                            return text.strip()
+                        # 表示されているか確認
+                        is_visible = await last_element.is_visible()
+                        if is_visible:
+                            text = await last_element.text_content()
+                            if text and len(text.strip()) > 10:  # 10文字以上
+                                print(f"✅ レスポンス取得成功: {selector} ({len(text)} 文字)")
+                                return text.strip()
                 except Exception as e:
-                    logger.debug(f"   セレクタ {selector} 失敗: {e}")
+                    # デバッグ用（オプション）
+                    # print(f"   {selector} で取得失敗: {e}")
                     continue
             
-            # セレクタで見つからない場合
-            logger.warning("⚠️ セレクタでレスポンスが見つかりません")
-            
-            # デバッグスクショ
-            await self._page.screenshot(path='logs/browser/debug_no_response.png')
-            logger.info("   📸 デバッグスクショ: logs/browser/debug_no_response.png")
-            
-            return None
+            print("⚠️  レスポンスが見つかりません")
+            return ""
             
         except Exception as e:
-            logger.error(f"❌ テキスト抽出エラー: {e}")
-            return None
-    
-    async def send_prompt_and_wait(
-        self,
-        prompt: str,
-        max_wait: int = 120
-    ) -> bool:
-        """
-        プロンプト送信して完了を待機
-        
-        Args:
-            prompt: 送信するプロンプト
-            max_wait: 最大待機時間
-            
-        Returns:
-            成功: True, 失敗: False
-        """
-        if not await self.send_prompt(prompt):
-            return False
-        
-        await asyncio.sleep(2)
-        return await self.wait_for_text_generation(max_wait)
-    
-    async def save_text_to_file(
-        self,
-        text: str,
-        filename: str
-    ) -> bool:
-        """
-        テキストをファイルに保存
-        
-        Args:
-            text: 保存するテキスト
-            filename: ファイル名
-            
-        Returns:
-            成功: True, 失敗: False
-        """
-        try:
-            file_path = Path(filename)
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(text, encoding='utf-8')
-            logger.info(f"✅ テキスト保存: {file_path}")
-            return True
-        except Exception as e:
-            logger.error(f"❌ ファイル保存エラー: {e}")
-            return False
-    
+            print(f"❌ レスポンス取得エラー: {e}")
+            return ""
+
     async def cleanup(self) -> None:
-        """クリーンアップ"""
-        logger.info("🧹 ブラウザクリーンアップ中...")
-        
+        """リソースをクリーンアップ"""
         try:
-            if self._page:
-                await self._page.close()
-                self._page = None
+            print("🧹 ブラウザをクリーンアップ中...")
             
-            if self._context:
-                await self._context.close()
-                self._context = None
+            if self.cookie_manager:
+                try:
+                    await self.cookie_manager.save_cookies()
+                except Exception as e:
+                    print(f"⚠️  クッキー保存エラー: {e}")
             
-            if self._browser:
-                await self._browser.close()
-                self._browser = None
+            if self.page:
+                await self.page.close()
+            if self.context:
+                await self.context.close()
+            if self.browser:
+                await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
             
-            if self._playwright:
-                await self._playwright.stop()
-                self._playwright = None
-            
-            self._is_initialized = False
-            logger.info("✅ クリーンアップ完了")
-            
+            print("✅ クリーンアップ完了")
         except Exception as e:
-            logger.error(f"⚠️ クリーンアップエラー: {e}")
+            print(f"⚠️  クリーンアップエラー: {e}")
+    
+    async def __aenter__(self):
+        await self.setup_browser()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.cleanup()
 
 
-# 後方互換性のためのエイリアス
-BrowserController = EnhancedBrowserController
+EnhancedBrowserController = BrowserController
