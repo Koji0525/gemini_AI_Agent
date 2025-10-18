@@ -121,3 +121,25 @@ test-results/
 node_modules/
 *.db
 *.db-journal
+
+# 一時スクリプト
+check_*.sh
+diagnose_*.sh
+fix_*.sh
+setup_*.sh
+verify_*.sh
+find_*.sh
+merge_to_*.sh
+select_files_*.sh
+git_workflow_*.sh
+update_config_*.py
+
+# デバッグファイル
+*debug*.png
+*debug*.json
+
+# バックアップファイル
+*.backup
+*.backup_*
+*_backup_*
+
