@@ -107,21 +107,53 @@ class BrowserController:
         except Exception as e:
             print(f"⚠️  CookieSessionManager 初期化エラー: {e}")
     
-    async def navigate_to_gemini(self) -> bool:
-        """Gemini AIに移動"""
-        try:
-            print("📱 Gemini AIに移動中...")
-            await self.page.goto(self.config.GEMINI_URL, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(3)
+    async def navigate_to_gemini(self, max_retries: int = 3) -> bool:
+        """
+        Gemini AIに移動（リトライ機能付き）
+        
+        Args:
+            max_retries: 最大リトライ回数
             
-            is_logged_in = await self._check_login_status()
-            print(f"{'✅' if is_logged_in else '⚠️ '} ログイン状態: {is_logged_in}")
-            
-            return is_logged_in
-        except Exception as e:
-            print(f"❌ Gemini移動エラー: {e}")
-            raise BrowserOperationError(f"Gemini移動失敗: {e}")
-    
+        Returns:
+            bool: ログイン状態
+        """
+        for attempt in range(max_retries):
+            try:
+                print(f"📱 Gemini AIに移動中... (試行 {attempt + 1}/{max_retries})")
+                
+                # タイムアウトを段階的に増加（30秒 → 60秒 → 90秒）
+                timeout = 30000 + (attempt * 30000)
+                
+                await self.page.goto(
+                    "https://gemini.google.com/app",
+                    timeout=timeout,
+                    wait_until="domcontentloaded"  # networkidle より軽い
+                )
+                
+                # ページ読み込み待機
+                await asyncio.sleep(3)
+                
+                # ログイン状態確認
+                is_logged_in = await self._check_login_status()
+                
+                if is_logged_in:
+                    print("✅ ログイン状態: True")
+                    return True
+                else:
+                    print("⚠️  ログインが必要です")
+                    return False
+                    
+            except Exception as e:
+                print(f"⚠️  試行 {attempt + 1} 失敗: {e}")
+                
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5
+                    print(f"   {wait_time}秒後に再試行...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    print(f"❌ {max_retries}回試行しましたが失敗しました")
+                    raise
+
     async def _check_login_status(self) -> bool:
         """ログイン状態をチェック（修正版）"""
         try:
@@ -144,20 +176,58 @@ class BrowserController:
         except:
             return False
     
-    async def send_prompt(self, prompt: str) -> bool:
-        """プロンプトを送信"""
-        try:
-            print(f"📝 プロンプト送信: {prompt[:50]}...")
-            textarea = self.page.locator("div[contenteditable='true']").first
-            await textarea.fill(prompt)
-            await asyncio.sleep(0.5)
-            await textarea.press("Enter")
-            print("✅ プロンプト送信完了")
-            return True
-        except Exception as e:
-            print(f"❌ プロンプト送信エラー: {e}")
-            raise BrowserOperationError(f"プロンプト送信失敗: {e}")
-    
+    async def send_prompt(self, prompt: str, timeout: int = 60000, max_retries: int = 2) -> None:
+        """
+        Geminiにプロンプトを送信（リトライ機能付き）
+        
+        Args:
+            prompt: 送信するプロンプト
+            timeout: タイムアウト時間（ミリ秒）
+            max_retries: 最大リトライ回数
+        """
+        for attempt in range(max_retries):
+            try:
+                print(f"📝 プロンプト送信: {prompt[:80]}...")
+                
+                # 入力欄を探す（複数のセレクタを試行）
+                selectors = [
+                    "div[contenteditable='true']",
+                    ".ql-editor",
+                    "rich-textarea"
+                ]
+                
+                textarea = None
+                for selector in selectors:
+                    try:
+                        textarea = await self.page.locator(selector).first
+                        if await textarea.is_visible():
+                            break
+                    except:
+                        continue
+                
+                if not textarea:
+                    raise Exception("入力欄が見つかりません")
+                
+                # クリアしてからテキスト入力
+                await textarea.click()
+                await textarea.fill("")
+                await textarea.fill(prompt)
+                
+                # Enterキーで送信
+                await textarea.press("Enter")
+                
+                print("✅ プロンプト送信完了")
+                return
+                
+            except Exception as e:
+                print(f"⚠️  試行 {attempt + 1} 失敗: {e}")
+                
+                if attempt < max_retries - 1:
+                    print(f"   3秒後に再試行...")
+                    await asyncio.sleep(3)
+                else:
+                    raise BrowserOperationError(f"プロンプト送信失敗: {e}")
+
     async def wait_for_text_generation(self, max_wait: int = 60) -> bool:
         """テキスト生成完了を待機"""
         try:
