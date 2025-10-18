@@ -143,3 +143,34 @@ update_config_*.py
 *.backup_*
 *_backup_*
 
+noVNC/
+
+# 認証情報（重要！）
+gemini_cookies.json
+*.cookies.json
+service_account.json
+credentials.json
+
+# ログファイル
+*.log
+logs/
+
+# 環境変数ファイル
+.env
+.env.local
+
+
+# 認証情報（重要！）
+gemini_cookies.json
+*.cookies.json
+service_account.json
+credentials.json
+
+# ログファイル
+*.log
+logs/
+
+# 環境変数ファイル
+.env
+.env.local
+
