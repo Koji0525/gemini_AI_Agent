@@ -67,3 +67,7 @@ Thumbs.db
 *.backup*
 *_backup*
 *_fixed*
+agent_outputs/
+downloads/
+browser_data/
+gemini_cookies.json
