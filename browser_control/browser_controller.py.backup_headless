@@ -58,7 +58,7 @@ class BrowserController:
             self.playwright = await async_playwright().start()
             
             self.browser = await self.playwright.chromium.launch(
-                headless=True,
+                headless=False,
                 args=[
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -176,9 +176,9 @@ class BrowserController:
         except:
             return False
     
-    async def send_prompt(self, prompt: str, timeout: int = 60000, max_retries: int = 3) -> None:
+    async def send_prompt(self, prompt: str, timeout: int = 60000, max_retries: int = 2) -> None:
         """
-        Geminiにプロンプトを送信（リトライ機能付き・待機時間強化）
+        Geminiにプロンプトを送信（リトライ機能付き）
         
         Args:
             prompt: 送信するプロンプト
@@ -189,88 +189,29 @@ class BrowserController:
             try:
                 print(f"📝 プロンプト送信: {prompt[:80]}...")
                 
-                # ページが完全に読み込まれるまで待機（重要！）
-                if attempt == 0:
-                    print("⏳ ページ読み込み待機中（5秒）...")
-                    await asyncio.sleep(5)
-                
                 # 入力欄を探す（複数のセレクタを試行）
                 selectors = [
                     "div[contenteditable='true']",
-                    "[contenteditable='true']",
-                    "div[role='textbox']",
-                    "[role='textbox']",
                     ".ql-editor",
-                    "rich-textarea",
-                    "textarea"
+                    "rich-textarea"
                 ]
                 
                 textarea = None
-                found_selector = None
-                
                 for selector in selectors:
                     try:
-                        # 要素を待機（最大10秒）
-                        await self.page.wait_for_selector(selector, timeout=10000, state="visible")
-                        
-                        elements = await self.page.locator(selector).all()
-                        
-                        if elements:
-                            # 表示されている要素を探す
-                            for elem in elements:
-                                if await elem.is_visible():
-                                    textarea = elem
-                                    found_selector = selector
-                                    print(f"✅ 入力欄発見: {selector}")
-                                    break
-                        
-                        if textarea:
+                        textarea = await self.page.locator(selector).first
+                        if await textarea.is_visible():
                             break
-                            
-                    except Exception as e:
-                        # このセレクタでは見つからなかった
+                    except:
                         continue
                 
                 if not textarea:
                     raise Exception("入力欄が見つかりません")
                 
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
-                
-                # テキスト入力
-                print("📝 テキスト入力中...")
+                # クリアしてからテキスト入力
                 await textarea.click()
-                
-                # クリア
                 await textarea.fill("")
-                await asyncio.sleep(0.5)
-                
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
-                
-                # テキスト入力
                 await textarea.fill(prompt)
-                await asyncio.sleep(1)
                 
                 # Enterキーで送信
                 await textarea.press("Enter")
@@ -279,124 +220,36 @@ class BrowserController:
                 return
                 
             except Exception as e:
-                print(f"⚠️  試行 {attempt + 1}/{max_retries} 失敗: {e}")
+                print(f"⚠️  試行 {attempt + 1} 失敗: {e}")
                 
                 if attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 3
-                    print(f"   {wait_time}秒後に再試行...")
-                    await asyncio.sleep(wait_time)
+                    print(f"   3秒後に再試行...")
+                    await asyncio.sleep(3)
                 else:
-                    # 最終試行失敗時はスクリーンショットを撮る
-                    try:
-                        await self.page.screenshot(path="error_send_prompt.png")
-                        print("📸 エラー時のスクリーンショット: error_send_prompt.png")
-                    except:
-                        pass
-                    
                     raise BrowserOperationError(f"プロンプト送信失敗: {e}")
 
-    async def wait_for_text_generation(self, max_wait: int = 120, min_stable_time: int = 7) -> bool:
-        """
-        Geminiのテキスト生成完了を待機（長文対応版）
-        
-        Args:
-            max_wait: 最大待機時間（秒）デフォルト120秒
-            min_stable_time: 安定判定の回数（秒）デフォルト7秒
-            
-        Returns:
-            bool: 生成完了したかどうか
-            
-        判定ロジック:
-        - 1秒ごとに文字数をチェック
-        - 短文（1,000文字未満）: 3秒安定で完了
-        - 中文（1,000-3,000文字）: 5秒安定で完了
-        - 長文（3,000文字以上）: 7秒安定で完了
-        """
+    async def wait_for_text_generation(self, max_wait: int = 60) -> bool:
+        """テキスト生成完了を待機"""
         try:
             print("⏳ レスポンス生成を待機中...")
             
-            start_time = asyncio.get_event_loop().time()
-            last_length = 0
-            stable_count = 0
-            max_length_seen = 0  # これまでの最大文字数
-            
-            while (asyncio.get_event_loop().time() - start_time) < max_wait:
-                # レスポンス要素を探す
-                selectors = [
-                    ".response-container",
-                    ".model-response-text",
-                    ".markdown"
-                ]
-                
-                current_text = ""
-                
-                for selector in selectors:
-                    try:
-                        elements = await self.page.locator(selector).all()
-                        if elements:
-                            last_elem = elements[-1]
-                            if await last_elem.is_visible():
-                                current_text = await last_elem.text_content() or ""
-                                break
-                    except:
-                        continue
-                
-                current_length = len(current_text.strip())
-                
-                # 最大文字数を記録
-                if current_length > max_length_seen:
-                    max_length_seen = current_length
-                
-                # 50文字以上なら実際のレスポンス
-                if current_length > 50:
-                    # 文字数に応じて必要な安定時間を決定
-                    if current_length < 1000:
-                        required_stable = 3  # 短文: 3秒
-                    elif current_length < 3000:
-                        required_stable = 5  # 中文: 5秒
-                    else:
-                        required_stable = 7  # 長文: 7秒
-                    
-                    # 文字数が安定しているか確認
-                    if current_length == last_length:
-                        stable_count += 1
-                        
-                        # 必要な安定時間に達したら完了
-                        if stable_count >= required_stable:
-                            print(f"✅ レスポンス生成完了（{current_length} 文字、{required_stable}秒安定）")
-                            return True
-                        else:
-                            # 安定中の表示
-                            if stable_count % 2 == 0:  # 2秒ごとに表示
-                                print(f"   安定確認中... {current_length} 文字（{stable_count}/{required_stable}秒）")
-                    else:
-                        # 文字数が増えた
-                        stable_count = 0
-                        last_length = current_length
-                        
-                        # 進捗表示（100文字ごと）
-                        if current_length % 100 < 50 and current_length > 100:
-                            print(f"   生成中... {current_length} 文字")
-                
-                # 1秒待機
+            for i in range(max_wait):
                 await asyncio.sleep(1)
+                is_generating = await self.page.locator("[data-test-id='generation-in-progress']").count() > 0
+                
+                if not is_generating:
+                    print("✅ レスポンス生成完了")
+                    return True
+                
+                if i % 10 == 0 and i > 0:
+                    print(f"   待機中... ({i}秒)")
             
-            # タイムアウト
-            elapsed = int(asyncio.get_event_loop().time() - start_time)
-            print(f"⚠️  待機タイムアウト（{elapsed}秒）")
-            
-            # タイムアウトでも50文字以上あれば部分的に成功
-            if max_length_seen > 50:
-                print(f"   ただし、{max_length_seen}文字のレスポンスを取得済み")
-                print(f"   最終的な文字数: {last_length}")
-                return True
-            
+            print("⚠️  タイムアウト")
             return False
-            
         except Exception as e:
             print(f"❌ 待機エラー: {e}")
             return False
-
+    
     async def extract_latest_text_response(self):
         """
         最新のレスポンステキストを取得

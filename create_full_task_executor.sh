@@ -1,3 +1,13 @@
+#!/bin/bash
+set -e
+
+echo "=========================================="
+echo "🎯 TaskExecutor 完全実装"
+echo "=========================================="
+
+mkdir -p scripts
+
+cat > scripts/task_executor.py << 'EXECUTOR_CODE'
 #!/usr/bin/env python3
 """
 TaskExecutor - タスク実行のオーケストレーター
@@ -260,4 +270,10 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+EXECUTOR_CODE
+
+chmod +x scripts/task_executor.py
+
+echo "✅ TaskExecutor作成完了"
 

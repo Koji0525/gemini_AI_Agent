@@ -234,19 +234,6 @@ class BrowserController:
                 if not textarea:
                     raise Exception("入力欄が見つかりません")
                 
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
-                
                 # テキスト入力
                 print("📝 テキスト入力中...")
                 await textarea.click()
@@ -254,19 +241,6 @@ class BrowserController:
                 # クリア
                 await textarea.fill("")
                 await asyncio.sleep(0.5)
-                
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
                 
                 # テキスト入力
                 await textarea.fill(prompt)
@@ -295,22 +269,15 @@ class BrowserController:
                     
                     raise BrowserOperationError(f"プロンプト送信失敗: {e}")
 
-    async def wait_for_text_generation(self, max_wait: int = 120, min_stable_time: int = 7) -> bool:
+    async def wait_for_text_generation(self, max_wait: int = 90) -> bool:
         """
-        Geminiのテキスト生成完了を待機（長文対応版）
+        Geminiのテキスト生成完了を待機（改良版）
         
         Args:
-            max_wait: 最大待機時間（秒）デフォルト120秒
-            min_stable_time: 安定判定の回数（秒）デフォルト7秒
+            max_wait: 最大待機時間（秒）
             
         Returns:
             bool: 生成完了したかどうか
-            
-        判定ロジック:
-        - 1秒ごとに文字数をチェック
-        - 短文（1,000文字未満）: 3秒安定で完了
-        - 中文（1,000-3,000文字）: 5秒安定で完了
-        - 長文（3,000文字以上）: 7秒安定で完了
         """
         try:
             print("⏳ レスポンス生成を待機中...")
@@ -318,7 +285,6 @@ class BrowserController:
             start_time = asyncio.get_event_loop().time()
             last_length = 0
             stable_count = 0
-            max_length_seen = 0  # これまでの最大文字数
             
             while (asyncio.get_event_loop().time() - start_time) < max_wait:
                 # レスポンス要素を探す
@@ -334,6 +300,7 @@ class BrowserController:
                     try:
                         elements = await self.page.locator(selector).all()
                         if elements:
+                            # 最後の要素（最新のレスポンス）
                             last_elem = elements[-1]
                             if await last_elem.is_visible():
                                 current_text = await last_elem.text_content() or ""
@@ -343,52 +310,30 @@ class BrowserController:
                 
                 current_length = len(current_text.strip())
                 
-                # 最大文字数を記録
-                if current_length > max_length_seen:
-                    max_length_seen = current_length
-                
-                # 50文字以上なら実際のレスポンス
-                if current_length > 50:
-                    # 文字数に応じて必要な安定時間を決定
-                    if current_length < 1000:
-                        required_stable = 3  # 短文: 3秒
-                    elif current_length < 3000:
-                        required_stable = 5  # 中文: 5秒
-                    else:
-                        required_stable = 7  # 長文: 7秒
-                    
-                    # 文字数が安定しているか確認
+                # "Just a sec..." のような短いメッセージはスキップ
+                if current_length > 50:  # 50文字以上なら実際のレスポンス
+                    # テキストの長さが安定しているか確認
                     if current_length == last_length:
                         stable_count += 1
                         
-                        # 必要な安定時間に達したら完了
-                        if stable_count >= required_stable:
-                            print(f"✅ レスポンス生成完了（{current_length} 文字、{required_stable}秒安定）")
+                        # 3回連続で同じ長さなら生成完了
+                        if stable_count >= 3:
+                            print(f"✅ レスポンス生成完了（{current_length} 文字）")
                             return True
-                        else:
-                            # 安定中の表示
-                            if stable_count % 2 == 0:  # 2秒ごとに表示
-                                print(f"   安定確認中... {current_length} 文字（{stable_count}/{required_stable}秒）")
                     else:
-                        # 文字数が増えた
                         stable_count = 0
                         last_length = current_length
-                        
-                        # 進捗表示（100文字ごと）
-                        if current_length % 100 < 50 and current_length > 100:
-                            print(f"   生成中... {current_length} 文字")
+                        print(f"   生成中... {current_length} 文字")
                 
                 # 1秒待機
                 await asyncio.sleep(1)
             
             # タイムアウト
-            elapsed = int(asyncio.get_event_loop().time() - start_time)
-            print(f"⚠️  待機タイムアウト（{elapsed}秒）")
+            print(f"⚠️  待機タイムアウト（{max_wait}秒）")
             
-            # タイムアウトでも50文字以上あれば部分的に成功
-            if max_length_seen > 50:
-                print(f"   ただし、{max_length_seen}文字のレスポンスを取得済み")
-                print(f"   最終的な文字数: {last_length}")
+            # タイムアウトでも50文字以上あれば成功とみなす
+            if last_length > 50:
+                print(f"   ただし、{last_length}文字のレスポンスを取得済み")
                 return True
             
             return False

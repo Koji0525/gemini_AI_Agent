@@ -234,19 +234,6 @@ class BrowserController:
                 if not textarea:
                     raise Exception("入力欄が見つかりません")
                 
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
-                
                 # テキスト入力
                 print("📝 テキスト入力中...")
                 await textarea.click()
@@ -254,19 +241,6 @@ class BrowserController:
                 # クリア
                 await textarea.fill("")
                 await asyncio.sleep(0.5)
-                
-
-                # オーバーレイが表示されていたら閉じる
-                try:
-                    overlay = await self.page.locator(".cdk-overlay-backdrop").first
-                    if await overlay.is_visible():
-                        print("⚠️  オーバーレイを検出、閉じています...")
-                        # Escapeキーで閉じる
-                        await self.page.keyboard.press("Escape")
-                        await asyncio.sleep(1)
-                        print("✅ オーバーレイを閉じました")
-                except:
-                    pass  # オーバーレイがなければ無視
                 
                 # テキスト入力
                 await textarea.fill(prompt)

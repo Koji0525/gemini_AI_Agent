@@ -1,8 +1,3 @@
-# サービスアカウント（機密情報）
-service_account.json
-*service_account*.json
-*.json.old
-
 # Python
 __pycache__/
 *.py[cod]
@@ -11,166 +6,61 @@ __pycache__/
 .Python
 env/
 venv/
+ENV/
+*.egg-info/
+dist/
+build/
 
-# IDEs
-.vscode/
-.idea/
-
-# Logs
-*.log
-error_logs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# === サービスアカウント（機密情報） ===
-service_account.json
-*service_account*.json
-*.json.old
-service_account_b64.txt
-
-# === Python ===
-__pycache__/
-*.py[cod]
-error_logs/
-
-# === IDE ===
-.vscode/settings.json
-
-# === バックアップファイル ===
-*.backup
-*.bak
-*_backup.py
-backups/
-
-# === ログとキャッシュ ===
-logs/
-*.log
-error_logs/
-
-# === テンポラリファイル ===
-service_account_b64.txt
+# 環境変数・認証情報
 .env
+.env.local
+credentials.json
+configuration/service_account.json
+*.key
+*.pem
 
-# === Docker ===
-docker-compose.override.yml
+# Google Sheets認証
+token.json
+token.pickle
 
-# === テストファイル（オプション） ===
-test_autonomous_*.py
-*_test.py
-autonomous_*_v2.py
-simple_test.sh
-wait_and_test.sh
+# ブラウザデータ
+cookies/
+*.pkl
+session_data/
+chrome_profile/
+browser_profile/
 
-# サービスアカウント（機密情報）
-service_account.json
-service_account.json.old
-service_account_b64.txt
-*service_account*.json
-
-# ===== ブラウザ関連（自動生成） =====
-browser_data/
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-
-# ===== ログファイル =====
+# ログファイル
 *.log
-*.pid
+logs/
 
-# ===== 一時ファイル =====
+# テンポラリファイル
 *.tmp
-*.temp
-*.swp
-*.swo
-*~
-
-# ===== バックアップファイル =====
-*.backup
 *.bak
-*.old
-*.orig
-*.rej
-
-# ===== OS関連 =====
+*.swp
+*~
 .DS_Store
-Thumbs.db
 
-# ===== IDE関連 =====
+# 出力ファイル（オプション - 必要に応じてコメントアウト）
+# agent_outputs/
+# downloads/
+
+# IDE設定
 .vscode/
 .idea/
 *.sublime-*
 
-# ===== Python関連 =====
-*.egg-info/
-dist/
-build/
-.eggs/
+# テストファイル
+.pytest_cache/
+.coverage
+htmlcov/
 
-# ===== 環境変数 =====
-.env
-.env.local
+# スクリプト実行結果
+*.md.backup
+*_backup.*
 
-# ===== Playwright =====
-playwright-report/
-test-results/
-
-# ===== その他 =====
-node_modules/
-*.db
-*.db-journal
-
-# 一時スクリプト
-check_*.sh
-diagnose_*.sh
-fix_*.sh
-setup_*.sh
-verify_*.sh
-find_*.sh
-merge_to_*.sh
-select_files_*.sh
-git_workflow_*.sh
-update_config_*.py
-
-# デバッグファイル
-*debug*.png
-*debug*.json
-
-# バックアップファイル
-*.backup
-*.backup_*
-*_backup_*
-
-noVNC/
-
-# 認証情報（重要！）
-gemini_cookies.json
-*.cookies.json
-service_account.json
-credentials.json
-
-# ログファイル
-*.log
-logs/
-
-# 環境変数ファイル
-.env
-.env.local
-
-
-# 認証情報（重要！）
-gemini_cookies.json
-*.cookies.json
-service_account.json
-credentials.json
-
-# ログファイル
-*.log
-logs/
-
-# 環境変数ファイル
-.env
-.env.local
+# 一時的なテストスクリプト（本番用スクリプトは含める）
+test_*.sh
+*_temp.py
+*_tmp.py
 
