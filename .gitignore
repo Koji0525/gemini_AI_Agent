@@ -33,6 +33,7 @@ browser_profile/
 # ログファイル
 *.log
 logs/
+agent_outputs/
 
 # テンポラリファイル
 *.tmp
@@ -64,3 +65,21 @@ test_*.sh
 *_temp.py
 *_tmp.py
 
+# バックアップ
+_BACKUP/
+_WIP/
+_ARCHIVE/
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Gemini cookies (機密情報)
+gemini_cookies.json
+*_cookies.json
+*.pyc
+*.pyo
