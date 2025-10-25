@@ -1,7 +1,7 @@
 # sheets_manager.py
 """Google Sheets管理クラス(拡張版: Google Drive対応)"""
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from google.auth import default
 from google.auth.transport.requests import Request
 from pathlib import Path
@@ -39,8 +39,8 @@ class GoogleSheetsManager:
             
             if self.service_account_file and Path(self.service_account_file).exists():
                 # サービスアカウント認証
-                creds = ServiceAccountCredentials.from_json_keyfile_name(
-                    self.service_account_file, self.GOOGLE_SHEETS_SCOPE)
+                creds = Credentials.from_service_account_file(
+                    self.service_account_file, scopes=self.GOOGLE_SHEETS_SCOPE)
                 self.gc = gspread.authorize(creds)
                 
                 # Google Drive API用のサービスも初期化

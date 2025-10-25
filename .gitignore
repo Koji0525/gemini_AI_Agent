@@ -83,3 +83,18 @@ gemini_cookies.json
 *_cookies.json
 *.pyc
 *.pyo
+
+# Phase 2開発時の一時ファイル
+run_pm_tasks_adaptive_v1.3_test.py
+_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
+_WIP/task_dependency_manager_v01.py
+
+# バックアップ
+_BACKUP/
+
+# ログファイル
+*.log
+gemini_automation.log
+
+# クッキー
+*_cookies.json
