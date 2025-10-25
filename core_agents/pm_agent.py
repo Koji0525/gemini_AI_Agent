@@ -4,6 +4,51 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Optional
 from datetime import datetime
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Phase 3: execution_type判定機能をインポート
+def determine_execution_type(task: dict) -> str:
+    """
+    改善版：タスクの実行タイプを判定
+    優先順位:
+    1. ExecutionType列が設定されている → それを使用
+    2. プレフィックス判定（【WP】【設計】など）
+    3. 動詞パターン認識
+    4. キーワードマッチ（従来方式）
+    """
+    # 1. ExecutionType列（最優先）
+    exec_type = task.get("ExecutionType", "").lower()
+    if exec_type in ["wordpress", "gemini"]:
+        return exec_type
+    
+    description = task.get("description", "") + " " + task.get("required_role", "")
+    
+    # 2. プレフィックス判定
+    if any(prefix in description for prefix in ["【WP", "【ワードプレス", "【WordPress"]):
+        return "wordpress"
+    if any(prefix in description for prefix in ["【設計】", "【分析】", "【調査】", "【計画】"]):
+        return "gemini"
+    
+    # 3. 動詞パターン認識（WordPress操作を示す動詞）
+    wp_action_verbs = ["設定", "実装", "追加", "編集", "公開", "投稿", "更新"]
+    if any(verb in description for verb in wp_action_verbs):
+        if "wordpress" in description.lower() or "wp" in description.lower():
+            return "wordpress"
+    
+    # 4. キーワードマッチ
+    wordpress_keywords = [
+        "wordpress", "wp", "投稿", "記事", "プラグイン", "acf", 
+        "カスタム投稿", "カスタムフィールド", "テーマ"
+    ]
+    if any(keyword in description.lower() for keyword in wordpress_keywords):
+        return "wordpress"
+    
+    # デフォルトはgemini
+    return "gemini"
+
+
 
 from configuration.config_utils import config, ErrorHandler
 from tools.sheets_manager import GoogleSheetsManager
@@ -321,11 +366,12 @@ class PMAgent:
                 if len(existing_data) == 0:
                     # === パート3: 新規シートのヘッダー作成 ===
                     headers = [
-                        "task_id", "parent_goal_id", "task_description", 
+                        "task_id", "parent_goal_id", "description", 
                         "required_role", "status", "priority", 
-                        "estimated_time", "dependencies", "created_at", "batch_id"
+                        "estimated_time", "dependencies", "created_at", "batch_id",
+                        "", "", "execution_type"  # 11,12列は予備
                     ]
-                    task_sheet.update('A1:J1', [headers])
+                    task_sheet.update('A1:M1', [headers])
                     start_row = 2
                 
             except:
@@ -333,11 +379,12 @@ class PMAgent:
                 logger.info("'pm_tasks'シートを作成します")
                 task_sheet = sheet.add_worksheet(title="pm_tasks", rows=1000, cols=10)
                 headers = [
-                    "task_id", "parent_goal_id", "task_description", 
+                    "task_id", "parent_goal_id", "description", 
                     "required_role", "status", "priority", 
-                    "estimated_time", "dependencies", "created_at", "batch_id"
+                    "estimated_time", "dependencies", "created_at", "batch_id",
+                    "", "", "execution_type"  # 11,12列は予備
                 ]
-                task_sheet.update('A1:J1', [headers])
+                task_sheet.update('A1:M1', [headers])
                 start_row = 2
                 existing_data = []
         
@@ -359,6 +406,13 @@ class PMAgent:
             rows_data = []
         
             for i, task in enumerate(tasks):
+                # execution_typeを判定
+                task_for_type = {
+                    'description': task.get('description', ''),
+                    'required_role': task.get('required_role', 'dev')
+                }
+                exec_type = determine_execution_type(task_for_type)
+                
                 row = [
                     next_task_id + i,
                     self.current_goal['goal_id'] if self.current_goal else '',
@@ -369,14 +423,17 @@ class PMAgent:
                     task.get('estimated_time', ''),
                     ','.join(map(str, task.get('dependencies', []))),
                     datetime.now().isoformat(),
-                    batch_id
+                    batch_id,
+                    '',  # 11列目（予備）
+                    '',  # 12列目（予備）
+                    exec_type  # 13列目（execution_type）
                 ]
                 rows_data.append(row)
         
             # === パート9: スプレッドシートへの書き込み ===
             if rows_data:
                 end_row = start_row + len(rows_data) - 1
-                task_sheet.update(f'A{start_row}:J{end_row}', rows_data)
+                task_sheet.update(f'A{start_row}:M{end_row}', rows_data)
                 logger.info(f"タスク {len(rows_data)} 件を追加しました（バッチ: {batch_id}）")
         
             # === パート10: メタデータの保存 ===
