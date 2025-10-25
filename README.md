@@ -272,3 +272,54 @@ MIT License
 ---
 
 **🎉 Phase 1 完了記念 - v1.3.0-add-operation**
+
+---
+
+## 🎉 v1.4.0 Phase 2実装完了（2025-10-25）
+
+### ✨ 新機能：タスク依存関係管理
+
+#### 実装内容
+- **柔軟な依存関係チェック**：依存タスクに問題があっても実行継続
+- **前タスク結果の自動取得**：task_execution_logから品質スコア≧7の結果を取得
+- **コンテキスト付きプロンプト生成**：前タスクの成果物を含めてGeminiに依頼
+- **GitHubファイル統合**：長文の成果物はGitHubから完全版を取得
+
+#### 解決した問題
+- ✅ Google Sheets認証エラー（CRITICAL-2）
+  - SERVICE_ACCOUNT_FILEのパス修正
+  - Credentials.from_service_account_fileの引数修正
+  
+#### 新規追加ファイル
+- `tools/task_dependency_manager.py`：依存関係管理の中核
+
+#### 修正ファイル
+- `tools/sheets_manager.py`：Google Sheets認証修正
+- `run_pm_tasks_adaptive.py`：Phase 2統合
+- `.env`：SERVICE_ACCOUNT_FILEパス修正
+
+#### 使用方法
+```bash
+# VNC環境変数設定
+export DISPLAY=:1
+
+# Phase 2統合版を実行
+python3 run_pm_tasks_adaptive.py --max-tasks 1 --status pending
+```
+
+#### Phase 2の動作例
+```
+TaskID=7 (Dependencies="4,6")
+  ↓
+1. 依存タスク4,6の完了チェック
+2. task_execution_logから結果取得（品質≧7）
+3. コンテキスト付きプロンプト生成
+4. Geminiに実行依頼
+5. レビュー＆品質スコア記録
+```
+
+#### 次のフェーズ（Phase 3）
+- PM Agentによるタスク自動分解
+- 進捗モニタリング
+- 動的タスク生成
+
