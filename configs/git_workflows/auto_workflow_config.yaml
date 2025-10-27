@@ -1,4 +1,4 @@
-# 完全自動化Git統合ワークフロー設定
+# 完全自動化Git統合ワークフロー設定（運用ルール v2.0準拠）
 
 # 除外ディレクトリ
 excluded_dirs:
@@ -27,16 +27,34 @@ secret_patterns:
   - "**/.env"
   - "**/config.ini"
 
-# 品質ゲート設定
+# 品質ゲート設定（運用ルール v2.0準拠）
 quality_gates:
-  cleanup: true
-  list: true
-  compile: true
-  linter: false          # 警告のみ（コミットはブロックしない）
-  formatter: false       # 自動整形はスキップ
-  test: true            # 開発プログラムのテスト
-  security_check: true   # 認証ファイル検出
-  duplicate_check: true  # 重複メソッド検出
+  cleanup: true              # STEP 1: 一時ファイル整理
+  list: true                 # STEP 2: コミット対象列挙
+  security_check: true       # STEP 3: 認証ファイル検出
+  duplicate_check: true      # STEP 3: 重複メソッド検出
+  compile: true              # STEP 3: 構文チェック
+  linter: true               # STEP 3: flake8チェック（必須）
+  formatter: true            # STEP 4: Black自動整形（必須）
+  test: true                 # STEP 5: 開発プログラムのテスト
+  final_cleanup: true        # STEP 6: 不要ファイル削除
+  update_gitignore: true     # STEP 8: .gitignore更新
+  update_readme: true        # STEP 9: README更新
+
+# Linter設定（flake8）
+linter_options:
+  max_line_length: 120
+  ignore_codes:
+    - E203    # スペース関連（Blackと競合）
+    - W503    # 演算子の前の改行
+  # 警告のみ（エラーはブロック）
+  warning_only: false
+
+# Formatter設定（Black）
+formatter_options:
+  line_length: 120
+  skip_string_normalization: false
+  auto_fix: true
 
 # 自動修正
-auto_fix: false
+auto_fix: true
