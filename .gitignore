@@ -98,3 +98,8 @@ gemini_automation.log
 
 # クッキー
 *_cookies.json
+
+# Google Cloud認証情報（絶対にコミットしない）
+service_account.json
+**/service_account.json
+gemini_auto_generate/configuration/service_account.json
