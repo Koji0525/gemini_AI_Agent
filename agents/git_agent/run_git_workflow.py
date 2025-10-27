@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Git Workflow 統合実行スクリプト
-ワンコマンドでコミット→プッシュ→ブランチ切り替え
 """
 
 import sys
@@ -20,42 +19,40 @@ def main():
     
     args = parser.parse_args()
     
-    print("="*70)
     print("🤖 Git Workflow 自動化システム")
-    print("="*70)
     
-    # STEP 1: コミット
-    print("\n【1/3】コミット実行")
+    # コミット
     commit_agent = CommitAgent()
-    if not commit_agent.run(args.message):
-        print("\n❌ コミット失敗 - 処理中断")
+    commit_agent.list_commit_targets()
+    success, errors = commit_agent.compile_check()
+    
+    if not success:
+        print("❌ 構文エラー")
         return False
     
-    # STEP 2: プッシュ（オプション）
+    if not commit_agent.commit(args.message):
+        print("❌ コミット失敗")
+        return False
+    
+    # プッシュ
     if args.push:
-        print("\n【2/3】プッシュ実行")
         push_agent = PushAgent()
         if not push_agent.push():
-            print("\n❌ プッシュ失敗 - 処理中断")
+            print("❌ プッシュ失敗")
             return False
     
-    # STEP 3: ブランチ切り替え（オプション）
+    # ブランチ操作
     if args.new_branch or args.version_up:
-        print("\n【3/3】ブランチ操作")
         branch_agent = BranchAgent()
         
         if args.version_up:
             if not branch_agent.auto_increment(args.version_up, args.feature or ''):
-                print("\n❌ ブランチ作成失敗")
                 return False
         elif args.new_branch:
             if not branch_agent.create_and_switch(args.new_branch):
-                print("\n❌ ブランチ切り替え失敗")
                 return False
     
-    print("\n" + "="*70)
-    print("✅ すべての処理が完了しました")
-    print("="*70)
+    print("✅ すべての処理が完了")
     return True
 
 if __name__ == "__main__":
