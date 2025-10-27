@@ -473,4 +473,79 @@ class BrowserController:
         await self.cleanup()
 
 
+
+    async def load_wordpress_cookies(self, wp_url: str) -> bool:
+        """
+        WordPressのクッキーを読み込み
+        
+        Args:
+            wp_url: WordPress サイトURL
+            
+        Returns:
+            bool: 読み込み成功時 True
+        """
+        try:
+            import json
+            
+            cookies_file = Path("wordpress_cookies.json")
+            if not cookies_file.exists():
+                print("📝 WordPressクッキーファイルが見つかりません")
+                return False
+            
+            with open(cookies_file, 'r') as f:
+                cookies = json.load(f)
+            
+            if not cookies:
+                print("📝 クッキーが空です")
+                return False
+            
+            if self.context:
+                await self.context.add_cookies(cookies)
+                print(f"✅ WordPressクッキーを読み込みました: {len(cookies)}個")
+                return True
+            else:
+                print("❌ コンテキストが初期化されていません")
+                return False
+            
+        except Exception as e:
+            print(f"❌ WordPressクッキー読み込みエラー: {e}")
+            return False
+    
+    async def save_wordpress_cookies(self, wp_url: str) -> bool:
+        """
+        WordPressのクッキーを保存
+        
+        Args:
+            wp_url: WordPress サイトURL
+            
+        Returns:
+            bool: 保存成功時 True
+        """
+        try:
+            import json
+            from urllib.parse import urlparse
+            
+            if not self.context:
+                print("❌ コンテキストが初期化されていません")
+                return False
+            
+            # 現在のクッキーを取得
+            cookies = await self.context.cookies()
+            
+            # WordPressドメインのクッキーのみフィルタ
+            wp_domain = urlparse(wp_url).netloc
+            wp_cookies = [c for c in cookies if wp_domain in c.get('domain', '')]
+            
+            # 保存
+            cookies_file = Path("wordpress_cookies.json")
+            with open(cookies_file, 'w') as f:
+                json.dump(wp_cookies, f, indent=2)
+            
+            print(f"✅ WordPressクッキーを保存しました: {len(wp_cookies)}個")
+            return True
+            
+        except Exception as e:
+            print(f"❌ WordPressクッキー保存エラー: {e}")
+            return False
+
 EnhancedBrowserController = BrowserController

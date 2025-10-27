@@ -36,6 +36,7 @@ class PMTasksLoader:
         "dependencies": "Dependencies",
         "created_at": "CreatedAt",
         "batch_id": "BatchID",
+            'execution_type': 'ExecutionType',
     }
 
     def __init__(
@@ -173,6 +174,56 @@ class PMTasksLoader:
         print(f"✅ ハードコーディングフォールバックから {len(tasks)} タスク読み込み成功")
         return tasks
 
+
+
+    def update_task_status(self, task_id: str, new_status: str) -> bool:
+        """
+        pm_tasksシートのタスクステータスを更新
+        
+        Args:
+            task_id: タスクID
+            new_status: 新しいステータス (pending/in_progress/completed/failed)
+        
+        Returns:
+            bool: 更新成功したかどうか
+        """
+        try:
+            if not self.sheets_client or not self.spreadsheet_id:
+                print(f"⚠️ Sheets接続がありません")
+                return False
+            
+            spreadsheet = self.sheets_client.open_by_key(self.spreadsheet_id)
+            sheet = spreadsheet.worksheet(self.pm_sheet_name)
+            
+            all_values = sheet.get_all_values()
+            if not all_values or len(all_values) < 2:
+                print(f"⚠️ シートが空です")
+                return False
+            
+            # ヘッダー行
+            headers = all_values[0]
+            
+            # task_id列とstatus列のインデックスを取得
+            task_id_col = headers.index('task_id') if 'task_id' in headers else 0
+            status_col = headers.index('status') if 'status' in headers else 4
+            
+            # タスクIDを検索
+            for row_idx, row in enumerate(all_values[1:], start=2):
+                if len(row) > task_id_col and str(row[task_id_col]) == str(task_id):
+                    # ステータスを更新
+                    cell_address = f'{chr(65 + status_col)}{row_idx}'
+                    sheet.update(cell_address, new_status)
+                    print(f"✅ タスク {task_id} のステータスを {new_status} に更新しました")
+                    return True
+            
+            print(f"⚠️ タスクID {task_id} が見つかりませんでした")
+            return False
+            
+        except Exception as e:
+            print(f"❌ ステータス更新エラー: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
 if __name__ == "__main__":
     """ローダーのテスト"""

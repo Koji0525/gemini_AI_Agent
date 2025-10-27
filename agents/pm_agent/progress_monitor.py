@@ -1,5 +1,24 @@
-#!/usr/bin/env python3
-"""PM Agent自動化 - 進捗監視モジュール（英語ヘッダー対応）"""
+"""
+PM Agent 進捗監視エージェント
+低進捗の目標を自動検出
+
+【ステータス統一ルール】
+project_goalシート:
+  - planning: 計画中(タスク分解待ち)→ スキップ
+  - active: 実行中 → タスク分解＆実行対象
+  - paused: 一時停止 → スキップ
+  - completed: 完了 → スキップ
+  - cancelled: キャンセル → スキップ
+
+pm_tasksシート:
+  - pending: 実行待ち → 実行対象
+  - in_progress: 実行中
+  - review: レビュー中
+  - completed: 完了 → スキップ
+  - failed: 失敗 → スキップ(再実行可能)
+  - skipped: スキップ
+  - cancelled: キャンセル → スキップ
+PM Agent自動化 - 進捗監視モジュール(英語ヘッダー対応)"""
 import asyncio
 import sys
 import os
@@ -11,15 +30,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ['DISPLAY'] = ':1'
 
 from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import get_config
+from configuration.config_loader import ConfigLoader
 
 
 class ProgressMonitorAgent:
-    """進捗監視エージェント（英語ヘッダー対応）"""
+    """進捗監視エージェント(英語ヘッダー対応)"""
     
     def __init__(self, sheets_manager: GoogleSheetsManager):
         self.sheets = sheets_manager
-        self.config = get_config()
+        # self.config = ConfigLoader.get('spreadsheet_id')  # 不要なため削除
     
     async def get_dashboard_data(self) -> List[Dict[str, Any]]:
         """
@@ -29,13 +48,13 @@ class ProgressMonitorAgent:
             ダッシュボードの全データ
         """
         try:
-            spreadsheet = self.sheets.gc.open_by_key(self.config.get("SPREADSHEET_ID"))
+            spreadsheet = self.sheets.gc.open_by_key(ConfigLoader.get("spreadsheet_id"))
             dashboard = spreadsheet.worksheet('progress_dashboard')
             
             # ヘッダー行を取得
             headers = dashboard.row_values(1)
             
-            # データ行を取得（2行目以降）
+            # データ行を取得(2行目以降)
             data_rows = dashboard.get_all_values()[1:]
             
             # 辞書形式に変換
@@ -63,7 +82,7 @@ class ProgressMonitorAgent:
         進捗率が低い目標を検出
         
         Args:
-            threshold: 進捗率の閾値（デフォルト50%）
+            threshold: 進捗率の閾値(デフォルト50%)
         
         Returns:
             低進捗の目標リスト
@@ -71,9 +90,30 @@ class ProgressMonitorAgent:
         dashboard_data = await self.get_dashboard_data()
         low_progress_goals = []
         
+        # project_goalシートから最新のstatusを取得
+        goal_statuses = {}
+        try:
+            spreadsheet = self.sheets.gc.open_by_key(self.sheets.spreadsheet_id)
+            project_goal = spreadsheet.worksheet('project_goal')
+            goal_rows = project_goal.get_all_values()
+            for row in goal_rows[1:]:  # ヘッダーをスキップ
+                if len(row) >= 3:
+                    goal_id = row[0]
+                    status = row[2].lower()
+                    goal_statuses[goal_id] = status
+        except Exception as e:
+            print(f"⚠️  project_goalのstatus取得エラー: {e}")
+        
         for goal in dashboard_data:
+            # project_goalシートの最新statusでcancelledをスキップ
+            goal_id = str(goal.get('goal_id', ''))
+            status = goal_statuses.get(goal_id, '').lower()
+            if status == 'cancelled':
+                print(f"  ⏭️  Goal {goal_id} はcancelledのためスキップ")
+                continue
+            
             try:
-                # 数値変換（英語ヘッダー対応）
+                # 数値変換(英語ヘッダー対応)
                 progress_rate = float(goal.get('progress_rate', 0) or 0)
                 total_tasks = int(goal.get('total_tasks', 0) or 0)
                 completed_tasks = int(goal.get('completed_tasks', 0) or 0)
@@ -104,6 +144,36 @@ class ProgressMonitorAgent:
             key=lambda x: (priority_order.get(x['priority'], 3), -x['progress_rate'])
         )
         
+        # activeなゴールも追加（進捗率に関係なく）
+        for goal in dashboard_data:
+            goal_id = str(goal.get('goal_id', ''))
+            status = goal_statuses.get(goal_id, '').lower()
+            
+            if status == 'active':
+                # すでにlow_progress_goalsに含まれていない場合のみ追加
+                already_included = any(
+                    str(g.get('goal_id', '')) == goal_id 
+                    for g in low_progress_goals
+                )
+                if not already_included:
+                    low_progress_goals.append(goal)
+                    print(f"  ➕ Goal {goal_id} (active, 進捗率: {float(goal.get('progress_rate', 0) or 0):.1f}%) を処理対象に追加")
+        
+        # activeなゴールも追加（進捗率に関係なく）
+        for goal in dashboard_data:
+            goal_id = str(goal.get('goal_id', ''))
+            status = goal_statuses.get(goal_id, '').lower()
+            
+            if status == 'active':
+                # すでにlow_progress_goalsに含まれていない場合のみ追加
+                already_included = any(
+                    str(g.get('goal_id', '')) == goal_id 
+                    for g in low_progress_goals
+                )
+                if not already_included:
+                    low_progress_goals.append(goal)
+                    print(f"  ➕ Goal {goal_id} (active, 進捗率: {float(goal.get('progress_rate', 0) or 0):.1f}%) を処理対象に追加")
+        
         return low_progress_goals
     
     async def get_goal_details(self, goal_id: str) -> Dict[str, Any]:
@@ -118,6 +188,9 @@ class ProgressMonitorAgent:
         """
         try:
             all_tasks = self.sheets.get_tasks()
+        
+        # ステータスでフィルタ: pendingタスクのみを対象
+            all_tasks = [task for task in all_tasks if str(task.get('status', 'pending')).strip().lower() == 'pending']
             goal_tasks = [
                 task for task in all_tasks 
                 if str(task.get('parent_goal_id')) == str(goal_id)
@@ -203,11 +276,8 @@ async def test_progress_monitor():
     print("="*70)
     print()
     
-    config = get_config()
-    sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"),
-        service_account_file=config.get("SERVICE_ACCOUNT_FILE")
-    )
+    config = ConfigLoader.get('spreadsheet_id')
+    sheets = GoogleSheetsManager(spreadsheet_id=os.getenv('SPREADSHEET_ID'))
     
     monitor = ProgressMonitorAgent(sheets)
     

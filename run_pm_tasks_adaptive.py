@@ -36,14 +36,9 @@ def determine_execution_type(task: dict) -> str:
     description = task.get("Description", "") + " " + task.get("Title", "")
 
     # 2. プレフィックス判定
-    if any(
-        prefix in description for prefix in ["【WP", "【ワードプレス", "【WordPress"]
-    ):
+    if any(prefix in description for prefix in ["【WP", "【ワードプレス", "【WordPress"]):
         return "wordpress"
-    if any(
-        prefix in description
-        for prefix in ["【設計】", "【分析】", "【調査】", "【計画】"]
-    ):
+    if any(prefix in description for prefix in ["【設計】", "【分析】", "【調査】", "【計画】"]):
         return "gemini"
 
     # 3. 動詞パターン認識（WordPress操作を示す動詞）
@@ -183,32 +178,28 @@ async def execute_wordpress_task(task, wp_session):
         description = task.get("Description", "") + task.get("Title", "")
 
         # CPT作成タスク
-        if (
-            "Custom Post Type" in description
-            or "CPT" in description
-            or "カスタム投稿タイプ" in description
-        ):
+        if "Custom Post Type" in description or "CPT" in description or "カスタム投稿タイプ" in description:
             from wordpress.wp_dev.wp_cpt_agent import WordPressCPTAgent
 
-            cpt_agent = WordPressCPTAgent(wp_session.wp_page)
+            cpt_agent = WordPressCPTAgent(wp_session.wp_page, output_folder="agent_outputs/wordpress")
 
             print("📝 CPT作成エージェントを実行中...")
-            result = await cpt_agent.create_cpt_from_description(description)
+            result = await cpt_agent.execute({"task_id": task.get("task_id"), "description": description})
             return result
 
         # ACF設定タスク
         elif "ACF" in description or "Advanced Custom Fields" in description:
             from wordpress.wp_dev.wp_acf_agent import WordPressACFAgent
 
-            acf_agent = WordPressACFAgent(wp_session.wp_page)
+            acf_agent = WordPressACFAgent(wp_session.wp_page, output_folder="agent_outputs/wordpress")
 
             print("📝 ACF設定エージェントを実行中...")
-            result = await acf_agent.configure_acf_from_description(description)
+            result = await acf_agent.execute({"task_id": task.get("task_id"), "description": description})
             return result
 
         # 一般的なWordPressタスク
         else:
-            from wordpress.wp_dev import WordPressDevAgent
+            from wordpress.wp_dev.wp_dev_agent import WordPressDevAgent
 
             wp_dev = WordPressDevAgent(wp_session.wp_page)
 
@@ -310,34 +301,26 @@ async def main():
 
         # Phase 2: TaskDependencyManager初期化
         from tools.sheets_manager import GoogleSheetsManager as SheetsManager
+
         sheets_manager = SheetsManager(
-            spreadsheet_id=config.get("SPREADSHEET_ID"),
-            service_account_file=config.get("SERVICE_ACCOUNT_FILE")
+            spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("SERVICE_ACCOUNT_FILE")
         )
         dependency_manager = TaskDependencyManager(sheets_manager)
         print("✅ TaskDependencyManager初期化完了")
 
         parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--max-tasks", type=int, default=1, help="処理する最大タスク数"
-        )
+        parser.add_argument("--max-tasks", type=int, default=1, help="処理する最大タスク数")
         parser.add_argument(
             "--status",
             type=str,
             default="pending",
             help="ステータスフィルター（デフォルト: pending）",
         )
-        parser.add_argument(
-            "--skip-review", action="store_true", help="レビューをスキップ"
-        )
+        parser.add_argument("--skip-review", action="store_true", help="レビューをスキップ")
         args = parser.parse_args()
 
-        print(
-            f"🔄 タスク読み込み中（最大{args.max_tasks}タスク、ステータス: {args.status}）..."
-        )
-        tasks = tasks_loader.load_tasks(
-            max_tasks=args.max_tasks, status_filter=args.status
-        )
+        print(f"🔄 タスク読み込み中（最大{args.max_tasks}タスク、ステータス: {args.status}）...")
+        tasks = tasks_loader.load_tasks(max_tasks=args.max_tasks, status_filter=args.status)
 
         if not tasks:
             print(f"⚠️ ステータス '{args.status}' のタスクがありません")
@@ -390,27 +373,24 @@ async def main():
                 # ============================================================
                 # Phase 2: 依存関係チェックと前タスク結果の取得
                 # ============================================================
-                dependencies_str = task.get('Dependencies', '')
+                dependencies_str = task.get("Dependencies", "")
                 dependencies = dependency_manager.parse_dependencies(dependencies_str)
-                
+
                 dep_result = await dependency_manager.check_and_get_dependencies(
-                    task_id=task_id,
-                    dependencies=dependencies,
-                    min_quality_score=7.0
+                    task_id=task_id, dependencies=dependencies, min_quality_score=7.0
                 )
-                
+
                 # 警告がある場合は表示
-                if dep_result['warnings']:
+                if dep_result["warnings"]:
                     print()
                     print("⚠️ 依存関係の警告:")
-                    for warning in dep_result['warnings']:
+                    for warning in dep_result["warnings"]:
                         print(f"   - {warning}")
-                
+
                 # サマリー表示
                 print(f"📊 依存関係: {dep_result['summary']}")
                 print()
                 # ============================================================
-
 
                 # === 実行タイプ判定 ===
                 execution_type = determine_execution_type(task)
@@ -425,13 +405,17 @@ async def main():
                 agent_role = task.get("Agent", "general")
 
                 if agent_role == "design":
-                    role_instruction = "あなたは設計専門のエージェントです。技術選定、アーキテクチャ設計、要件定義を担当します。"
+                    role_instruction = (
+                        "あなたは設計専門のエージェントです。技術選定、アーキテクチャ設計、要件定義を担当します。"
+                    )
                 elif agent_role == "dev":
                     role_instruction = "あなたは開発専門のエージェントです。コード実装、テスト、デプロイを担当します。"
                 elif agent_role == "review":
                     role_instruction = "あなたはレビュー専門のエージェントです。品質チェック、改善提案を担当します。"
                 elif agent_role == "ui":
-                    role_instruction = "あなたはUI/UX専門のエージェントです。ワイヤーフレーム作成、デザイン仕様を担当します。"
+                    role_instruction = (
+                        "あなたはUI/UX専門のエージェントです。ワイヤーフレーム作成、デザイン仕様を担当します。"
+                    )
                 else:
                     role_instruction = "あなたは汎用エージェントです。"
 
@@ -460,17 +444,14 @@ async def main():
 """
 
                 # Phase 2: コンテキスト付きプロンプト生成
-                if dep_result['context_tasks']:
+                if dep_result["context_tasks"]:
                     prompt = dependency_manager.build_context_prompt(
-                        base_prompt=prompt_base,
-                        context_tasks=dep_result['context_tasks'],
-                        max_context_length=3000
+                        base_prompt=prompt_base, context_tasks=dep_result["context_tasks"], max_context_length=3000
                     )
                     print("✅ コンテキスト付きプロンプトで実行")
                 else:
                     prompt = prompt_base
                     print("ℹ️ コンテキストなしで実行")
-
 
                 # === ルーティング分岐 ===
                 if execution_type == "wordpress":
@@ -500,9 +481,7 @@ async def main():
                     await browser.send_prompt(prompt)
 
                     print("⏳ レスポンス生成待機中（最大60秒）...")
-                    generation_success = await browser.wait_for_text_generation(
-                        max_wait=60
-                    )
+                    generation_success = await browser.wait_for_text_generation(max_wait=60)
 
                     if not generation_success:
                         print("⚠️ レスポンス生成タイムアウト")
@@ -567,16 +546,12 @@ async def main():
 
                         review_task = {
                             "task_id": task_id,
-                            "description": task.get(
-                                "Description", task.get("Title", "")
-                            ),
+                            "description": task.get("Description", task.get("Title", "")),
                             "required_role": agent_role,
                             "status": final_status,
                         }
 
-                        review_result = await review_agent.review_completed_task(
-                            review_task, response
-                        )
+                        review_result = await review_agent.review_completed_task(review_task, response)
 
                         if review_result.get("success"):
                             review_data = review_result.get("review", {})
@@ -587,9 +562,7 @@ async def main():
                             elif "overall_score" in evaluation:
                                 quality_score = evaluation["overall_score"]
 
-                            quality_description = evaluation.get(
-                                "overall_assessment", review_result.get("summary", "")
-                            )
+                            quality_description = evaluation.get("overall_assessment", review_result.get("summary", ""))
 
                             print(f"✅ レビュー完了")
                             if quality_score:
@@ -608,9 +581,7 @@ async def main():
                     print()
                     print("📝 実行ログをシートに記録中...")
                     task_description = task.get("Description", task.get("Title", ""))
-                    output_summary = (
-                        response[:200] + "..." if len(response) > 200 else response
-                    )
+                    output_summary = response[:200] + "..." if len(response) > 200 else response
 
                     await log_to_sheet(
                         task_id=task_id,

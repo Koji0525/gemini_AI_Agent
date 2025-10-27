@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 os.environ['DISPLAY'] = ':1'
 
 from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import get_config
+from configuration.config_loader import ConfigLoader
 
 
 class TaskRegistrationAgent:
@@ -36,12 +36,13 @@ class TaskRegistrationAgent:
     
     def __init__(self, sheets_manager: GoogleSheetsManager):
         self.sheets = sheets_manager
-        self.config = get_config()
+        # self.config = ConfigLoader.get()  # 不要なため削除
     
     async def register_tasks(
         self, 
         goal_id: str,
-        tasks: List[Dict[str, Any]]
+        tasks: List[Dict[str, Any]],
+        detail_file_path: str = ""
     ) -> bool:
         """
         タスクをpm_tasksシートに登録
@@ -65,7 +66,8 @@ class TaskRegistrationAgent:
             sheet_rows = self._convert_to_sheet_format(
                 goal_id, 
                 tasks, 
-                next_task_id
+                next_task_id,
+                detail_file_path
             )
             
             # pm_tasksシートに追加（範囲指定版）
@@ -113,7 +115,8 @@ class TaskRegistrationAgent:
         self,
         goal_id: str,
         tasks: List[Dict[str, Any]],
-        start_id: int
+        start_id: int,
+        detail_file_path: str = ""
     ) -> List[List[Any]]:
         """タスクをシート形式に変換"""
         sheet_rows = []
@@ -134,7 +137,7 @@ class TaskRegistrationAgent:
                 '',                                         # 8. dependencies (H)
                 datetime.now().strftime('%Y-%m-%d'),       # 9. created_at (I)
                 batch_id,                                   # 10. batch_id (J)
-                '',                                         # 11. (K)
+                detail_file_path,                           # 11. detail_file_path (K)
                 '',                                         # 12. (L)
                 'gemini'                                    # 13. execution_type (M)
             ]
@@ -154,7 +157,7 @@ class TaskRegistrationAgent:
             追加が成功したかどうか
         """
         try:
-            spreadsheet = self.sheets.gc.open_by_key(self.config.get("SPREADSHEET_ID"))
+            spreadsheet = self.sheets.gc.open_by_key(ConfigLoader.get("spreadsheet_id"))
             sheet = spreadsheet.worksheet('pm_tasks')
             
             # シートの最終行を取得
@@ -192,7 +195,7 @@ async def test_task_registration():
     print("="*70)
     print()
     
-    config = get_config()
+    config = ConfigLoader.get()
     sheets = GoogleSheetsManager(
         spreadsheet_id=config.get("SPREADSHEET_ID"),
         service_account_file=config.get("SERVICE_ACCOUNT_FILE")

@@ -1,269 +1,185 @@
+#!/usr/bin/env python3
 """
-task_executor_content.py
-記事生成専用のタスク実行モジュール
-task_executor.pyから分離
+📝 コンテンツ生成タスク実行 - 記事生成専用
 """
-import logging
-from typing import Dict, List
-from configuration.config_utils import ErrorHandler
 
-logger = logging.getLogger(__name__)
-
+import os
+import asyncio
+from datetime import datetime
 
 class ContentTaskExecutor:
-    """記事生成タスク専用の実行クラス"""
+    """コンテンツ生成タスク実行クラス"""
     
-    def __init__(self, agents: Dict):
-        self.agents = agents
+    def __init__(self):
+        self.content_types = {
+            'blog_post': self._generate_blog_post,
+            'news_article': self._generate_news_article,
+            'guide': self._generate_guide,
+            'case_study': self._generate_case_study
+        }
     
-    async def execute_writer_task(self, task: Dict, role: str) -> Dict:
-        """言語別ライタータスクを実行"""
-        # === パート1: タスク情報の抽出 ===
-        task_language = task.get('language')
-        polylang_lang = task.get('polylang_lang')
+    async def execute(self, task_info):
+        """コンテンツ生成タスクを実行"""
+        content_type = self._detect_content_type(task_info)
+        generator = self.content_types.get(content_type, self._generate_blog_post)
         
-        # === パート2: 実行開始ヘッダー ===
-        logger.info("┌" + "─"*58 + "┐")
-        logger.info(f"│ ✏️ ライターAIエージェント実行中 ({role})")
-        logger.info("├" + "─"*58 + "┤")
-        logger.info(f"│ 言語: {task_language}")
-        logger.info(f"│ Polylang: {polylang_lang}")
-        logger.info("└" + "─"*58 + "┘")
-        
-        # === パート3: エージェントの選択と実行 ===
-        if role == 'writer' or role == 'content':
-            # === パート3-1: 汎用ライターの処理 ===
-            logger.info("📝 汎用ライターを使用(後方互換性モード)")
-            agent = self.agents.get('writer')
-            if not agent:
-                logger.error("❌ writerエージェントが登録されていません")
-                return {
-                    'success': False,
-                    'error': 'writer エージェントが登録されていません'
-                }
-            result = await agent.process_task(task)
-        else:
-            # === パート3-2: 言語別ライターの処理 ===
-            agent = self.agents.get(role)
-            if not agent:
-                logger.error(f"❌ {role}エージェントが登録されていません")
-                return {
-                    'success': False,
-                    'error': f'未対応の言語ライター: {role}'
-                }
-            
-            # === パート3-3: 言語確認 ===
-            if task_language and hasattr(agent, 'get_language_code'):
-                if agent.get_language_code() != task_language:
-                    logger.warning(f"⚠️ 言語不一致: タスク={task_language}, ライター={agent.get_language_code()}")
-            
-            result = await agent.process_task(task)
-        
-        # === パート4: 結果の処理 ===
-        if result.get('success'):
-            logger.info(f"✅ ライターAI ({role}): タスク完了")
-            # 言語情報を追加
-            if hasattr(agent, 'get_language_code'):
-                result['language'] = agent.get_language_code()
-                result['polylang_lang'] = polylang_lang or agent.get_language_code()
-        else:
-            logger.error(f"❌ ライターAI ({role}): 失敗 - {result.get('error', '不明')}")
-        
+        result = await generator(task_info)
         return result
     
-    def display_suggested_tasks(self, suggested_tasks: List[Dict]):
-        """提案タスクの詳細を表示"""
-        # === パート1: ヘッダー表示 ===
-        print("\n" + "="*60)
-        print("提案タスク詳細")
-        print("="*60)
-
-        # === パート2: 各タスクの詳細表示 ===
-        for i, task in enumerate(suggested_tasks, 1):
-            # === パート2-1: 優先度マークの設定 ===
-            priority_mark = {
-                'high': '🔴[高]',
-                'medium': '🟡[中]', 
-                'low': '🟢[低]'
-            }.get(task.get('priority', 'medium'), '⚪[中]')
+    def _detect_content_type(self, task_info):
+        """コンテンツタイプを検出"""
+        description = task_info.get('description', '').lower()
         
-            # === パート2-2: 役割ラベルの設定 ===
-            role_label = {
-                'design': '📐[設計]',
-                'dev': '💻[開発]',
-                'ui': '🎨[UI]',
-                'review': '✅[レビュー]',
-                'wordpress': '🌐[WordPress]',
-                'writer': '✏️[ライター]',
-                'writer_ja': '🇯🇵[日本語]',
-                'writer_en': '🇬🇧[英語]',
-                'writer_ru': '🇷🇺[ロシア語]',
-                'content': '📄[コンテンツ]'
-            }.get(task.get('required_role', 'dev'), '📋[タスク]')
-        
-            # === パート2-3: タスク情報の表示 ===
-            print(f"\n{i}. {priority_mark} {role_label} {task.get('description', 'N/A')}")
-            print(f"   理由: {task.get('reasoning', 'N/A')}")
-            print(f"   担当: {task.get('required_role', 'dev')}")
-            print(f"   優先度: {task.get('priority', 'medium')}")
-
-        # === パート3: フッター表示 ===
-        print("="*60)
+        if 'ニュース' in description or 'news' in description:
+            return 'news_article'
+        elif 'ガイド' in description or 'guide' in description:
+            return 'guide'
+        elif '事例' in description or 'case study' in description:
+            return 'case_study'
+        else:
+            return 'blog_post'
     
-    async def edit_suggested_tasks(self, suggested_tasks: List[Dict]) -> List[Dict]:
-        """提案タスクを編集"""
-        try:
-            # === パート1: 変数初期化 ===
-            edited_tasks = []
+    async def _generate_blog_post(self, task_info):
+        """ブログ記事を生成"""
+        print(f"      📖 ブログ記事生成: {task_info['task_id']}")
         
-            # === パート2: 各タスクの編集ループ ===
-            for i, task in enumerate(suggested_tasks, 1):
-                # === パート2-1: 現在のタスク情報表示 ===
-                print(f"\n--- タスク {i}/{len(suggested_tasks)} の編集 ---")
-                print(f"現在の内容:")
-                print(f"  説明: {task.get('description', '')}")
-                print(f"  担当: {task.get('required_role', 'dev')}")
-                print(f"  優先度: {task.get('priority', 'medium')}")
-                print(f"  理由: {task.get('reasoning', '')}")
-            
-                # === パート2-2: 編集オプション表示 ===
-                print(f"\n編集オプション:")
-                print("  (d)説明を変更 / (r)担当を変更 / (p)優先度を変更 / (e)理由を変更")
-                print("  (s)このタスクをスキップ / (k)このタスクを保持 / (q)編集を終了")
-            
-                # === パート2-3: ユーザー入力の取得 ===
-                edit_choice = input("選択: ").lower()
-            
-                # === パート2-4: 各選択肢の処理 ===
-                if edit_choice == 'd':
-                    # 説明変更
-                    new_desc = input("新しい説明: ").strip()
-                    if new_desc:
-                        task['description'] = new_desc
-                    edited_tasks.append(task)
-                
-                elif edit_choice == 'r':
-                    # 担当変更
-                    print("利用可能な担当:")
-                    print("  design, dev, ui, review, wordpress, writer, writer_ja, writer_en, writer_ru, plugin")
-                    new_role = input("新しい担当: ").strip()
-                    valid_roles = ['design', 'dev', 'ui', 'review', 'wordpress', 'writer', 
-                                'writer_ja', 'writer_en', 'writer_ru', 'writer_uz', 
-                                'writer_zh', 'writer_ko', 'writer_tr', 'plugin', 'content']
-                    if new_role in valid_roles:
-                        task['required_role'] = new_role
-                    else:
-                        print("無効な担当です。変更しません。")
-                    edited_tasks.append(task)
-                
-                elif edit_choice == 'p':
-                    # 優先度変更
-                    print("優先度: high, medium, low")
-                    new_priority = input("新しい優先度: ").strip()
-                    if new_priority in ['high', 'medium', 'low']:
-                        task['priority'] = new_priority
-                    else:
-                        print("無効な優先度です。変更しません。")
-                    edited_tasks.append(task)
-                
-                elif edit_choice == 'e':
-                    # 理由変更
-                    new_reason = input("新しい理由: ").strip()
-                    if new_reason:
-                        task['reasoning'] = new_reason
-                    edited_tasks.append(task)
-                
-                elif edit_choice == 's':
-                    # スキップ
-                    print(f"タスク {i} をスキップしました")
-                    continue
-                
-                elif edit_choice == 'k':
-                    # 保持
-                    edited_tasks.append(task)
-                    print(f"タスク {i} をそのまま保持しました")
-                
-                elif edit_choice == 'q':
-                    # 編集終了
-                    print("編集を終了します")
-                    break
-                
-                else:
-                    # 不正な入力
-                    print("不正な入力です。タスクをそのまま保持します。")
-                    edited_tasks.append(task)
+        # 実際のコンテンツ生成ロジック
+        content = {
+            'title': f"M&A関連記事: {task_info['description'][:30]}...",
+            'content': self._generate_sample_content(task_info),
+            'word_count': 1200,
+            'keywords': ['M&A', '企業価値', '買収', '合併'],
+            'status': 'draft'
+        }
         
-            # === パート3: 編集結果の表示 ===
-            if edited_tasks:
-                print(f"\n編集後のタスク ({len(edited_tasks)}件):")
-                self.display_suggested_tasks(edited_tasks)
-            
-            return edited_tasks
+        await asyncio.sleep(2)  # 生成時間のシミュレーション
         
-        except Exception as e:
-            # === パート4: 例外処理 ===
-            ErrorHandler.log_error(e, "タスク編集")
-            return suggested_tasks
+        return content
     
-    async def create_manual_tasks(self) -> List[Dict]:
-        """手動でタスクを作成"""
-        try:
-            # === パート1: 変数初期化 ===
-            manual_tasks = []
-            
-            # === パート2: 作成開始ヘッダー ===
-            print("\n" + "="*60)
-            print("手動タスク作成")
-            print("="*60)
-            print("新しいタスクを手動で作成します。")
-            print("空の説明で終了します。")
-            
-            # === パート3: タスク作成ループ ===
-            while True:
-                # === パート3-1: タスクヘッダー表示 ===
-                print(f"\n--- タスク {len(manual_tasks) + 1} ---")
-                
-                # === パート3-2: タスク説明の入力 ===
-                description = input("タスク説明: ").strip()
-                if not description:
-                    break
-                    
-                # === パート3-3: 担当の入力 ===
-                print("利用可能な担当: design, dev, ui, review, wordpress, writer, writer_ja, writer_en, writer_ru, plugin")
-                role = input("担当 (デフォルト: dev): ").strip() or "dev"
-                
-                # === パート3-4: 優先度の入力 ===
-                print("優先度: high, medium, low")
-                priority = input("優先度 (デフォルト: medium): ").strip() or "medium"
-                
-                # === パート3-5: 理由の入力 ===
-                reasoning = input("理由: ").strip()
-                
-                # === パート3-6: タスクオブジェクトの作成 ===
-                task = {
-                    'description': description,
-                    'required_role': role,
-                    'priority': priority,
-                    'reasoning': reasoning
-                }
-                
-                # === パート3-7: タスクリストへの追加 ===
-                manual_tasks.append(task)
-                print(f"タスクを追加しました (合計: {len(manual_tasks)}件)")
-                
-                # === パート3-8: 継続確認 ===
-                more = input("さらにタスクを追加しますか? (y/n): ").lower()
-                if more != 'y':
-                    break
-            
-            # === パート4: 作成結果の表示 ===
-            if manual_tasks:
-                print(f"\n作成したタスク ({len(manual_tasks)}件):")
-                self.display_suggested_tasks(manual_tasks)
-                
-            return manual_tasks
-            
-        except Exception as e:
-            # === パート5: 例外処理 ===
-            ErrorHandler.log_error(e, "手動タスク作成")
-            return []
+    async def _generate_news_article(self, task_info):
+        """ニュース記事を生成"""
+        print(f"      📰 ニュース記事生成: {task_info['task_id']}")
+        
+        content = {
+            'title': f"M&Aニュース: {task_info['description'][:40]}...",
+            'content': self._generate_news_content(task_info),
+            'word_count': 800,
+            'keywords': ['M&Aニュース', '企業買収', '業界動向'],
+            'status': 'draft'
+        }
+        
+        await asyncio.sleep(1.5)
+        return content
+    
+    async def _generate_guide(self, task_info):
+        """ガイドを生成"""
+        print(f"      📚 ガイド生成: {task_info['task_id']}")
+        
+        content = {
+            'title': f"M&Aガイド: {task_info['description'][:30]}...",
+            'content': self._generate_guide_content(task_info),
+            'word_count': 2000,
+            'keywords': ['M&Aガイド', '手続き', 'チェックリスト'],
+            'status': 'draft'
+        }
+        
+        await asyncio.sleep(3)
+        return content
+    
+    async def _generate_case_study(self, task_info):
+        """事例研究を生成"""
+        print(f"      📊 事例研究生成: {task_info['task_id']}")
+        
+        content = {
+            'title': f"M&A事例: {task_info['description'][:35]}...",
+            'content': self._generate_case_study_content(task_info),
+            'word_count': 1500,
+            'keywords': ['M&A事例', '成功事例', '失敗事例'],
+            'status': 'draft'
+        }
+        
+        await asyncio.sleep(2.5)
+        return content
+    
+    def _generate_sample_content(self, task_info):
+        """サンプルコンテンツを生成"""
+        return f"""
+# {task_info['description']}
+
+## はじめに
+M&A（合併と買収）は、企業成長の重要な戦略の一つです。
+
+## 主要内容
+この記事では、{task_info['description']}について詳しく解説します。
+
+### ポイント1: 基本概念
+M&Aの基本を理解することが重要です。
+
+### ポイント2: 実践手法
+実際のM&Aプロセスについて説明します。
+
+## 結論
+適切なM&A戦略が企業価値を高めます。
+
+生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+    
+    def _generate_news_content(self, task_info):
+        """ニュースコンテンツを生成"""
+        return f"""
+# {task_info['description']}
+
+## 速報
+最新のM&A動向をお伝えします。
+
+## 詳細
+{task_info['description']}に関する最新情報です。
+
+発信日: {datetime.now().strftime('%Y-%m-%d')}
+"""
+    
+    def _generate_guide_content(self, task_info):
+        """ガイドコンテンツを生成"""
+        return f"""
+# {task_info['description']} 完全ガイド
+
+## ステップバイステップ
+1. 準備段階
+2. 実行段階
+3. 完了後の管理
+
+## 注意点
+重要な考慮事項を説明します。
+
+作成日: {datetime.now().strftime('%Y-%m-%d')}
+"""
+    
+    def _generate_case_study_content(self, task_info):
+        """事例研究コンテンツを生成"""
+        return f"""
+# 事例研究: {task_info['description']}
+
+## 背景
+事例の背景を説明します。
+
+## 取り組み
+具体的な取り組み内容です。
+
+## 結果
+得られた成果を報告します。
+
+分析日: {datetime.now().strftime('%Y-%m-%d')}
+"""
+
+if __name__ == "__main__":
+    # テスト実行
+    async def test():
+        executor = ContentTaskExecutor()
+        test_task = {
+            'task_id': 'CONTENT-001',
+            'description': 'M&Aの基本戦略について'
+        }
+        result = await executor.execute(test_task)
+        print(f"コンテンツ生成結果: {result}")
+    
+    asyncio.run(test())

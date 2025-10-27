@@ -1,13 +1,15 @@
-"""PM Agent自動化システム"""
+"""
+PM Agent パッケージ
+"""
 
 from .progress_monitor import ProgressMonitorAgent
-from .task_breakdown import TaskBreakdownAgent
 from .task_registration import TaskRegistrationAgent
-from .automation import PMAgentAutomation
+from .task_exporter import TaskExportAgent
+from .task_breakdown_gemini import GeminiTaskBreakdownAgent
 
 __all__ = [
     'ProgressMonitorAgent',
-    'TaskBreakdownAgent',
-    'TaskRegistrationAgent',
-    'PMAgentAutomation'
+    'TaskRegistrationAgent', 
+    'TaskExportAgent',
+    'GeminiTaskBreakdownAgent',
 ]
