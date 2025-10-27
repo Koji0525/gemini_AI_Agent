@@ -122,7 +122,7 @@ async def initialize_wordpress_session(browser):
     try:
         from browser_control.browser_wp_session_manager import WPSessionManager
         from wordpress.wp_auth import WordPressAuth
-        from configuration.config_loader import get_config
+        from configuration.config_loader import get_config, config
 
         print("🌐 WordPress セッション初期化中...")
 
@@ -230,7 +230,7 @@ async def log_to_sheet(
     try:
         import gspread
         from google.oauth2.service_account import Credentials
-        from configuration.config_loader import get_config
+        from configuration.config_loader import get_config, config
 
         creds = Credentials.from_service_account_file(
             "configuration/service_account.json",
@@ -282,9 +282,9 @@ async def log_to_sheet(
 async def main():
     """メイン実行関数"""
     try:
-        from configuration.config_loader import get_config
+        from configuration.config_loader import get_config, config
 
-        config = get_config()
+        # config変数はそのまま使用可能
 
         print("============================================================")
         print("🚀 pm_tasks処理システム - ステータス管理統合版")
@@ -317,6 +317,7 @@ async def main():
             help="ステータスフィルター（デフォルト: pending）",
         )
         parser.add_argument("--skip-review", action="store_true", help="レビューをスキップ")
+        parser.add_argument("--dry-run", action="store_true", help="実際には実行せず、処理内容のみ表示")
         args = parser.parse_args()
 
         print(f"🔄 タスク読み込み中（最大{args.max_tasks}タスク、ステータス: {args.status}）...")
