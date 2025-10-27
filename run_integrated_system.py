@@ -208,16 +208,6 @@ class IntegratedTaskExecutor:
         return await self._execute_with_gemini(task, "WordPressカスタム投稿タイプ")
 
 
-    async def handle_wp_dev_task(self, task: Dict) -> bool:
-        """WordPress開発タスク処理"""
-        print("🌐 WordPress Dev Agent で処理中...")
-        return await self._execute_with_gemini(task, "WordPress開発")
-    
-    async def handle_wp_cpt_task(self, task: Dict) -> bool:
-        """WordPressカスタム投稿タイプタスク処理"""
-        print("📝 WordPress CPT Agent で処理中...")
-        return await self._execute_with_gemini(task, "WordPressカスタム投稿タイプ")
-
     async def handle_wp_task(self, task: Dict) -> bool:
         """WordPressタスク処理"""
         print("🌐 WordPress Agent で処理中...")

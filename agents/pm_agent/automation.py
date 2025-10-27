@@ -1,190 +1,221 @@
 #!/usr/bin/env python3
-"""PM Agent完全自動化システム"""
+"""
+PM Agent 完全自動化システム - Gemini統合版
+- 進捗監視
+- タスク分解（Gemini AI使用）
+- タスク登録
+"""
 import asyncio
 import sys
-import os
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Any
+from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-os.environ['DISPLAY'] = ':1'
+# プロジェクトルートをパスに追加
+sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
-from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import get_config
+# _WIPディレクトリから直接インポート
+
 from agents.pm_agent.progress_monitor import ProgressMonitorAgent
-from agents.pm_agent.task_breakdown import TaskBreakdownAgent
+from agents.pm_agent.task_breakdown_gemini import GeminiTaskBreakdownAgent  # Gemini統合版
 from agents.pm_agent.task_registration import TaskRegistrationAgent
+from agents.pm_agent.task_exporter import TaskExportAgent  # タスク詳細エクスポート
+from tools.sheets_manager import GoogleSheetsManager
+from browser_control.browser_controller import BrowserController
+from configuration.config_loader import ConfigLoader
 
 
-class PMAgentAutomation:
-    """PM Agent完全自動化システム"""
-    
-    def __init__(self, sheets_manager: GoogleSheetsManager):
-        self.sheets = sheets_manager
-        self.config = get_config()
-        
-        # 各モジュールを初期化
-        self.monitor = ProgressMonitorAgent(sheets_manager)
-        self.breakdown = TaskBreakdownAgent(sheets_manager)
-        self.registration = TaskRegistrationAgent(sheets_manager)
-    
-    async def run_full_automation(
-        self, 
-        progress_threshold: float = 50.0,
-        max_goals: int = 3,
-        dry_run: bool = False
-    ) -> Dict[str, Any]:
-        """
-        完全自動化を実行
-        
-        Args:
-            progress_threshold: 進捗率の閾値（デフォルト50%）
-            max_goals: 処理する目標の最大数（デフォルト3）
-            dry_run: テストモード（実際には登録しない）
-        
-        Returns:
-            実行結果のサマリー
-        """
-        print("="*70)
-        print("🤖 PM Agent 完全自動化システム")
-        print("="*70)
-        print(f"開始日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        if dry_run:
-            print("⚠️  DRY RUN モード: タスクは実際には登録されません")
-        print()
-        
-        results = {
-            'start_time': datetime.now().isoformat(),
-            'detected_goals': [],
-            'generated_tasks': {},
-            'registered_tasks': {},
-            'errors': []
-        }
-        
-        try:
-            # フェーズ1: 進捗監視
-            print("【Phase 1】進捗監視")
-            print("-"*70)
-            low_progress_goals = await self.monitor.detect_low_progress_goals(
-                threshold=progress_threshold
-            )
-            
-            if not low_progress_goals:
-                print("✅ 全目標が順調に進行中（進捗率50%以上）")
-                print("📊 追加タスクの生成は不要です")
-                results['message'] = '全目標が順調に進行中'
-                results['status'] = 'no_action_needed'
-                return results
-            
-            print(f"⚠️  {len(low_progress_goals)}個の低進捗目標を検出:")
-            for goal in low_progress_goals[:max_goals]:
-                print(f"  - 目標{goal['goal_id']}: {goal['progress_rate']:.1f}% ({goal['priority']})")
-            
-            results['detected_goals'] = low_progress_goals[:max_goals]
-            print()
-            
-            # フェーズ2 & 3: タスク分解と登録
-            for goal in low_progress_goals[:max_goals]:
-                goal_id = goal['goal_id']
-                
-                print("\n" + "="*70)
-                print(f"【Phase 2】目標{goal_id}のタスク分解")
-                print("-"*70)
-                
-                # タスク生成
-                tasks = await self.breakdown.generate_tasks_for_goal(goal_id, goal)
-                
-                if tasks:
-                    results['generated_tasks'][goal_id] = len(tasks)
-                    print(f"✅ {len(tasks)}個のタスクを生成")
-                    
-                    # タスク登録
-                    print(f"\n【Phase 3】目標{goal_id}のタスク登録")
-                    print("-"*70)
-                    
-                    if dry_run:
-                        print("⚠️  DRY RUN モード: タスクは登録されません")
-                        results['registered_tasks'][goal_id] = 0
-                    else:
-                        success = await self.registration.register_tasks(goal_id, tasks)
-                        
-                        if success:
-                            results['registered_tasks'][goal_id] = len(tasks)
-                            print(f"✅ {len(tasks)}個のタスクを登録")
-                        else:
-                            error_msg = f"目標{goal_id}のタスク登録に失敗"
-                            results['errors'].append(error_msg)
-                            print(f"❌ {error_msg}")
-                else:
-                    error_msg = f"目標{goal_id}のタスク生成に失敗"
-                    results['errors'].append(error_msg)
-                    print(f"❌ {error_msg}")
-            
-            # 最終レポート
-            print("\n" + "="*70)
-            print("📊 実行結果サマリー")
-            print("="*70)
-            
-            total_generated = sum(results['generated_tasks'].values())
-            total_registered = sum(results['registered_tasks'].values())
-            
-            print(f"検出した低進捗目標: {len(results['detected_goals'])}個")
-            print(f"生成したタスク: {total_generated}個")
-            print(f"登録したタスク: {total_registered}個")
-            
-            if results['errors']:
-                print(f"エラー: {len(results['errors'])}件")
-                for error in results['errors']:
-                    print(f"  - {error}")
-            else:
-                print("エラー: なし")
-            
-            print()
-            print(f"完了日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            print("="*70)
-            
-            results['end_time'] = datetime.now().isoformat()
-            results['status'] = 'success' if not results['errors'] else 'partial_success'
-            
-            return results
-            
-        except Exception as e:
-            print(f"\n❌ 自動化実行エラー: {e}")
-            import traceback
-            traceback.print_exc()
-            
-            results['status'] = 'error'
-            results['error_message'] = str(e)
-            return results
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ステータス統一ルール
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# project_goal: planning/active/paused/completed/cancelled
+# pm_tasks: pending/in_progress/review/completed/failed/skipped/cancelled
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# メイン実行
 async def main():
     """メイン実行関数"""
-    print("\n")
+    print("=" * 70)
+    print("🤖 PM Agent 完全自動化システム（Gemini統合版）")
+    print("=" * 70)
+    print(f"開始日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print()
     
-    config = get_config()
-    sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"),
-        service_account_file=config.get("SERVICE_ACCOUNT_FILE")
-    )
+    # 統計情報
+    stats = {
+        "low_progress_goals": 0,
+        "tasks_generated": 0,
+        "tasks_registered": 0,
+        "errors": []
+    }
     
-    automation = PMAgentAutomation(sheets)
+    browser = None
     
-    # 完全自動化を実行
-    results = await automation.run_full_automation(
-        progress_threshold=50.0,
-        max_goals=3,
-        dry_run=False
-    )
+    try:
+        # ============================================================
+        # 初期化
+        # ============================================================
+        
+        # Google Sheets接続
+        spreadsheet_id = ConfigLoader.get("spreadsheet_id")
+        service_account_file = ConfigLoader.get("service_account_file")
+        sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
+        
+        # BrowserController初期化（Gemini連携用）
+        print("🌐 BrowserController初期化中...")
+        browser = BrowserController()
+        await browser.setup_browser()
+        
+        # Geminiページに移動
+        print("🤖 Geminiページに移動中...")
+        await browser.navigate_to_gemini()
+        print("✅ Gemini準備完了")
+        print()
+        
+        # エージェント初期化
+        progress_monitor = ProgressMonitorAgent(sheets_manager)
+        task_breakdown = GeminiTaskBreakdownAgent(sheets_manager, browser)
+        task_registration = TaskRegistrationAgent(sheets_manager)
+        task_exporter = TaskExportAgent()  # タスク詳細エクスポート
+        
+        # ============================================================
+        # Phase 1: 進捗監視
+        # ============================================================
+        print("【Phase 1】進捗監視")
+        print("-" * 70)
+        
+        low_progress_goals = await progress_monitor.detect_low_progress_goals(
+            threshold=0.7  # 70%未満の目標を検出
+        )
+        
+        stats["low_progress_goals"] = len(low_progress_goals)
+        
+        if not low_progress_goals:
+            print("✅ すべての目標が順調に進行しています")
+            return
+        
+        print(f"⚠️  {len(low_progress_goals)}個の低進捗目標を検出:")
+        for goal in low_progress_goals:
+            # 安全にキーにアクセス
+            goal_id = goal.get('goal_id', 'Unknown')
+            progress = goal.get('progress', goal.get('completion_rate', 0))
+            status = goal.get('status', goal.get('priority', 'unknown'))
+            print(f"  - 目標{goal_id}: {progress:.1%} ({status})")
+        print()
+        
+        # ============================================================
+        # Phase 2-3: 各目標に対してタスク生成＆登録
+        # ============================================================
+        for goal in low_progress_goals:
+            goal_id = goal["goal_id"]
+            goal_title = goal.get("title", f"目標{goal_id}")
+            goal_description = goal.get("description", "")
+            
+            print("=" * 70)
+            print(f"【Phase 2】目標{goal_id}のタスク分解（Gemini使用）")
+            print("-" * 70)
+            
+            # タスク生成（Gemini使用）
+            try:
+                # goal_descriptionが空の場合はgoal_titleを使用
+                if not goal_description or goal_description.strip() == "":
+                    goal_description = f"{goal_title}を達成するためのタスクを実行する"
+                    print(f"💡 目標説明が空のため、タイトルから生成: {goal_description}")
+                
+                generated_tasks = await task_breakdown.generate_tasks_for_goal(
+                    goal_id=goal_id,
+                    goal_title=goal_title,
+                    goal_description=goal_description,
+                    context={
+                        "現在の進捗": f"{goal.get('progress', goal.get('completion_rate', 0)):.1%}",
+                        "完了タスク": f"{goal.get('completed_tasks', 0)}/{goal.get('total_tasks', 0)}"
+                    },
+                    max_tasks=5  # 一度に5個まで
+                )
+                
+                stats["tasks_generated"] += len(generated_tasks)
+                print(f"✅ {len(generated_tasks)}個のタスクを生成")
+                
+                # タスク詳細をMarkdownファイルにエクスポート
+                if generated_tasks:
+                    try:
+                        export_path = task_exporter.export_tasks(
+                            goal_id=goal_id,
+                            goal_title=goal_title,
+                            tasks=generated_tasks
+                        )
+                        print(f"📄 詳細ファイル: {export_path}")
+                    except Exception as export_error:
+                        print(f"⚠️ エクスポートエラー（続行）: {export_error}")
+                
+                print()
+                
+            except Exception as e:
+                error_msg = f"目標{goal_id}のタスク生成失敗: {e}"
+                print(f"❌ {error_msg}")
+                stats["errors"].append(error_msg)
+                continue
+            
+            # タスク登録
+            print(f"【Phase 3】目標{goal_id}のタスク登録")
+            print("-" * 70)
+            
+            try:
+                # デバッグ: export_pathの値を確認
+                print(f"🔍 export_path = {export_path}")
+                
+                registered_count = await task_registration.register_tasks(
+                    goal_id=goal_id,
+                    tasks=generated_tasks,
+                    detail_file_path=export_path
+                )
+                
+                stats["tasks_registered"] += registered_count
+                print(f"✅ {registered_count}個のタスクを登録")
+                print()
+                
+            except Exception as e:
+                error_msg = f"目標{goal_id}のタスク登録失敗: {e}"
+                print(f"❌ {error_msg}")
+                stats["errors"].append(error_msg)
+                continue
+        
+    except Exception as e:
+        print(f"❌ システムエラー: {e}")
+        import traceback
+        traceback.print_exc()
+        stats["errors"].append(str(e))
+        
+    finally:
+        # ブラウザクリーンアップ
+        if browser:
+            print("\n🧹 ブラウザをクリーンアップ中...")
+            await browser.cleanup()
+            print("✅ クリーンアップ完了")
     
-    if results['status'] == 'success':
-        print("\n🎉 PM Agent自動化が正常に完了しました！")
-    elif results['status'] == 'no_action_needed':
-        print("\n✅ アクション不要（全目標が順調）")
+    # ============================================================
+    # サマリー表示
+    # ============================================================
+    print()
+    print("=" * 70)
+    print("📊 実行結果サマリー")
+    print("=" * 70)
+    print(f"検出した低進捗目標: {stats['low_progress_goals']}個")
+    print(f"生成したタスク: {stats['tasks_generated']}個")
+    print(f"登録したタスク: {stats['tasks_registered']}個")
+    print(f"エラー: {len(stats['errors'])}件")
+    
+    if stats["errors"]:
+        print("\n⚠️ エラー詳細:")
+        for error in stats["errors"]:
+            print(f"  - {error}")
+    
+    print(f"\n完了日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 70)
+    
+    if stats["errors"]:
+        print("\n⚠️ PM Agent自動化が一部エラーで完了しました")
     else:
-        print(f"\n⚠️  一部エラーがありました: {results.get('errors', [])}")
+        print("\n🎉 PM Agent自動化が正常に完了しました！")
 
 
 if __name__ == "__main__":

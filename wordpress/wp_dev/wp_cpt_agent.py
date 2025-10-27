@@ -142,11 +142,4 @@ class WordPressTaxonomyAgent:
         self.browser = browser
         self.output_folder = output_folder
     
-    async def execute(self, task: Dict) -> Dict:
-        """タクソノミー作成タスクを実行"""
-        # 実装（wp_cpt_agent.py と同様のパターン）
-        return {
-            'success': True,
-            'message': 'タクソノミー作成完了（実装中）',
-            'task_id': task.get('task_id')
-        }
+    

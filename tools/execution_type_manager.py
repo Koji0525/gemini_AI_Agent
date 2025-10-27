@@ -36,9 +36,7 @@ def display_tasks_table(tasks):
         # 不一致を強調
         marker = "⚠️ " if current and current != predicted else "  "
 
-        print(
-            f"{marker}{task_id:<6} {agent:<8} {current:<10} {predicted:<10} {title:<50}"
-        )
+        print(f"{marker}{task_id:<6} {agent:<8} {current:<10} {predicted:<10} {title:<50}")
 
     print("=" * 100)
     print()
