@@ -79,6 +79,30 @@ gemini_AI_Agent/
   ├── automation_v01-gemini.py   # 新機能開発中
   └── automation_v02-fix_bug.py  # バグ修正中
 ```
+### 初回セットアップ方法
+
+# 基本インストール
+pip install -r requirements.txt
+
+# Playwrightブラウザのインストール
+python -m playwright install chromium
+
+# 開発モード（開発ツールも含む）
+pip install -r requirements.txt
+pre-commit install
+
+# Playwrightシステム依存関係
+sudo apt-get install -y \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxrandr2 \
+    libxdamage1 \
+    libxfixes3 \
+    libxss1 \
+    libgbm1 \
+    libasound2
 
 ---
 
