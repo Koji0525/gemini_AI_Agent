@@ -355,8 +355,61 @@ class AutoCommitPushAgent:
         
         return True
     
-    # STEP 9: COMMIT & PUSH
-    def step9_commit_and_push(self, message: str, push: bool = True) -> bool:
+    # STEP 9: README更新
+    def step9_update_readme(self) -> bool:
+        """README更新（対話式）"""
+        self._print_step(9, "UPDATE README")
+        
+        readme_path = self.project_root / 'README.md'
+        
+        if not readme_path.exists():
+            print("⚠️  README.mdが見つかりません")
+            return True
+        
+        print("📝 READMEに追加する内容を入力してください")
+        print("   例: ### v1.4.1 新機能")
+        print("   例: - ✅ PM Agent自動化完了")
+        print("   スキップする場合は Enter のみ押してください")
+        print()
+        
+        readme_content = input("README更新内容（複数行の場合は ; で区切る）: ").strip()
+        
+        if not readme_content:
+            print("⚠️  README更新をスキップしました")
+            return True
+        
+        # 複数行対応
+        lines = readme_content.split(';')
+        
+        with open(readme_path, 'r', encoding='utf-8') as f:
+            existing = f.read()
+        
+        # 変更履歴セクションを探す
+        if '## 📝 変更履歴' in existing:
+            # 変更履歴セクションの直後に追加
+            parts = existing.split('## 📝 変更履歴')
+            
+            # 最初のセクション（### vX.X.X）の前に追加
+            changelog_part = parts[1]
+            if '###' in changelog_part:
+                first_section_idx = changelog_part.index('###')
+                updated_changelog = changelog_part[:first_section_idx] + '\n'.join(lines) + '\n\n' + changelog_part[first_section_idx:]
+            else:
+                updated_changelog = '\n' + '\n'.join(lines) + '\n' + changelog_part
+            
+            new_readme = parts[0] + '## 📝 変更履歴' + updated_changelog
+        else:
+            # 変更履歴セクションがない場合は末尾に追加
+            new_readme = existing + '\n\n## 📝 変更履歴\n\n' + '\n'.join(lines) + '\n'
+        
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(new_readme)
+        
+        print(f"✅ READMEを更新しました")
+        return True
+
+    # STEP 10: COMMIT & PUSH
+    def step10_commit_and_push(self, message: str, push: bool = True) -> bool:
         """コミット＆プッシュ"""
         self._print_step(9, "COMMIT & PUSH")
         
@@ -434,6 +487,7 @@ class AutoCommitPushAgent:
             ("TEST", self.step5_test, self.config['quality_gates']['test']),
             ("FINAL CLEANUP", self.step6_cleanup, True),
             ("UPDATE .gitignore", self.step8_update_gitignore, True),
+            ("UPDATE README", self.step9_update_readme, True),
         ]
         
         for step_name, step_func, enabled in steps:
@@ -450,7 +504,7 @@ class AutoCommitPushAgent:
                 return False
         
         # 最後にコミット＆プッシュ
-        if not self.step9_commit_and_push(commit_message, auto_push):
+        if not self.step10_commit_and_push(commit_message, auto_push):
             return False
         
         print("\n" + "="*70)
