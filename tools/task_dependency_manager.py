@@ -311,3 +311,33 @@ class TaskDependencyManager:
         logger.info(f"✅ コンテキスト付きプロンプト生成完了" f"（{len(context_tasks)}件の前タスク結果を含む）")
 
         return enhanced_prompt
+
+    def get_execution_order(self, tasks: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+        """
+        タスクを依存関係に基づいてグループ化
+        
+        Returns:
+            実行順序のグループリスト
+            例: [[task1, task2], [task3], [task4, task5]]
+                 → グループ1とグループ2は並列実行可能
+        """
+        if not tasks:
+            return []
+        
+        # 簡易版: 依存関係がないタスクから順に実行
+        # TODO: 本格的な依存解決は後日実装
+        
+        # 依存関係を持たないタスク
+        no_deps = [t for t in tasks if not t.get('dependencies') or t.get('dependencies') == '']
+        
+        # 依存関係を持つタスク
+        with_deps = [t for t in tasks if t.get('dependencies') and t.get('dependencies') != '']
+        
+        # 現時点では2グループに分割（シンプル版）
+        execution_groups = []
+        if no_deps:
+            execution_groups.append(no_deps)
+        if with_deps:
+            execution_groups.append(with_deps)
+        
+        return execution_groups
