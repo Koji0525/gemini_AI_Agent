@@ -114,6 +114,11 @@ class AutoCommitPushAgent:
         self.staged_files = files
         print(f"📋 コミット対象: {len(files)}ファイル")
 
+        if len(files) == 0:
+            print("\n⚠️  変更されたファイルがありません")
+            print("   すべての変更が既にコミット済みです")
+            return True  # エラーではなく正常終了
+
         if len(files) > 10:
             print("   （最初の10ファイルのみ表示）")
             for f in files[:10]:
@@ -123,7 +128,7 @@ class AutoCommitPushAgent:
             for f in files:
                 print(f"   ✅ {f.relative_to(self.project_root)}")
 
-        return len(files) > 0
+        return True
 
     # STEP 3: QUALITY GATE - セキュリティチェック
     def step3_security_check(self) -> bool:
