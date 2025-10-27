@@ -12,7 +12,6 @@ class PushAgent:
         self.project_root = Path(__file__).parent.parent.parent
     
     def get_current_branch(self) -> str:
-        """現在のブランチ名取得"""
         result = subprocess.run(
             ['git', 'branch', '--show-current'],
             cwd=self.project_root,
@@ -21,37 +20,14 @@ class PushAgent:
         )
         return result.stdout.strip()
     
-    def check_uncommitted_changes(self) -> bool:
-        """未コミット変更チェック"""
-        result = subprocess.run(
-            ['git', 'status', '--porcelain'],
-            cwd=self.project_root,
-            capture_output=True,
-            text=True
-        )
-        return len(result.stdout.strip()) == 0
-    
     def push(self, force: bool = False) -> bool:
         """プッシュ実行"""
-        print("\n" + "="*70)
-        print("🚀 Git Push Agent")
-        print("="*70)
-        
-        # 現在のブランチ
         branch = self.get_current_branch()
         print(f"📍 現在のブランチ: {branch}")
         
-        # 未コミット変更チェック
-        if not self.check_uncommitted_changes():
-            print("❌ 未コミットの変更があります")
-            print("   先にコミットしてください")
-            return False
-        
-        # プッシュ実行
         cmd = ['git', 'push', 'origin', branch]
         if force:
             cmd.append('--force')
-            print("⚠️  強制プッシュを実行します")
         
         result = subprocess.run(cmd, cwd=self.project_root, capture_output=True, text=True)
         

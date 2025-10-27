@@ -26,7 +26,6 @@ class BranchAgent:
     
     def parse_version(self, branch_name: str) -> Optional[dict]:
         """ブランチ名からバージョン解析"""
-        # v1.2.0-feature のパターン
         pattern = r'v(\d+)\.(\d+)\.(\d+)(?:-(.+))?'
         match = re.match(pattern, branch_name)
         
@@ -50,7 +49,7 @@ class BranchAgent:
         elif level == 'minor':
             new_version['minor'] += 1
             new_version['patch'] = 0
-        else:  # patch
+        else:
             new_version['patch'] += 1
         
         return new_version
@@ -64,11 +63,8 @@ class BranchAgent:
     
     def create_and_switch(self, new_branch: str) -> bool:
         """新規ブランチ作成＋切り替え"""
-        print("\n" + "="*70)
         print(f"🌿 新規ブランチ作成: {new_branch}")
-        print("="*70)
         
-        # ブランチ作成
         result = subprocess.run(
             ['git', 'checkout', '-b', new_branch],
             cwd=self.project_root,
@@ -85,9 +81,7 @@ class BranchAgent:
     
     def switch(self, branch: str) -> bool:
         """ブランチ切り替え"""
-        print("\n" + "="*70)
         print(f"🔄 ブランチ切り替え: {branch}")
-        print("="*70)
         
         result = subprocess.run(
             ['git', 'checkout', branch],
@@ -113,7 +107,6 @@ class BranchAgent:
             print("❌ 現在のブランチがバージョン形式ではありません")
             return False
         
-        # バージョンインクリメント
         new_version = self.increment_version(version, level)
         if feature:
             new_version['feature'] = feature
