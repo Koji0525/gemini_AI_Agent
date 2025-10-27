@@ -1,325 +1,289 @@
-# 🤖 Gemini AI Agent - タスク管理システム
+# 🤖 Gemini AI Agent System
 
-[![Version](https://img.shields.io/badge/version-v1.3.0--add--operation-blue)](./VERSION)
-[![Python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/)
-[![Status](https://img.shields.io/badge/status-Phase%201%20Complete-success)](./PHASE2_DESIGN.md)
+**バージョン: v1.4.1-phase2-complete**
 
-## 📊 現在のバージョン
-
-**v1.3.0-add-operation** - Phase 1完了版
+完全自動化されたAIエージェントシステム with Git統合ワークフロー
 
 ---
 
-## 🎯 概要
+## 📋 プロジェクト概要
 
-Google SheetsベースのPM（プロジェクト管理）システムと連携し、Gemini AIおよびWordPressを使用してタスクを自動実行するシステムです。
-
-### ✨ Phase 1で実装された機能
-
-#### 🤖 タスク実行
-- ✅ **Geminiタスク自動実行** - AIによる自動処理
-- ✅ **WordPressタスク実行** - WP管理画面での自動操作
-- ✅ **タスクルーティング** - execution_type による自動振り分け
-
-#### 📊 品質管理
-- ✅ **自動レビュー機能** - 実行結果を10点満点で評価
-- ✅ **品質スコア記録** - task_execution_logシートに記録
-- ✅ **ステータス管理** - pending → in_progress → completed/failed
-
-#### 🔧 システム機能
-- ✅ **execution_type自動判定** - タスク内容からGemini/WPを判別
-- ✅ **WordPress認証** - クッキーベース自動ログイン
-- ✅ **WordPressDevAgent** - CPT/ACF/Requirements統合エージェント
+このプロジェクトは、Gemini AIを活用した複数のエージェントシステムを統合し、
+自動化されたタスク管理、進捗監視、品質チェック、Git操作を提供します。
 
 ---
 
-## 🏗️ システム構成
-```
-┌──────────────────────────────────────┐
-│  📊 Google Sheets (pm_tasks)         │
-│  - タスク管理                         │
-│  - execution_type設定                │
-│  - ステータス管理                     │
-└──────────────┬───────────────────────┘
-               │
-               ↓
-┌──────────────────────────────────────┐
-│  🎛️ run_pm_tasks_adaptive.py        │
-│  - タスクルーティング                 │
-│  - ステータス自動更新                 │
-└──────────────┬───────────────────────┘
-               │
-        ┌──────┴──────┐
-        ↓             ↓
-┌──────────┐  ┌──────────────────┐
-│ Gemini   │  │ WordPress        │
-│ AI       │  │ DevAgent         │
-└────┬─────┘  └─────┬────────────┘
-     │              │
-     └──────┬───────┘
-            ↓
-    ┌───────────────────┐
-    │ ReviewAgent       │
-    │ 品質評価 (10点満点)│
-    └───────┬───────────┘
-            ↓
-    ┌───────────────────────────┐
-    │ task_execution_log        │
-    │ 実行結果・品質スコア記録  │
-    └───────────────────────────┘
-```
+## 🚀 主要機能
 
----
+### 1. PM Agent（プロジェクト管理エージェント）
+- **自動進捗監視**: progress_dashboardから低進捗ゴールを検出
+- **AI駆動タスク分解**: Gemini APIでタスクを自動生成
+- **自動登録**: Google Sheetsへの一括登録
+- **完全自動化**: activeなゴールを自動処理
 
-## 📁 主要ファイル
-
-### コアシステム
-- `run_pm_tasks_adaptive.py` - メインシステム（タスク実行・ルーティング）
-- `tools/pm_tasks_loader.py` - Google Sheetsからタスク読み込み
-- `tools/execution_type_manager.py` - execution_type判定・管理
-
-### エージェント
-- `core_agents/review_agent.py` - レビューエージェント
-- `wordpress/wp_dev/wp_dev_agent.py` - WordPress統合エージェント
-- `wordpress/wp_dev/wp_cpt_agent.py` - CPT（カスタム投稿タイプ）
-- `wordpress/wp_dev/wp_acf_agent.py` - ACF（カスタムフィールド）
-- `wordpress/wp_dev/wp_requirements_agent.py` - 要件定義
-
-### ブラウザ制御
-- `browser_control/browser_controller.py` - ブラウザ操作
-- `browser_control/browser_wp_session_manager.py` - WPセッション管理
-- `wordpress/wp_auth.py` - WordPress認証
-
----
-
-## 🚀 使い方
-
-### 1. タスク準備
-Google Sheets の `pm_tasks` シートにタスクを登録：
-
-| task_id | Title | Description | Status | execution_type |
-|---------|-------|-------------|--------|----------------|
-| 1 | 要件定義 | システムの要件を定義 | pending | gemini |
-| 2 | CPT作成 | M&A案件CPT作成 | pending | wordpress |
-
-### 2. execution_type 自動設定（オプション）
+**実行方法:**
 ```bash
-python3 tools/execution_type_manager.py
+DISPLAY=:1 python3 agents/pm_agent/automation.py
 ```
 
-### 3. タスク実行
+### 2. Git自動化エージェント
+- **完全自動化ワークフロー**: STEP 1-9を一括実行
+- **セキュリティチェック**: 認証ファイル自動検出
+- **品質保証**: 重複メソッド・構文エラー検出
+- **対話式テスト**: 開発プログラムのテスト実行
+
+**実行方法:**
 ```bash
-# 最大5タスクを実行
-DISPLAY=:1 python3 run_pm_tasks_adaptive.py --max-tasks 5 --status pending
-
-# 特定のタスクを実行
-DISPLAY=:1 python3 run_pm_tasks_adaptive.py --task-id 1
+python3 agents/git_agent/auto_commit_push.py 'コミットメッセージ'
 ```
 
-### 4. 結果確認
-- **pm_tasks シート** - ステータスが updated
-- **task_execution_log シート** - 実行ログ・品質スコア記録
-- **agent_outputs/tasks/** - 詳細な出力ファイル
-
----
-
-## 📊 実行例
+**エイリアス設定（推奨）:**
 ```bash
-$ DISPLAY=:1 python3 run_pm_tasks_adaptive.py --max-tasks 2 --status pending
-
-======================================================================
-📝 タスク 1/2
-======================================================================
-  TaskID     : 1
-  Agent      : design
-  ExecutionType: gemini
-  
-🤖 Gemini タスクとして実行します
-💬 タスク実行中...
-✅ レスポンス取得成功
-
-======================================================================
-🎯 レビュー結果
-======================================================================
-⭐ 品質スコア: 9/10
-✅ レビュー完了
-📝 実行ログをシートに記録中...
-✅ タスク 1 完了
-
-======================================================================
-📝 タスク 2/2
-======================================================================
-  TaskID     : 2
-  Agent      : wp_dev
-  ExecutionType: wordpress
-  
-🌐 WordPress タスクとして実行します
-🔐 WordPress ログイン中...
-✅ WordPress ログイン成功
-📝 CPTエージェントで処理中...
-✅ CPT作成完了
-
-⭐ 品質スコア: 8/10
-✅ タスク 2 完了
-
-======================================================================
-🎉 すべてのタスク処理完了
-======================================================================
+echo "alias gauto='python3 agents/git_agent/auto_commit_push.py'" >> ~/.bashrc
+source ~/.bashrc
+gauto '✨ 新機能追加'
 ```
 
 ---
 
-## ⚙️ 設定
+## �� ディレクトリ構造
+```
+gemini_AI_Agent/
+├── agents/                     # エージェントシステム
+│   ├── pm_agent/              # PM Agent
+│   │   ├── automation.py      # メイン自動化スクリプト
+│   │   ├── progress_monitor.py
+│   │   ├── task_breakdown_gemini.py
+│   │   ├── task_registration.py
+│   │   └── task_exporter.py
+│   └── git_agent/             # Git自動化エージェント
+│       ├── auto_commit_push.py     # ワンコマンド実行
+│       ├── commit_agent.py
+│       ├── push_agent.py
+│       ├── branch_agent.py
+│       └── run_git_workflow.py
+├── configs/                    # 設定ファイル
+│   └── git_workflows/
+│       ├── auto_workflow_config.yaml
+│       └── commit_config.yaml
+├── scripts/                    # 昇格スクリプト
+│   └── promote_to_production_v2.sh
+├── _WIP/                      # 一時的なテストコード専用
+├── _BACKUP/                   # 自動バックアップ
+└── _ARCHIVE/                  # アーカイブ
 
-### 環境変数（.env）
+開発用ディレクトリ（機能別バージョン管理）:
+各ディレクトリ内で命名規則に従って開発
+例: agents/pm_agent/
+  ├── automation.py              # 安定版
+  ├── automation_v01-gemini.py   # 新機能開発中
+  └── automation_v02-fix_bug.py  # バグ修正中
+```
+
+---
+
+## 🎯 開発フロー v2.0（改定版）
+
+### 基本原則
+1. **_WIPは一時的なテストコードのみ**
+2. **安定的な環境はブランチごとに担保**
+3. **適切なディレクトリで開発（移動をほぼしない）**
+4. **不安定になったら前のブランチに戻る**
+
+### ファイル配置ルール
+
+#### 基本ルール
+- 既存のフォルダ内に同じディレクトリで作成
+- 2つ以上の機能が実装される場合は階層を作成
+```
+agents/pm_agent/
+├── core/                      # コア機能
+│   ├── monitor/              # 進捗監視機能
+│   │   ├── progress_monitor.py
+│   │   └── progress_monitor_v01-realtime.py
+│   └── breakdown/            # タスク分解機能
+│       ├── task_breakdown_gemini.py
+│       └── task_breakdown_gemini_v01-enhanced.py
+└── automation.py              # メインスクリプト
+```
+
+### 命名規則
+
+| 目的 | 命名規則 | 例 |
+|------|---------|-----|
+| **新規機能のテスト** | `[ベース名]_vXX-[機能名].py` | `review_agent_v01-auto_select.py` |
+| **デバッグ・修正** | `[ベース名]_vXX-fix_[内容].py` | `review_agent_v02-fix_init_bug.py` |
+
+**重要な原則:**
+> 同じディレクトリ内では常に最も数字が大きいファイルが「作業中の最新版」
+
+#### 具体例
+
+**review_agent.pyに対して新機能を作る場合:**
+```
+agents/review/
+├── review_agent.py                    # 安定版
+├── review_agent_v01-auto_select.py    # 新機能開発中
+├── review_agent_v02-auto_select.py    # 機能改善
+└── review_agent_v03-fix_timeout.py    # バグ修正
+```
+
+**最新版を安定版に昇格:**
 ```bash
-# Google Sheets
-SPREADSHEET_ID=your_spreadsheet_id
-
-# WordPress
-WP_URL=https://your-site.com
-WP_USER=your_username
-WP_PASS=your_password
-```
-
-### Google Sheets構造
-
-#### pm_tasks シート
-```
-task_id | Title | Description | Status | Agent | Dependencies | ExecutionType
-```
-
-#### task_execution_log シート
-```
-log_id | task_id | output | timestamp | Status | Quality_Score | Quality_description
+# v03が完成したら
+cp review_agent_v03-fix_timeout.py review_agent.py
+gauto "✨ review_agent: タイムアウト修正完了"
 ```
 
 ---
 
-## 🗺️ ロードマップ
+## 🔄 ブランチ運用
 
-### ✅ Phase 1（完了）
-- Gemini/WordPressタスク実行
-- レビュー機能
-- ステータス管理
-- execution_type対応
+### ブランチ命名規則
+```
+v{major}.{minor}.{patch}-{feature}
+```
 
-### 🔄 Phase 2（次）
-- タスク依存関係システム
-- 前タスク結果の自動取得
-- コンテキスト付き実行
-- 品質スコアフィルタリング
+例:
+- `v1.4.0-phase2-complete` (安定版)
+- `v1.4.1-pm_agent_enhance` (機能開発)
+- `v1.5.0-major_refactor` (大規模変更)
 
-詳細: [PHASE2_DESIGN.md](./PHASE2_DESIGN.md)
-
-### 🔮 Phase 3（将来）
-- PM Agent自動化
-- ゴール分析・タスク自動生成
-- 進捗モニタリング
-- 動的タスク追加
-
----
-
-## 📝 開発履歴
-
-### v1.3.0-add-operation (2025-10-24)
-- ✅ Phase 1完了
-- ✅ WordPress連携完全実装
-- ✅ WordPressDevAgent統合
-- ✅ execution_type自動判定
-- ✅ レビュー機能統合
-- ✅ 品質スコア記録
-
-### v1.2.0-add-operation
-- レビュー機能実装
-- ステータス管理追加
-
----
-
-## 🐛 トラブルシューティング
-
-### WordPress ログイン失敗
+### ブランチ作成＋切り替え
 ```bash
-# 1. .env のパスワード確認
-cat .env | grep WP_PASS
+# 自動バージョンアップ
+python3 agents/git_agent/branch_agent.py auto patch pm_agent_enhance
 
-# 2. 手動ログインテスト
-ブラウザで https://your-site.com/wp-login.php を開く
-
-# 3. クッキーをクリア
-rm wordpress_cookies.json
+# 手動作成
+python3 agents/git_agent/branch_agent.py new v1.4.1-custom_feature
 ```
 
-### execution_type が設定されていない
+### 不安定時の対処
 ```bash
-# 自動判定ツールを実行
-python3 tools/execution_type_manager.py
+# 前のブランチに戻る
+git checkout v1.4.0-phase2-complete
+
+# または特定のブランチに
+git checkout v1.3.0-stable
 ```
 
 ---
 
-## 📞 サポート
+## 📝 Git統合ワークフロー
 
-- **設計書**: [PHASE2_DESIGN.md](./PHASE2_DESIGN.md)
-- **バージョン**: [VERSION](./VERSION)
-
----
-
-## 📄 ライセンス
-
-MIT License
-
----
-
-**🎉 Phase 1 完了記念 - v1.3.0-add-operation**
-
----
-
-## 🎉 v1.4.0 Phase 2実装完了（2025-10-25）
-
-### ✨ 新機能：タスク依存関係管理
-
-#### 実装内容
-- **柔軟な依存関係チェック**：依存タスクに問題があっても実行継続
-- **前タスク結果の自動取得**：task_execution_logから品質スコア≧7の結果を取得
-- **コンテキスト付きプロンプト生成**：前タスクの成果物を含めてGeminiに依頼
-- **GitHubファイル統合**：長文の成果物はGitHubから完全版を取得
-
-#### 解決した問題
-- ✅ Google Sheets認証エラー（CRITICAL-2）
-  - SERVICE_ACCOUNT_FILEのパス修正
-  - Credentials.from_service_account_fileの引数修正
-  
-#### 新規追加ファイル
-- `tools/task_dependency_manager.py`：依存関係管理の中核
-
-#### 修正ファイル
-- `tools/sheets_manager.py`：Google Sheets認証修正
-- `run_pm_tasks_adaptive.py`：Phase 2統合
-- `.env`：SERVICE_ACCOUNT_FILEパス修正
-
-#### 使用方法
+### ワンコマンド実行
 ```bash
-# VNC環境変数設定
-export DISPLAY=:1
-
-# Phase 2統合版を実行
-python3 run_pm_tasks_adaptive.py --max-tasks 1 --status pending
+gauto 'コミットメッセージ'
 ```
 
-#### Phase 2の動作例
+### 実行されるステップ
+
+| STEP | 項目 | 説明 |
+|------|------|------|
+| 1 | CLEANUP | 一時ファイルを_WIPに移動 |
+| 2 | LIST | コミット対象を列挙 |
+| 3 | SECURITY CHECK | 認証ファイル検出 |
+| 3 | DUPLICATE CHECK | 重複メソッド検出 |
+| 3 | COMPILE CHECK | 構文チェック |
+| 5 | TEST | 開発プログラムのテスト（対話式） |
+| 6 | FINAL CLEANUP | 不要ファイル削除 |
+| 8 | UPDATE .gitignore | 必要なパターンを追加 |
+| 9 | UPDATE README | README更新（対話式） |
+| 10 | COMMIT & PUSH | コミット＋プッシュ |
+
+### STEP 5: テスト（対話式）
 ```
-TaskID=7 (Dependencies="4,6")
-  ↓
-1. 依存タスク4,6の完了チェック
-2. task_execution_logから結果取得（品質≧7）
-3. コンテキスト付きプロンプト生成
-4. Geminiに実行依頼
-5. レビュー＆品質スコア記録
+📝 開発したプログラムのテストコマンドを入力してください
+   例: DISPLAY=:1 python3 agents/pm_agent/automation.py
+   スキップする場合は Enter
+
+テストコマンド: _
 ```
 
-#### 次のフェーズ（Phase 3）
-- PM Agentによるタスク自動分解
-- 進捗モニタリング
-- 動的タスク生成
+### STEP 9: README更新（対話式）
+```
+📝 READMEに追加する内容を入力してください
+   スキップする場合は Enter
 
+README更新内容: _
+```
+
+---
+
+## 🔒 セキュリティ
+
+### 自動検出される認証ファイル
+- `service_account.json`
+- `**/*_key.json`
+- `**/*.pem`
+- `**/credentials.json`
+- `**/.env`
+
+### Push Protection対応
+GitHubのPush Protectionが発動した場合、自動的にガイドを表示
+
+---
+
+## 🛠️ セットアップ
+
+### 必須ツール
+```bash
+pip install pyyaml flake8 black --break-system-packages
+```
+
+### 初期設定
+```bash
+# エイリアス設定
+echo "alias gauto='python3 agents/git_agent/auto_commit_push.py'" >> ~/.bashrc
+source ~/.bashrc
+
+# .gitignore確認
+cat .gitignore  # 認証ファイルが除外されているか確認
+```
+
+---
+
+## 📊 プロジェクト統計
+
+- **総ファイル数**: 274個
+- **エージェント数**: 10個以上
+- **自動化ワークフロー**: 完全対応
+- **セキュリティチェック**: 自動化
+
+---
+
+## 🎯 今後の予定
+
+- [ ] GitHub Actions統合
+- [ ] 自動テストカバレッジ
+- [ ] CI/CDパイプライン構築
+- [ ] ドキュメント自動生成
+
+---
+
+## 📝 変更履歴
+
+### v1.4.1-phase2-complete (2025-10-27)
+- ✅ PM Agent完成: activeなゴール自動処理
+- ✅ Git自動化エージェント追加
+- ✅ セキュリティチェック強化
+- ✅ 完全自動化ワークフロー実装
+- ✅ 開発フロー v2.0導入
+
+### v1.4.0-phase2-complete
+- PM Agent基本機能実装
+- Google Sheets連携
+
+---
+
+## 📧 サポート
+
+問題が発生した場合:
+1. GitHub Issuesで報告
+2. 前のブランチに戻る
+3. ドキュメント確認
+
+---
+
+**安定版ブランチ**: `v1.4.1-phase2-complete`
+**最終更新**: 2025-10-27
