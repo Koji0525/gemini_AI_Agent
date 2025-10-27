@@ -1,0 +1,45 @@
+name: Code Quality Check (チェックのみ版)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.py'
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install tools
+      run: |
+        pip install black isort flake8 --break-system-packages
+    
+    - name: Check Black formatting
+      run: |
+        echo "🎨 Blackチェック中..."
+        black --check --line-length 120 --exclude '(_BACKUP|_ARCHIVE|__pycache__)' .
+    
+    - name: Check isort
+      run: |
+        echo "📦 isortチェック中..."
+        isort --check-only --profile black --line-length 120 --skip-glob '*/_BACKUP/*' --skip-glob '*/_ARCHIVE/*' .
+    
+    - name: Run flake8
+      run: |
+        echo "🔍 flake8実行中..."
+        flake8 --max-line-length=120 --exclude=_BACKUP,_ARCHIVE,__pycache__ --extend-ignore=E203,W503 --statistics .
+    
+    - name: Compile check
+      run: |
+        echo "🧪 構文チェック実行中..."
+        python3 -m compileall -q .
