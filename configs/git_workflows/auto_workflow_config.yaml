@@ -1,0 +1,42 @@
+# 完全自動化Git統合ワークフロー設定
+
+# 除外ディレクトリ
+excluded_dirs:
+  - _WIP
+  - _BACKUP
+  - _ARCHIVE
+  - __pycache__
+  - .git
+  - node_modules
+  - venv
+
+# 除外ファイルパターン
+excluded_files:
+  - "*.pyc"
+  - "*.log"
+  - "*.tmp"
+  - ".DS_Store"
+
+# 認証ファイルパターン（自動検出）
+secret_patterns:
+  - service_account.json
+  - "**/service_account.json"
+  - "**/*_key.json"
+  - "**/*.pem"
+  - "**/credentials.json"
+  - "**/.env"
+  - "**/config.ini"
+
+# 品質ゲート設定
+quality_gates:
+  cleanup: true
+  list: true
+  compile: true
+  linter: false          # 警告のみ（コミットはブロックしない）
+  formatter: false       # 自動整形はスキップ
+  test: true            # 開発プログラムのテスト
+  security_check: true   # 認証ファイル検出
+  duplicate_check: true  # 重複メソッド検出
+
+# 自動修正
+auto_fix: false
