@@ -103,3 +103,9 @@ gemini_automation.log
 service_account.json
 **/service_account.json
 gemini_auto_generate/configuration/service_account.json
+
+# 認証情報（絶対にコミットしない）
+**/*_key.json
+**/*.pem
+**/credentials.json
+# 実行時生成ファイル
