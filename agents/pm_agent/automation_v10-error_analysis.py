@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-PM Agent 完全自動化システム（RCA統合版）
+PM Agent 完全自動化システム（エラー分析統合版）
 
-v10 からの変更:
-+ Phase 5 拡張: 根本原因分析（RCA）
-+ エラー傾向分析
-+ 再発防止策の提案
+v09 からの変更:
++ Phase 5: エラー分析・記録
++ タスク実行エラーを自動的に error_analysis に記録
++ 定期的なエラー傾向分析
 """
 
 import asyncio
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 import traceback
 from typing import List, Dict, Any
-from collections import Counter
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -29,158 +28,12 @@ from browser_control.browser_controller import BrowserController
 from configuration.config_loader import ConfigLoader
 
 
-class RCAEngine:
-    """根本原因分析（Root Cause Analysis）エンジン"""
-
-    def __init__(self, error_analyzer: ErrorAnalyzer):
-        self.error_analyzer = error_analyzer
-
-    def analyze_error_trends(self, days: int = 7) -> Dict[str, Any]:
-        """エラー傾向を分析"""
-        print(f"\n📊 過去{days}日間のエラー傾向を分析中...")
-
-        # エラーログ取得
-        all_logs = self.error_analyzer.get_execution_logs(status_filter="failed")
-
-        if not all_logs:
-            print("✅ エラーログなし")
-            return {"total_errors": 0}
-
-        # 日付フィルタ
-        cutoff_date = datetime.now() - timedelta(days=days)
-        recent_logs = []
-
-        for log in all_logs:
-            timestamp_str = log.get("timestamp") or log.get("created_at", "")
-            if timestamp_str:
-                try:
-                    log_date = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-                    if log_date >= cutoff_date:
-                        recent_logs.append(log)
-                except Exception:
-                    pass
-
-        print(f"✅ {len(recent_logs)}件のエラーを検出")
-
-        # 傾向分析
-        error_types = []
-        task_ids = []
-
-        for log in recent_logs:
-            error_msg = log.get("error", "") or log.get("result", "")
-            error_type = self.error_analyzer.classify_error(error_msg)
-            error_types.append(error_type)
-            task_ids.append(log.get("task_id", "Unknown"))
-
-        # 集計
-        type_counter = Counter(error_types)
-        task_counter = Counter(task_ids)
-
-        trends = {
-            "total_errors": len(recent_logs),
-            "by_type": dict(type_counter.most_common()),
-            "by_task": dict(task_counter.most_common(5)),
-            "most_common_type": type_counter.most_common(1)[0] if type_counter else ("none", 0),
-        }
-
-        # 表示
-        print("\n【エラータイプ別】")
-        for error_type, count in type_counter.most_common():
-            percentage = (count / len(recent_logs)) * 100
-            print(f"  {error_type}: {count}件 ({percentage:.1f}%)")
-
-        print("\n【頻発タスク（上位5件）】")
-        for task_id, count in task_counter.most_common(5):
-            print(f"  タスク#{task_id}: {count}件")
-
-        return trends
-
-    def suggest_preventions(self, trends: Dict[str, Any]) -> List[str]:
-        """再発防止策を提案"""
-        if trends["total_errors"] == 0:
-            return []
-
-        suggestions = []
-        most_common_type, count = trends["most_common_type"]
-
-        # エラータイプ別の提案
-        prevention_map = {
-            "timeout": [
-                f"タイムアウトが{count}件発生しています",
-                "→ 対策1: タイムアウト時間を60秒→90秒に延長",
-                "→ 対策2: 処理を分割して軽量化",
-                "→ 対策3: リトライ回数を2回→3回に増加",
-            ],
-            "authentication": [
-                f"認証エラーが{count}件発生しています",
-                "→ 対策1: セッション有効期限を確認",
-                "→ 対策2: 自動ログイン機能を強化",
-                "→ 対策3: クッキーの定期更新",
-            ],
-            "network": [
-                f"ネットワークエラーが{count}件発生しています",
-                "→ 対策1: リトライ間隔を2秒→5秒に延長",
-                "→ 対策2: 接続タイムアウトを延長",
-                "→ 対策3: ネットワーク状態の事前チェック",
-            ],
-            "data_format": [
-                f"データフォーマットエラーが{count}件発生しています",
-                "→ 対策1: 入力データのバリデーション強化",
-                "→ 対策2: JSONパースのエラーハンドリング改善",
-                "→ 対策3: データ型チェックの追加",
-            ],
-        }
-
-        if most_common_type in prevention_map:
-            suggestions = prevention_map[most_common_type]
-        else:
-            suggestions = [f"{most_common_type}エラーが{count}件発生しています", "→ 詳細な分析が必要です"]
-
-        return suggestions
-
-    def generate_rca_report(self, trends: Dict[str, Any]) -> str:
-        """RCAレポートを生成"""
-        report = []
-        report.append("=" * 70)
-        report.append("🔍 根本原因分析（RCA）レポート")
-        report.append("=" * 70)
-        report.append(f"生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        report.append("")
-
-        if trends["total_errors"] == 0:
-            report.append("✅ エラーなし - システムは正常に動作しています")
-        else:
-            report.append(f"📊 総エラー数: {trends['total_errors']}件")
-            report.append("")
-
-            # 最も多いエラータイプ
-            most_common_type, count = trends["most_common_type"]
-            percentage = (count / trends["total_errors"]) * 100
-            report.append("【最頻発エラー】")
-            report.append(f"  タイプ: {most_common_type}")
-            report.append(f"  発生件数: {count}件 ({percentage:.1f}%)")
-            report.append("")
-
-            # 再発防止策
-            suggestions = self.suggest_preventions(trends)
-            if suggestions:
-                report.append("【推奨される対策】")
-                for suggestion in suggestions:
-                    report.append(f"  {suggestion}")
-                report.append("")
-
-        report.append("=" * 70)
-
-        return "\n".join(report)
-
-
 class ErrorHandler:
-    """エラーハンドリング用クラス（RCA対応版）"""
+    """エラーハンドリング用クラス（拡張版）"""
 
     def __init__(self, error_analyzer: ErrorAnalyzer = None):
         self.error_log = []
         self.error_analyzer = error_analyzer
-        self.rca_engine = RCAEngine(error_analyzer) if error_analyzer else None
 
     def log_error(self, phase: str, error: Exception, context: dict = None):
         """エラーをログに記録"""
@@ -190,6 +43,7 @@ class ErrorHandler:
             "error_type": type(error).__name__,
             "error_message": str(error),
             "context": context or {},
+            "traceback": traceback.format_exc(),
         }
         self.error_log.append(error_entry)
         print(f"❌ [{phase}] {type(error).__name__}: {error}")
@@ -202,28 +56,31 @@ class ErrorHandler:
         try:
             error_type = self.error_analyzer.classify_error(str(error))
 
+            # error_analysis シートに追加
             spreadsheet = self.error_analyzer.sheets_manager.gc.open_by_key(self.error_analyzer.spreadsheet_id)
             worksheet = spreadsheet.worksheet("error_analysis")
 
+            # 次のerror_idを取得
             all_values = worksheet.get_all_values()
-            next_error_id = len(all_values)
+            next_error_id = len(all_values)  # ヘッダー含む
 
+            # 新しい行を追加
             new_row = [
                 str(next_error_id),
                 str(task_id),
                 error_type,
-                "medium",
-                str(error)[:500],
-                "",
-                "1",
-                datetime.now().isoformat(),
-                datetime.now().isoformat(),
-                "open",
-                "",
-                datetime.now().isoformat(),
-                datetime.now().isoformat(),
-                f"Task: {task_name}",
-                "medium",
+                "medium",  # severity
+                str(error)[:500],  # error_message
+                "",  # root_cause (後で分析)
+                "1",  # occurrence_count
+                datetime.now().isoformat(),  # first_seen
+                datetime.now().isoformat(),  # last_seen
+                "open",  # status
+                "",  # resolution
+                datetime.now().isoformat(),  # created_at
+                datetime.now().isoformat(),  # updated_at
+                f"Task: {task_name}",  # notes
+                "medium",  # priority
             ]
 
             worksheet.append_row(new_row)
@@ -231,19 +88,6 @@ class ErrorHandler:
 
         except Exception as e:
             print(f"  ⚠️ エラー記録失敗: {e}")
-
-    def run_rca(self) -> Dict[str, Any]:
-        """RCA分析を実行"""
-        if not self.rca_engine:
-            return {}
-
-        trends = self.rca_engine.analyze_error_trends(days=7)
-
-        if trends["total_errors"] > 0:
-            report = self.rca_engine.generate_rca_report(trends)
-            print("\n" + report)
-
-        return trends
 
     def get_summary(self):
         """エラーサマリーを取得"""
@@ -398,7 +242,7 @@ async def process_goal(
 async def execute_task_with_timeout(
     task: Dict[str, Any], browser: BrowserController, error_handler: ErrorHandler, timeout: int = 60
 ) -> Dict[str, Any]:
-    """タイムアウト付きタスク実行"""
+    """タイムアウト付きタスク実行（エラー記録付き）"""
     task_id = task.get("task_id", "Unknown")
     task_name = task.get("_display_name", "Untitled Task")
     description = task.get("description", "")
@@ -434,7 +278,7 @@ async def execute_task_with_timeout(
 async def execute_tasks_parallel(
     tasks: List[Dict[str, Any]], browser: BrowserController, error_handler: ErrorHandler, max_concurrent: int = 3
 ) -> List[Dict[str, Any]]:
-    """タスクを並列実行"""
+    """タスクを並列実行（エラー記録付き）"""
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async def execute_with_semaphore(task):
@@ -468,7 +312,7 @@ async def execute_tasks_parallel(
 async def main():
     """メイン実行関数"""
     print("=" * 70)
-    print("🤖 PM Agent 完全自動化システム（RCA統合版）")
+    print("�� PM Agent 完全自動化システム（エラー分析統合版）")
     print("=" * 70)
     print(f"開始日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
@@ -496,10 +340,10 @@ async def main():
         sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
         print("✅ Google Sheets接続成功")
 
+        # エラー分析初期化
         error_analyzer = ErrorAnalyzer(sheets_manager)
         error_handler = ErrorHandler(error_analyzer)
         print("✅ エラー分析エンジン初期化完了")
-        print("✅ RCAエンジン初期化完了")
 
         browser = BrowserController()
         await retry_async(lambda: browser.setup_browser(), max_retries=3, delay=5)
@@ -511,7 +355,7 @@ async def main():
         task_registration = TaskRegistrationAgent(sheets_manager)
         task_exporter = TaskExportAgent()
 
-        # Phase 1-3
+        # Phase 1-3: ゴール処理
         print("【Phase 1-3】ゴール処理")
         print("-" * 70)
 
@@ -541,9 +385,9 @@ async def main():
 
         print(f"\n✅ Phase 1-3 完了: {stats['goals_processed']}個のゴールを処理")
 
-        # Phase 4
+        # Phase 4: タスク実行
         print()
-        print("【Phase 4】タスク実行")
+        print("【Phase 4】タスク実行（エラー記録付き）")
         print("-" * 70)
 
         pending_tasks = get_pending_tasks(sheets_manager, spreadsheet_id, max_tasks=6)
@@ -564,17 +408,17 @@ async def main():
                 else:
                     stats["tasks_failed"] += 1
 
-        # Phase 5: エラー分析 + RCA
+        # Phase 5: エラー分析
         print()
-        print("【Phase 5】エラー分析とRCA")
+        print("【Phase 5】エラー分析")
         print("-" * 70)
 
         if stats["tasks_failed"] > 0:
+            print(f"📊 {stats['tasks_failed']}件の失敗タスクを分析中...")
             stats["errors_recorded"] = len(error_handler.error_log)
-            print(f"✅ {stats['errors_recorded']}件のエラーを記録")
-
-        # RCA実行
-        rca_trends = error_handler.run_rca()
+            print(f"✅ {stats['errors_recorded']}件のエラーを記録しました")
+        else:
+            print("✅ エラーなし")
 
         # サマリー
         print()
@@ -588,10 +432,6 @@ async def main():
         print(f"  成功: {stats['tasks_succeeded']}個")
         print(f"  失敗: {stats['tasks_failed']}個")
         print(f"記録したエラー: {stats['errors_recorded']}個")
-
-        if rca_trends.get("total_errors", 0) > 0:
-            print(f"\n🔍 RCA分析: {rca_trends['total_errors']}件のエラーを分析")
-
         print()
         print(error_handler.get_summary())
         print("=" * 70)
