@@ -5,6 +5,7 @@ WordPress Specialized Agents
 
 from .wp_cpt_agent import WPCPTAgent, CPTSpecification
 from .wp_taxonomy_agent import WPTaxonomyAgent, TaxonomySpecification
+from .wp_acf_agent import WPACFAgent, ACFFieldGroupSpec, ACFFieldSpec
 from .wp_agent_logger import WPAgentLogger
 
 __all__ = [
@@ -12,5 +13,8 @@ __all__ = [
     'CPTSpecification',
     'WPTaxonomyAgent',
     'TaxonomySpecification',
+    'WPACFAgent',
+    'ACFFieldGroupSpec',
+    'ACFFieldSpec',
     'WPAgentLogger'
 ]
