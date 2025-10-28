@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 WPCPTAgent - WordPressカスタム投稿タイプ管理エージェント
-PHPコード生成アプローチ
+PHPコード生成アプローチ + スプレッドシート記録
 
-v1.0 - 初回実装
+v2.0 - ログ記録機能追加
 運用ルール準拠: 1ファイル1000行以下、PEP 8準拠
 """
 
@@ -15,24 +15,25 @@ from datetime import datetime
 
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
+from agents.wordpress.specialized.wp_agent_logger import WPAgentLogger
 
 
 @dataclass
 class CPTSpecification:
     """カスタム投稿タイプの仕様"""
-    post_type: str  # 投稿タイプ名（slug）
-    singular_name: str  # 単数形ラベル
-    plural_name: str  # 複数形ラベル
-    description: str = ""  # 説明
-    public: bool = True  # 公開するか
-    has_archive: bool = True  # アーカイブページを持つか
-    hierarchical: bool = False  # 階層構造（ページのような）
-    supports: List[str] = None  # サポート機能
-    menu_icon: str = "dashicons-admin-post"  # メニューアイコン
-    show_in_rest: bool = True  # REST APIで表示
+    post_type: str
+    singular_name: str
+    plural_name: str
+    description: str = ""
+    public: bool = True
+    has_archive: bool = True
+    hierarchical: bool = False
+    supports: List[str] = None
+    menu_icon: str = "dashicons-admin-post"
+    show_in_rest: bool = True
     
     def __post_init__(self):
-        """デフォルト値の設定"""
         if self.supports is None:
             self.supports = ['title', 'editor', 'thumbnail', 'excerpt']
 
@@ -40,26 +41,25 @@ class CPTSpecification:
 class WPCPTAgent:
     """WordPressカスタム投稿タイプ管理エージェント"""
     
-    def __init__(self, config_loader: ConfigLoader):
+    def __init__(self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None):
         """
         初期化（依存性注入）
         
         Args:
             config_loader: ConfigLoaderインスタンス
+            sheets_manager: GoogleSheetsManagerインスタンス（オプション）
         """
         self.config = config_loader
         self.wp_url = self.config._config.get("WP_URL")
         self.wp_user = self.config._config.get("wp_user")
         self.wp_pass = self.config._config.get("wp_pass")
         self.auth = (self.wp_user, self.wp_pass)
+        
+        # ロガーの初期化
+        self.logger = WPAgentLogger(sheets_manager) if sheets_manager else None
     
     async def list_post_types(self) -> Dict[str, Any]:
-        """
-        既存の投稿タイプ一覧を取得
-        
-        Returns:
-            Dict: 投稿タイプ情報
-        """
+        """既存の投稿タイプ一覧を取得"""
         print("\n📋 既存の投稿タイプを取得中...")
         try:
             response = requests.get(
@@ -72,7 +72,6 @@ class WPCPTAgent:
                 types = response.json()
                 print(f"✅ 投稿タイプ数: {len(types)}個")
                 
-                # カスタム投稿タイプを抽出（標準以外）
                 standard_types = ['post', 'page', 'attachment', 'nav_menu_item', 
                                 'wp_block', 'wp_template', 'wp_template_part',
                                 'wp_global_styles', 'wp_navigation', 'wp_font_family', 'wp_font_face']
@@ -94,15 +93,7 @@ class WPCPTAgent:
             return {}
     
     async def verify_post_type(self, post_type: str) -> bool:
-        """
-        投稿タイプの存在を確認
-        
-        Args:
-            post_type: 投稿タイプ名
-            
-        Returns:
-            bool: 存在する場合True
-        """
+        """投稿タイプの存在を確認"""
         try:
             response = requests.get(
                 f"{self.wp_url}/wp-json/wp/v2/types/{post_type}",
@@ -122,21 +113,11 @@ class WPCPTAgent:
             return False
     
     def generate_php_code(self, spec: CPTSpecification) -> str:
-        """
-        register_post_type()のPHPコードを生成
-        
-        Args:
-            spec: CPT仕様
-            
-        Returns:
-            str: 生成されたPHPコード
-        """
+        """register_post_type()のPHPコードを生成"""
         print(f"\n🔧 PHPコード生成中: {spec.post_type}")
         
-        # サポート機能をPHP配列形式に変換
         supports_str = "array('" + "', '".join(spec.supports) + "')"
         
-        # ラベル設定
         labels = {
             'name': spec.plural_name,
             'singular_name': spec.singular_name,
@@ -155,7 +136,6 @@ class WPCPTAgent:
             labels_str += f"        '{key}' => '{value}',\n"
         labels_str += "    )"
         
-        # PHPコード生成
         php_code = f"""<?php
 /**
  * カスタム投稿タイプ: {spec.plural_name}
@@ -187,16 +167,7 @@ add_action('init', 'register_cpt_{spec.post_type}');
         return php_code
     
     def save_php_code(self, php_code: str, filename: str) -> str:
-        """
-        生成したPHPコードをファイルに保存
-        
-        Args:
-            php_code: PHPコード
-            filename: ファイル名
-            
-        Returns:
-            str: 保存先パス
-        """
+        """生成したPHPコードをファイルに保存"""
         import os
         
         output_dir = "/workspaces/gemini_AI_Agent/agent_outputs/wordpress_cpt"
@@ -211,15 +182,7 @@ add_action('init', 'register_cpt_{spec.post_type}');
         return filepath
     
     async def create_cpt(self, spec: CPTSpecification) -> Dict[str, Any]:
-        """
-        カスタム投稿タイプを作成（PHPコード生成）
-        
-        Args:
-            spec: CPT仕様
-            
-        Returns:
-            Dict: 実行結果
-        """
+        """カスタム投稿タイプを作成（PHPコード生成）"""
         print("=" * 80)
         print(f"🚀 カスタム投稿タイプ作成: {spec.plural_name}")
         print("=" * 80)
@@ -258,18 +221,14 @@ add_action('init', 'register_cpt_{spec.post_type}');
             "2. <?php と ?> を除いたコードをコピー",
             "3. テーマの functions.php に貼り付け",
             "4. WordPressダッシュボードでパーマリンク設定を更新",
-            "",
-            "【方法2: カスタムプラグインとして使用】",
-            f"1. 生成されたファイル ({filename}) をそのまま使用",
-            "2. wp-content/plugins/ ディレクトリに配置",
-            "3. WordPressダッシュボードでプラグインを有効化",
-            "",
-            "⚠️  重要: パーマリンク設定の更新を忘れずに！",
-            "   （設定 > パーマリンク設定 > 変更を保存）"
         ]
         
         result["instructions"] = instructions
         result["success"] = True
+        
+        # 5. スプレッドシートに記録
+        if self.logger:
+            await self.logger.log_cpt_creation(result, spec)
         
         print("\n" + "=" * 80)
         print("✅ CPT作成処理完了")
@@ -282,34 +241,39 @@ add_action('init', 'register_cpt_{spec.post_type}');
 
 
 # テスト用のメイン関数
-async def test_cpt_agent():
-    """WPCPTAgentのテスト"""
+async def test_cpt_agent_with_logging():
+    """WPCPTAgent（ログ記録付き）のテスト"""
     print("=" * 80)
-    print("🧪 WPCPTAgent テスト")
+    print("�� WPCPTAgent（ログ記録付き）テスト")
     print("=" * 80)
     
     from dotenv import load_dotenv
     load_dotenv("/workspaces/gemini_AI_Agent/.env")
     
     config = ConfigLoader()
-    agent = WPCPTAgent(config)
     
-    # 1. 既存の投稿タイプ一覧
-    await agent.list_post_types()
-    
-    # 2. テスト用CPT仕様
-    test_spec = CPTSpecification(
-        post_type="portfolio",
-        singular_name="ポートフォリオ",
-        plural_name="ポートフォリオ一覧",
-        description="作品ポートフォリオを管理",
-        has_archive=True,
-        hierarchical=False,
-        supports=['title', 'editor', 'thumbnail', 'excerpt', 'custom-fields'],
-        menu_icon="dashicons-portfolio"
+    # SheetsManager初期化
+    sheets_manager = GoogleSheetsManager(
+        spreadsheet_id=config._config.get("SPREADSHEET_ID"),
+        service_account_file=config._config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
     )
     
-    # 3. CPT作成（PHPコード生成）
+    # CPTAgent初期化
+    agent = WPCPTAgent(config, sheets_manager)
+    
+    # テスト用CPT仕様
+    test_spec = CPTSpecification(
+        post_type="event",
+        singular_name="イベント",
+        plural_name="イベント一覧",
+        description="イベント情報を管理",
+        has_archive=True,
+        hierarchical=False,
+        supports=['title', 'editor', 'thumbnail', 'excerpt'],
+        menu_icon="dashicons-calendar"
+    )
+    
+    # CPT作成
     result = await agent.create_cpt(test_spec)
     
     print("\n" + "=" * 80)
@@ -322,4 +286,4 @@ async def test_cpt_agent():
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(test_cpt_agent())
+    asyncio.run(test_cpt_agent_with_logging())

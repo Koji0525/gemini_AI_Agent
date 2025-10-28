@@ -4,5 +4,13 @@ WordPress Specialized Agents
 """
 
 from .wp_cpt_agent import WPCPTAgent, CPTSpecification
+from .wp_taxonomy_agent import WPTaxonomyAgent, TaxonomySpecification
+from .wp_agent_logger import WPAgentLogger
 
-__all__ = ['WPCPTAgent', 'CPTSpecification']
+__all__ = [
+    'WPCPTAgent',
+    'CPTSpecification',
+    'WPTaxonomyAgent',
+    'TaxonomySpecification',
+    'WPAgentLogger'
+]
