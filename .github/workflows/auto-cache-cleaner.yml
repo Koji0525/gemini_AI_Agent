@@ -1,0 +1,39 @@
+name: "Auto Cache Cleaner"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # 毎日UTC2時（日本時間 11時）
+  push:
+    branches: [main, master, develop, 'v*', 'feature/*']
+
+jobs:
+  cache-cleanup:
+    runs-on: ubuntu-latest
+    name: Clean project cache
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Clean Python cache
+      run: |
+        echo "🧹 Pythonキャッシュをクリーンアップ中..."
+        find . -name "*.pyc" -delete
+        find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+        find . -name ".pytest_cache" -type d -exec rm -rf {} + 2>/dev/null || true
+        echo "✅ Pythonキャッシュクリーンアップ完了"
+        
+    - name: Clean build artifacts
+      run: |
+        echo "🧹 ビルドアーティファクトをクリーンアップ中..."
+        find . -name "dist" -type d -exec rm -rf {} + 2>/dev/null || true
+        find . -name "build" -type d -exec rm -rf {} + 2>/dev/null || true
+        find . -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true
+        echo "✅ ビルドアーティファクトクリーンアップ完了"
+        
+    - name: Completion message
+      run: |
+        echo "🎉 キャッシュクリーンアップ完了!"
+        echo "📅 実行日時: $(date)"
+        echo "🔗 ワークフロー: ${{ github.workflow }}"
