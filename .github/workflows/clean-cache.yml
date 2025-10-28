@@ -1,0 +1,39 @@
+name: Clean Cache on Code Execution
+
+on:
+  workflow_dispatch:  # 手動実行用
+  schedule:
+    - cron: '0 0 * * *'  # 毎日UTC0時に実行
+  push:
+    branches: [ main, master ]
+
+jobs:
+  clean-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Clean cache
+      run: |
+        echo "== キャッシュクリーンアップ開始 =="
+        if [ -f "./scripts/clean_cache.sh" ]; then
+          chmod +x ./scripts/clean_cache.sh
+          ./scripts/clean_cache.sh
+        else
+          echo "⚠️ clean_cache.shが見つかりません"
+        fi
+        echo "== キャッシュクリーンアップ完了 =="
+        
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+        
+    - name: Cache cleanup report
+      run: |
+        echo "✅ キャッシュクリーンアップが完了しました"
+        echo "📅 実行日時: $(date)"
+        echo "🐍 Pythonバージョン確認:"
+        python --version
