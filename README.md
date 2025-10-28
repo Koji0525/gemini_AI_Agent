@@ -343,3 +343,28 @@ python3 scripts/config_validation_system.py
 
 **現在のQuality Score**: 9/10 (合格)
 
+
+---
+
+## 🔍 WordPress設定確認システム
+
+WordPress環境の設定を自動確認し、Quality Scoreを算出するシステムを実装しました。
+
+### クイックスタート
+```bash
+# 設定確認の実行
+python3 scripts/config_validation_system.py
+```
+
+### 主な機能
+- ✅ WordPress接続テスト
+- ✅ REST API確認
+- ✅ Quality Score算出（合格ライン: 7/10）
+- ✅ Google Sheetsへのログ記録
+- ✅ Markdownレポート生成
+
+### 詳細ドキュメント
+詳しい使い方は [CONFIG_VALIDATION_SYSTEM.md](docs/CONFIG_VALIDATION_SYSTEM.md) を参照してください。
+
+**現在のQuality Score**: 9/10 (合格)
+
