@@ -1,7 +1,7 @@
 # 🤖 Gemini AI Agent System v2.0
 **完全自動化AIエージェントシステム - 自己進化型プロジェクト管理**
 
-バージョン: v1.4.1-phase2-complete → v2.0.0-integrated (移行中)  
+バージョン: v1.5.0-phase3-complete → v2.0.0-integrated (移行中)  
 最終更新: 2025-10-27
 
 ---
@@ -291,7 +291,7 @@ v{major}.{minor}.{patch}-{feature}
 - ✨ 眠っていた高度機能の活性化
 - 🔧 task_execution_log構造修正
 
-### v1.4.1-phase2-complete (2025-10-27)
+### v1.5.0-phase3-complete (2025-10-27)
 - ✅ PM Agent完成
 - ✅ Git自動化エージェント
 - ✅ セキュリティチェック強化
@@ -305,7 +305,7 @@ v{major}.{minor}.{patch}-{feature}
 
 ### ブランチ戻し
 ```bash
-git checkout v1.4.1-phase2-complete
+git checkout v1.5.0-phase3-complete
 ```
 
 ### ドキュメント
@@ -315,6 +315,6 @@ git checkout v1.4.1-phase2-complete
 
 ---
 
-**安定版ブランチ**: `v1.4.1-phase2-complete`  
+**安定版ブランチ**: `v1.5.0-phase3-complete`  
 **開発ブランチ**: `v2.0.0-integrated`  
 **最終更新**: 2025-10-27

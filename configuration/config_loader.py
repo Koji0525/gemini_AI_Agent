@@ -28,14 +28,16 @@ class ConfigLoader:
         load_dotenv(env_path)
 
         service_account = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        service_account_alt = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")  # 代替パス
         spreadsheet = os.getenv("SPREADSHEET_ID")
 
         cls._config = {
             # Google Sheets設定（複数のキー名に対応）
             "spreadsheet_id": spreadsheet,
             "SPREADSHEET_ID": spreadsheet,
-            "service_account_file": service_account,
-            "SERVICE_ACCOUNT_FILE": service_account,  # ← 追加
+            "service_account_file": service_account_alt or service_account,  # 優先: GOOGLE_SERVICE_ACCOUNT_FILE
+            "SERVICE_ACCOUNT_FILE": service_account_alt or service_account,
+            "GOOGLE_SERVICE_ACCOUNT_FILE": service_account_alt or service_account,
             "GOOGLE_APPLICATION_CREDENTIALS": service_account,
             "pm_sheet_name": os.getenv("PM_SHEET_NAME", "pm_tasks"),
             "PM_SHEET_NAME": os.getenv("PM_SHEET_NAME", "pm_tasks"),

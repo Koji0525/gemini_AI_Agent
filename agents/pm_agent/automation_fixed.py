@@ -15,7 +15,7 @@ sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
 # _WIPディレクトリから直接インポート
 
-from agents.pm_agent.progress_monitor_fixed import ProgressMonitorAgent
+from agents.pm_agent.progress_monitor import ProgressMonitorAgent
 from agents.pm_agent.task_breakdown_gemini import GeminiTaskBreakdownAgent  # Gemini統合版
 from agents.pm_agent.task_registration import TaskRegistrationAgent
 from agents.pm_agent.task_exporter import TaskExportAgent  # タスク詳細エクスポート
@@ -51,17 +51,9 @@ async def main():
         # ============================================================
 
         # Google Sheets接続
-        try:
-            config = ConfigLoader()
-            spreadsheet_id = config.get("SPREADSHEET_ID")
-            service_account_file = config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
-            print(f"📊 スプレッドシートID: {spreadsheet_id}")
-            print(f"🔑 サービスアカウント: {service_account_file}")
-            sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
-            print("✅ Google Sheets接続成功")
-        except Exception as e:
-            print(f"❌ Google Sheets接続エラー: {e}")
-            return
+        spreadsheet_id = ConfigLoader.get("spreadsheet_id")
+        service_account_file = ConfigLoader.get("service_account_file")
+        sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
 
         # BrowserController初期化（Gemini連携用）
         print("🌐 BrowserController初期化中...")
@@ -75,7 +67,7 @@ async def main():
         print()
 
         # エージェント初期化
-        progress_monitor = ProgressMonitorAgent()
+        progress_monitor = ProgressMonitorAgent(sheets_manager)
         task_breakdown = GeminiTaskBreakdownAgent(sheets_manager, browser)
         task_registration = TaskRegistrationAgent(sheets_manager)
         task_exporter = TaskExportAgent()  # タスク詳細エクスポート
