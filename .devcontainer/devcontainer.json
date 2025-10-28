@@ -1,0 +1,5 @@
+{
+    "name": "Custom Codespace",
+    "postCreateCommand": "chmod +x ./scripts/*.sh",
+    "postStartCommand": "echo '環境準備完了'"
+}
