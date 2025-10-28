@@ -931,3 +931,77 @@ class GoogleSheetsManager:
 
             traceback.print_exc()
             return []
+
+    def get_credentials(self):
+        """シンプルな認証情報取得"""
+        import google.auth
+        from google.oauth2 import service_account
+        import os
+
+        try:
+            # 環境変数からサービスアカウントファイルを取得
+            service_account_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json")
+
+            if os.path.exists(service_account_file):
+                creds = service_account.Credentials.from_service_account_file(
+                    service_account_file,
+                    scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+                )
+                return creds
+            else:
+                print(f"❌ サービスアカウントファイルが見つかりません: {service_account_file}")
+                return None
+
+        except Exception as e:
+            print(f"❌ 認証エラー: {e}")
+            return None
+
+
+# サービスアカウント解決ユーティリティをインポート
+from tools.service_account_resolver import resolve_service_account_file, validate_service_account_file
+
+
+class ReliableGoogleSheetsManager(GoogleSheetsManager):
+    """確実なGoogle Sheetsマネージャー"""
+
+    def __init__(self, spreadsheet_id: str = None, service_account_file: str = None):
+        """確実な初期化"""
+        try:
+            # サービスアカウントファイルを確実に解決
+            if not service_account_file:
+                from configuration.config_loader import ConfigLoader
+
+                config = ConfigLoader()
+                service_account_file = config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+
+            self.resolved_service_account_file = resolve_service_account_file(service_account_file)
+            print(f"✅ サービスアカウントファイルを解決: {self.resolved_service_account_file}")
+
+            # ファイルを検証
+            if not validate_service_account_file(self.resolved_service_account_file):
+                raise ValueError("サービスアカウントファイルが無効です")
+
+            # 親クラスの初期化
+            super().__init__(spreadsheet_id, self.resolved_service_account_file)
+
+        except Exception as e:
+            print(f"❌ ReliableGoogleSheetsManager初期化エラー: {e}")
+            raise
+
+    def get_credentials(self):
+        """確実な認証情報取得"""
+        try:
+            from google.oauth2 import service_account
+
+            if not hasattr(self, "resolved_service_account_file"):
+                self.resolved_service_account_file = resolve_service_account_file()
+
+            creds = service_account.Credentials.from_service_account_file(
+                self.resolved_service_account_file,
+                scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+            )
+            return creds
+
+        except Exception as e:
+            print(f"❌ 認証情報取得エラー: {e}")
+            return None

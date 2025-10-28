@@ -1,5 +1,5 @@
 """
-進捗監視エージェント - 互換性維持版
+進捗監視エージェント - 修正版
 """
 
 import asyncio
@@ -10,31 +10,24 @@ from configuration.config_loader import ConfigLoader
 
 
 class ProgressMonitorAgent:
-    """進捗監視エージェント(互換性維持版)"""
+    """進捗監視エージェント(修正版)"""
 
-    def __init__(self, sheets_manager: GoogleSheetsManager = None):
-        """
-        コンストラクタ - 互換性維持
+    def __init__(self):
+        """コンストラクタ - sheets_managerを内部で初期化"""
+        try:
+            self.config = ConfigLoader()
+            spreadsheet_id = self.config.get("SPREADSHEET_ID")
+            service_account_file = self.config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
 
-        Args:
-            sheets_manager: 既存のsheets_manager（オプション）
-        """
-        if sheets_manager:
-            # 既存のインターフェースを維持
-            self.sheets_manager = sheets_manager
-        else:
-            # 新しい初期化方法
-            try:
-                self.config = ConfigLoader()
-                spreadsheet_id = self.config.get("SPREADSHEET_ID")
-                service_account_file = self.config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+            print(f"📊 ProgressMonitorAgent初期化: spreadsheet_id={spreadsheet_id}")
+            print(f"🔑 ProgressMonitorAgent初期化: service_account_file={service_account_file}")
 
-                self.sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
-                print("✅ ProgressMonitorAgent: Google Sheets接続成功")
+            self.sheets_manager = GoogleSheetsManager(spreadsheet_id, service_account_file)
+            print("✅ ProgressMonitorAgent: Google Sheets接続成功")
 
-            except Exception as e:
-                print(f"❌ ProgressMonitorAgent初期化エラー: {e}")
-                self.sheets_manager = None
+        except Exception as e:
+            print(f"❌ ProgressMonitorAgent初期化エラー: {e}")
+            self.sheets_manager = None
 
     async def get_dashboard_data(self) -> List[Dict[str, Any]]:
         """
@@ -178,11 +171,10 @@ class ProgressMonitorAgent:
 async def test_progress_monitor():
     """進捗監視のテスト"""
     print("=" * 70)
-    print("🧪 PM Agent - Progress Monitor Test (Compatible Version)")
+    print("🧪 PM Agent - Progress Monitor Test (Fixed Version)")
     print("=" * 70)
 
     try:
-        # 新しい初期化方法でテスト
         monitor = ProgressMonitorAgent()
         print("✅ ProgressMonitorAgent初期化成功")
 
