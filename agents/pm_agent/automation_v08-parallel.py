@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-PM Agent 完全自動化システム（タスク名修正版）
+PM Agent 完全自動化システム（並列実行対応版）
 
-v08からの変更:
-- タスク名取得の修正（title, description, task_nameを順にチェック）
-- より堅牢なカラム名マッピング
+Phase 1: アクティブなゴール取得
+Phase 2: タスク分解（Gemini）- 並列実行
+Phase 3: タスク登録
+Phase 4: タスク実行 - 並列実行
++ エラーハンドリング強化
++ 並列実行サポート
 """
 
 import asyncio
@@ -41,8 +44,10 @@ class ErrorHandler:
             "error_type": type(error).__name__,
             "error_message": str(error),
             "context": context or {},
+            "traceback": traceback.format_exc(),
         }
         self.error_log.append(error_entry)
+
         print(f"❌ [{phase}] {type(error).__name__}: {error}")
 
     def get_summary(self):
@@ -53,6 +58,10 @@ class ErrorHandler:
         summary = f"⚠️ {len(self.error_log)}件のエラー:\n"
         for i, error in enumerate(self.error_log[:5], 1):
             summary += f"  {i}. [{error['phase']}] {error['error_type']}\n"
+
+        if len(self.error_log) > 5:
+            summary += f"  ... 他{len(self.error_log) - 5}件\n"
+
         return summary
 
 
@@ -63,6 +72,7 @@ async def retry_async(func, max_retries=3, delay=2):
             return await func()
         except Exception as e:
             if attempt < max_retries - 1:
+                print(f"  ⏳ リトライ {attempt + 1}/{max_retries - 1}...")
                 await asyncio.sleep(delay)
             else:
                 raise
@@ -102,14 +112,7 @@ def get_all_active_goals(sheets_manager, spreadsheet_id):
 
 
 def get_pending_tasks(sheets_manager, spreadsheet_id, goal_id=None, max_tasks=10):
-    """
-    pendingタスクを取得（タスク名取得を改善）
-
-    タスク名は以下の優先順位で取得:
-    1. title
-    2. task_name
-    3. description（最初の50文字）
-    """
+    """pendingタスクを取得"""
     spreadsheet = sheets_manager.gc.open_by_key(spreadsheet_id)
     worksheet = spreadsheet.worksheet("pm_tasks")
     all_values = worksheet.get_all_values()
@@ -138,15 +141,6 @@ def get_pending_tasks(sheets_manager, spreadsheet_id, goal_id=None, max_tasks=10
 
             if status == "pending":
                 if goal_id is None or str(task_goal_id) == str(goal_id):
-                    # ✅ タスク名を適切に取得
-                    task_name = (
-                        row_dict.get("title")
-                        or row_dict.get("task_name")
-                        or row_dict.get("description", "")[:50]
-                        or "Untitled Task"
-                    )
-                    row_dict["_display_name"] = task_name
-
                     tasks.append(row_dict)
                     if len(tasks) >= max_tasks:
                         break
@@ -161,7 +155,10 @@ async def process_goal(
     task_exporter: TaskExportAgent,
     error_handler: ErrorHandler,
 ) -> Dict[str, Any]:
-    """1つのゴールを処理（タスク分解・登録）"""
+    """
+    1つのゴールを処理（タスク分解・登録）
+    並列実行可能
+    """
     goal_id = goal["goal_id"]
     goal_title = goal.get("title", f"目標{goal_id}")
     goal_description = goal.get("goal_description", "")
@@ -174,6 +171,7 @@ async def process_goal(
         if not goal_description or goal_description.strip() == "":
             goal_description = f"{goal_title}を達成するためのタスクを実行する"
 
+        # タスク分解
         generated_tasks = await retry_async(
             lambda: task_breakdown.generate_tasks_for_goal(
                 goal_id=goal_id, goal_title=goal_title, goal_description=goal_description
@@ -183,13 +181,16 @@ async def process_goal(
         )
 
         if not generated_tasks:
+            print(f"⚠️ 目標{goal_id}: タスク生成失敗")
             return result
 
         result["tasks_generated"] = len(generated_tasks)
         print(f"✅ 目標{goal_id}: {len(generated_tasks)}個のタスクを生成")
 
+        # エクスポート
         export_path = task_exporter.export_tasks(goal_id=goal_id, goal_title=goal_title, tasks=generated_tasks)
 
+        # タスク登録
         registered_count = await task_registration.register_tasks(
             goal_id=goal_id, tasks=generated_tasks, detail_file_path=export_path
         )
@@ -200,6 +201,7 @@ async def process_goal(
 
     except Exception as e:
         error_handler.log_error(f"Goal {goal_id}", e, {"goal_id": goal_id})
+        print(f"❌ 目標{goal_id}: 処理失敗")
 
     return result
 
@@ -209,8 +211,7 @@ async def execute_task_with_timeout(
 ) -> Dict[str, Any]:
     """タイムアウト付きタスク実行"""
     task_id = task.get("task_id", "Unknown")
-    # ✅ 修正: _display_name を使用
-    task_name = task.get("_display_name", "Untitled Task")
+    task_name = task.get("task_name", "Unknown")
     description = task.get("description", "")
 
     try:
@@ -240,15 +241,15 @@ async def execute_task_with_timeout(
 async def execute_tasks_parallel(
     tasks: List[Dict[str, Any]], browser: BrowserController, max_concurrent: int = 3
 ) -> List[Dict[str, Any]]:
-    """タスクを並列実行"""
+    """
+    タスクを並列実行（同時実行数制限付き）
+    """
     semaphore = asyncio.Semaphore(max_concurrent)
 
     async def execute_with_semaphore(task):
         async with semaphore:
             task_id = task.get("task_id", "Unknown")
-            # ✅ タスク名を表示
-            task_name = task.get("_display_name", "Untitled")
-            print(f"  🔄 タスク#{task_id}: {task_name[:30]}...")
+            print(f"  🔄 タスク#{task_id} 開始")
             result = await retry_async(
                 lambda: execute_task_with_timeout(task, browser, timeout=60), max_retries=2, delay=3
             )
@@ -256,8 +257,10 @@ async def execute_tasks_parallel(
             print(f"  {status} タスク#{task_id} 完了")
             return result
 
+    # 並列実行
     results = await asyncio.gather(*[execute_with_semaphore(task) for task in tasks], return_exceptions=True)
 
+    # Exception を result に変換
     processed_results = []
     for i, result in enumerate(results):
         if isinstance(result, Exception):
@@ -273,7 +276,7 @@ async def execute_tasks_parallel(
 async def main():
     """メイン実行関数"""
     print("=" * 70)
-    print("🤖 PM Agent 完全自動化システム（v09: タスク名修正版）")
+    print("🤖 PM Agent 完全自動化システム（並列実行対応版）")
     print("=" * 70)
     print(f"開始日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
@@ -291,6 +294,9 @@ async def main():
     browser = None
 
     try:
+        # ============================================================
+        # 初期化
+        # ============================================================
         print("【初期化】")
         print("-" * 70)
 
@@ -307,10 +313,14 @@ async def main():
         print("✅ Gemini準備完了")
         print()
 
+        # エージェント初期化
         task_breakdown = GeminiTaskBreakdownAgent(sheets_manager, browser)
         task_registration = TaskRegistrationAgent(sheets_manager)
         task_exporter = TaskExportAgent()
 
+        # ============================================================
+        # Phase 1: アクティブなゴール取得
+        # ============================================================
         print("【Phase 1】アクティブなゴール取得")
         print("-" * 70)
 
@@ -323,17 +333,23 @@ async def main():
         print(f"✅ {len(active_goals)}個のアクティブなゴールを検出")
         print()
 
+        # ============================================================
+        # Phase 2-3: タスク生成＆登録（並列実行）
+        # ============================================================
         print("【Phase 2-3】タスク生成＆登録（並列実行）")
         print("-" * 70)
+        print(f"📊 {len(active_goals)}個のゴールを並列処理します")
 
+        # 並列実行（最大3ゴール同時）
         goal_results = await asyncio.gather(
             *[
                 process_goal(goal, task_breakdown, task_registration, task_exporter, error_handler)
-                for goal in active_goals[:3]
+                for goal in active_goals[:3]  # 最大3個まで
             ],
             return_exceptions=True,
         )
 
+        # 結果集計
         for result in goal_results:
             if isinstance(result, Exception):
                 continue
@@ -342,8 +358,12 @@ async def main():
                 stats["tasks_generated"] += result.get("tasks_generated", 0)
                 stats["tasks_registered"] += result.get("tasks_registered", 0)
 
-        print(f"\n✅ Phase 2-3 完了: {stats['goals_processed']}個のゴールを処理")
+        print()
+        print(f"✅ Phase 2-3 完了: {stats['goals_processed']}個のゴールを処理")
 
+        # ============================================================
+        # Phase 4: タスク実行（並列実行）
+        # ============================================================
         print()
         print("【Phase 4】タスク実行（並列実行）")
         print("-" * 70)
@@ -357,8 +377,10 @@ async def main():
             print(f"📊 並列実行（最大3タスク同時）")
             print()
 
+            # 並列実行
             task_results = await execute_tasks_parallel(pending_tasks, browser, max_concurrent=3)
 
+            # 結果集計
             for result in task_results:
                 stats["tasks_executed"] += 1
                 if result.get("success"):
@@ -366,6 +388,9 @@ async def main():
                 else:
                     stats["tasks_failed"] += 1
 
+        # ============================================================
+        # サマリー
+        # ============================================================
         print()
         print("=" * 70)
         print("📊 実行結果サマリー")
