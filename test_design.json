@@ -1,0 +1,55 @@
+{
+  "title": "テストサイト統合テスト",
+  "description": "API版エージェントの統合テスト用設計図",
+  "components": {
+    "plugins": [
+      {
+        "name": "Advanced Custom Fields",
+        "slug": "advanced-custom-fields",
+        "status": "active"
+      }
+    ],
+    "custom_post_types": [
+      {
+        "name": "テスト投稿タイプ",
+        "slug": "test_cpt",
+        "description": "統合テスト用のカスタム投稿タイプ",
+        "supports": ["title", "editor", "thumbnail"],
+        "public": true,
+        "has_archive": true
+      }
+    ],
+    "taxonomies": [
+      {
+        "name": "テスト分類",
+        "slug": "test_taxonomy",
+        "description": "統合テスト用の分類法",
+        "hierarchical": true,
+        "object_type": ["test_cpt"]
+      }
+    ],
+    "field_groups": [
+      {
+        "title": "テストフィールドグループ",
+        "key": "group_test_123",
+        "fields": [
+          {
+            "key": "field_test_1",
+            "label": "テストフィールド",
+            "name": "test_field",
+            "type": "text"
+          }
+        ],
+        "location": [
+          [
+            {
+              "param": "post_type",
+              "operator": "==",
+              "value": "test_cpt"
+            }
+          ]
+        ]
+      }
+    ]
+  }
+}
