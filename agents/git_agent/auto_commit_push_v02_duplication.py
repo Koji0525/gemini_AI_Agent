@@ -25,6 +25,108 @@ class AutoCommitPushAgent:
         self.staged_files: List[Path] = []
         self.test_command: Optional[str] = None
 
+    def _generate_commit_message(self) -> str:
+        """変更内容から自動的にコミットメッセージを生成"""
+
+        # git statusで変更されたファイルを取得
+        result = subprocess.run(["git", "status", "--porcelain"], cwd=self.project_root, capture_output=True, text=True)
+
+        changes = {"added": [], "modified": [], "deleted": [], "renamed": []}
+
+        for line in result.stdout.splitlines():
+            if not line:
+                continue
+
+            status = line[:2].strip()
+            filepath = line[3:]
+
+            # 除外ディレクトリをスキップ
+            if any(excluded in filepath for excluded in self.config["excluded_dirs"]):
+                continue
+
+            if status in ["A", "??"]:
+                changes["added"].append(filepath)
+            elif status == "M":
+                changes["modified"].append(filepath)
+            elif status == "D":
+                changes["deleted"].append(filepath)
+            elif status == "R":
+                changes["renamed"].append(filepath)
+
+        # メッセージの生成
+        emoji = "🔧"
+        action = "更新"
+        details = []
+
+        # 新規追加が多い場合
+        if len(changes["added"]) > len(changes["modified"]) + len(changes["deleted"]):
+            emoji = "✨"
+            action = "新機能追加"
+
+            # ツール追加？
+            if any("tools/" in f for f in changes["added"]):
+                emoji = "🔧"
+                action = "ツール追加"
+                tool_files = [f.split("/")[-1].replace(".py", "") for f in changes["added"] if "tools/" in f]
+                details.append(f"- {', '.join(tool_files)}")
+
+            # エージェント追加？
+            elif any("agents/" in f for f in changes["added"]):
+                action = "エージェント追加"
+                agent_files = [f.split("/")[-1].replace(".py", "") for f in changes["added"] if "agents/" in f]
+                details.append(f"- {', '.join(agent_files)}")
+
+        # 削除が多い場合
+        elif len(changes["deleted"]) > len(changes["added"]) + len(changes["modified"]):
+            emoji = "🗑️"
+            action = "クリーンアップ"
+            details.append(f"- {len(changes['deleted'])}個のファイルを削除")
+
+        # 修正が多い場合
+        elif len(changes["modified"]) > 0:
+            # 修正の種類を判定
+            modified_paths = " ".join(changes["modified"])
+
+            if "test" in modified_paths:
+                emoji = "✅"
+                action = "テスト修正"
+            elif "config" in modified_paths or ".env" in modified_paths:
+                emoji = "⚙️"
+                action = "設定変更"
+            elif "README" in modified_paths or "docs/" in modified_paths:
+                emoji = "📝"
+                action = "ドキュメント更新"
+            elif any("_v" in f for f in changes["modified"]):
+                emoji = "🔄"
+                action = "バージョン更新"
+            else:
+                emoji = "🐛"
+                action = "修正"
+
+        # 詳細情報の追加
+        if not details:
+            total_files = len(changes["added"]) + len(changes["modified"]) + len(changes["deleted"])
+            if total_files > 0:
+                details.append(f"- {total_files}個のファイルを変更")
+
+            # 主要なファイルをリストアップ
+            important_files = []
+            for f in changes["added"] + changes["modified"]:
+                filename = f.split("/")[-1]
+                if not filename.startswith("_") and filename.endswith(".py"):
+                    important_files.append(filename.replace(".py", ""))
+
+            if important_files and len(important_files) <= 3:
+                details.append(f"- {', '.join(important_files)}")
+
+        # メッセージの組み立て
+        message = f"{emoji} {action}"
+
+        if details:
+            message += "\n\n" + "\n".join(details)
+
+        return message
+
     def _load_config(self, config_path: str) -> dict:
         """設定ファイル読み込み"""
         full_path = self.project_root / config_path
@@ -413,7 +515,7 @@ class AutoCommitPushAgent:
         print()
 
         # ユーザーに確認
-        response = input("重複を無視してコミットを続行しますか？ (y/N): ").strip().lower()
+        response = input("重複を無視してコミットを続行しますか？ (Y/n): ").strip().lower() or "y"
 
         if response == "y":
             print("\n⚠️  重複ファイル名を無視して続行します")
@@ -571,10 +673,16 @@ class AutoCommitPushAgent:
         print(f"✅ プッシュ成功: {branch}")
         return True
 
-    def run(self, commit_message: str, auto_push: bool = True) -> bool:
+    def run(self, commit_message: Optional[str] = None, auto_push: bool = True) -> bool:
         """フルワークフロー実行"""
         print("\n" + "=" * 70)
         print("🤖 完全自動化Git統合ワークフロー v1.0.2")
+        # コミットメッセージが指定されていない場合は自動生成
+        if commit_message is None:
+            print("📝 コミットメッセージを自動生成中...")
+            commit_message = self._generate_commit_message()
+            print(f"✅ 生成されたメッセージ: {commit_message}")
+            print()
         print("=" * 70)
         print(f"⏰ 開始時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print()
@@ -628,7 +736,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="完全自動化Git統合ワークフロー")
-    parser.add_argument("message", help="コミットメッセージ")
+    parser.add_argument("message", nargs="?", default=None, help="コミットメッセージ")
     parser.add_argument("--no-push", action="store_true", help="プッシュしない")
     parser.add_argument("--config", help="設定ファイルパス")
 
