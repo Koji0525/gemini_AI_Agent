@@ -218,7 +218,7 @@ python3 scripts/show_project_structure.py
 - [WP_TAXONOMY_AGENT.md](docs/WP_TAXONOMY_AGENT.md) - タクソノミーエージェント詳細
 - [WP_ACF_AGENT.md](docs/WP_ACF_AGENT.md) - ACFエージェント詳細
 - [WORDPRESS_DEPLOYMENT_GUIDE.md](docs/WORDPRESS_DEPLOYMENT_GUIDE.md) - WordPress適用ガイド
-
+-　/workspaces/gemini_AI_Agent/docs/SESSION_COMPLETION_20251029.md
 ---
 
 ## 🧪 テスト
