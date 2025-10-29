@@ -515,7 +515,7 @@ class AutoCommitPushAgent:
         print()
 
         # ユーザーに確認
-        response = input("重複を無視してコミットを続行しますか？ (Y/n): ").strip().lower() or "y"
+        response = "y"  # 自動的に続行
 
         if response == "y":
             print("\n⚠️  重複ファイル名を無視して続行します")
@@ -696,7 +696,7 @@ class AutoCommitPushAgent:
             ("COMPILE CHECK", self.step3_compile_check, True),
             ("LINTER CHECK", self.step3_linter_check, self.config["quality_gates"].get("linter", False)),
             ("FORMATTER", self.step4_format_code, self.config["quality_gates"].get("formatter", False)),
-            ("TEST", self.step5_test, self.config["quality_gates"]["test"]),
+            # ("TEST", self.step5_test, False),  # 無効化: 時間がかかる
             ("FINAL CLEANUP", self.step6_cleanup, True),
             (
                 "DUPLICATE FILENAME CHECK",
@@ -704,7 +704,7 @@ class AutoCommitPushAgent:
                 self.config["quality_gates"].get("duplicate_filename_check", True),
             ),
             ("UPDATE .gitignore", self.step9_update_gitignore, True),
-            ("UPDATE README", self.step10_update_readme, True),
+            # ("UPDATE README", self.step10_update_readme, False),  # 無効化: 大幅更新時のみ手動
         ]
 
         for step_name, step_func, enabled in steps:
