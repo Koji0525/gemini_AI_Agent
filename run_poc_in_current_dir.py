@@ -203,7 +203,7 @@ class CurrentDirectoryPOC:
     async def test_task_execution(self):
         """タスク実行テスト"""
         try:
-            from task_executor import TaskExecutor
+            from scripts.task_executor_v02-phase10 import TaskExecutor
             executor = TaskExecutor()
             result = await executor.execute_task({
                 'task_id': 'TEST-001',

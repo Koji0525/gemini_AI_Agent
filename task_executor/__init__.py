@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
-    from task_executor import TaskExecutor
+    from scripts.task_executor_v02-phase10 import TaskExecutor
 except ImportError:
     # フォールバック: 直接インポート
     from task_executor_base import TaskExecutor
