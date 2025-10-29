@@ -29,11 +29,11 @@ def determine_execution_type(task: dict) -> str:
     4. キーワードマッチ（従来方式）
     """
     # 1. ExecutionType列（最優先）
-    exec_type = task.get("ExecutionType", "").lower()
+    exec_type = task.get("execution_type", "").lower()
     if exec_type in ["wordpress", "gemini"]:
         return exec_type
 
-    description = task.get("Description", "") + " " + task.get("Title", "")
+    description = task.get("Description", "") + " " + task.get("description", "")
 
     # 2. プレフィックス判定
     if any(prefix in description for prefix in ["【WP", "【ワードプレス", "【WordPress"]):
@@ -175,7 +175,7 @@ async def execute_wordpress_task(task, wp_session):
             return "❌ WordPressセッションが初期化されていません"
 
         # タスクの説明から何をするか判定
-        description = task.get("Description", "") + task.get("Title", "")
+        description = task.get("Description", "") + task.get("description", "")
 
         # CPT作成タスク
         if "Custom Post Type" in description or "CPT" in description or "カスタム投稿タイプ" in description:
@@ -332,16 +332,27 @@ async def main():
 
         async with BrowserController(download_folder="./downloads") as browser:
             print("✅ BrowserController初期化完了")
+            # === Gemini API Client 初期化 ===
+            gemini_client = None
+            gemini_tasks_exist = any(determine_execution_type(task) == "gemini" for task in tasks)
 
-            # レビューエージェント初期化
-            review_agent = ReviewAgent(browser_controller=browser)
-            print("✅ ReviewAgent初期化完了")
+            if gemini_tasks_exist:
+                from browser_control.gemini_api_client import GeminiAPIClient
 
-            print("�� Geminiに接続中...")
+                gemini_client = GeminiAPIClient()
+                print("✅ GeminiAPIClient初期化完了")
+
+                # レビューエージェント初期化（gemini_client使用）
+                review_agent = ReviewAgent(gemini_client=gemini_client)
+                print("✅ ReviewAgent初期化完了")
+            else:
+                print("ℹ️  Geminiタスクなし - API初期化スキップ")
+                # gemini_clientがNoneの場合でもReviewAgentを初期化
+                review_agent = ReviewAgent(gemini_client=None)
+                print("✅ ReviewAgent初期化完了（API初期化なし）")
+
+            print("🌐 Geminiに接続中...")
             logged_in = await browser.navigate_to_gemini()
-
-            # === WordPress セッション初期化（必要な場合のみ）===
-            wp_session = None
             if has_wordpress_tasks(tasks):
                 print()
                 print("=" * 70)
@@ -364,17 +375,15 @@ async def main():
                 print("=" * 70)
                 print(f"📝 タスク {idx}/{len(tasks)}")
                 print("=" * 70)
-                task_id = task.get("TaskID", f"task_{idx}")
-                print(f"  TaskID     : {task_id}")
-                print(f"  Agent      : {task.get('Agent', 'N/A')}")
-                print(f"  Status     : {task.get('Status', 'N/A')}")
-                print(f"  Title      : {task.get('Title', 'N/A')[:80]}")
-                print(f"  Dependencies: {task.get('Dependencies', 'なし')}")
-
-                # ============================================================
+                task_id = task.get("task_id", f"task_{idx}")
+                print(f"  task_id    : {task_id}")
+                print(f"  required_role : {task.get('required_role', 'N/A')}")
+                print(f"  status     : {task.get('status', 'N/A')}")
+                print(f"  description: {task.get('description', 'N/A')[:80]}")
+                print(f"  dependencies: {task.get('dependencies', 'なし')}")
                 # Phase 2: 依存関係チェックと前タスク結果の取得
                 # ============================================================
-                dependencies_str = task.get("Dependencies", "")
+                dependencies_str = task.get("dependencies", "")
                 dependencies = dependency_manager.parse_dependencies(dependencies_str)
 
                 dep_result = await dependency_manager.check_and_get_dependencies(
@@ -403,7 +412,7 @@ async def main():
                 print(f"🔄 ステータスを in_progress に更新中...")
                 tasks_loader.update_task_status(task_id, "in_progress")
 
-                agent_role = task.get("Agent", "general")
+                agent_role = task.get("required_role", "general")
 
                 if agent_role == "design":
                     role_instruction = (
@@ -470,40 +479,40 @@ async def main():
                         error_message = str(e)
                         task_success = False
 
-                else:
-                    # Gemini処理（既存コード）
+                elif execution_type == "gemini":
+                    # === Gemini API処理 ===
                     print("🤖 Gemini タスクとして実行します")
-                task_success = False
-                response = None
-                error_message = None
-
-                try:
-                    print("💬 タスク実行中...")
-                    await browser.send_prompt(prompt)
-
-                    print("⏳ レスポンス生成待機中（最大60秒）...")
-                    generation_success = await browser.wait_for_text_generation(max_wait=60)
-
-                    if not generation_success:
-                        print("⚠️ レスポンス生成タイムアウト")
-                        error_message = "Response generation timeout"
-                        raise Exception(error_message)
-
-                    print("📥 レスポンス取得中...")
-                    response = await browser.extract_latest_text_response()
-
-                    if response:
-                        print(f"✅ レスポンス取得成功: {len(response)}文字")
-                        task_success = True
-                    else:
-                        print("❌ レスポンス取得失敗")
-                        error_message = "Failed to extract response"
-                        raise Exception(error_message)
-
-                except Exception as e:
-                    print(f"❌ タスク実行エラー: {e}")
-                    error_message = str(e)
                     task_success = False
+                    response = None
+                    error_message = None
+
+                    try:
+                        if not gemini_client:
+                            error_message = "GeminiAPIClientが初期化されていません"
+                            raise Exception(error_message)
+
+                        print("💬 Gemini APIにプロンプト送信中...")
+                        response = await gemini_client.send_prompt(prompt)
+
+                        if response:
+                            print(f"✅ 応答取得成功: {len(response)}文字")
+                            task_success = True
+                        else:
+                            error_message = "空の応答を受信"
+                            raise Exception(error_message)
+
+                    except Exception as e:
+                        print(f"❌ Gemini API実行エラー: {e}")
+                        error_message = str(e)
+                        task_success = False
+
+                else:
+                    # 未知のexecution_type
+                    error_message = f"未対応のexecution_type: {execution_type}"
+                    print(f"⚠️ {error_message}")
+                    task_success = False
+                    response = None
+                    error_message = str(e)
 
                 # ステータス更新
                 final_status = "completed" if task_success else "failed"
@@ -547,7 +556,7 @@ async def main():
 
                         review_task = {
                             "task_id": task_id,
-                            "description": task.get("Description", task.get("Title", "")),
+                            "description": task.get("Description", task.get("description", "")),
                             "required_role": agent_role,
                             "status": final_status,
                         }
@@ -581,7 +590,7 @@ async def main():
                     # ログをシートに記録
                     print()
                     print("📝 実行ログをシートに記録中...")
-                    task_description = task.get("Description", task.get("Title", ""))
+                    task_description = task.get("Description", task.get("description", ""))
                     output_summary = response[:200] + "..." if len(response) > 200 else response
 
                     await log_to_sheet(
@@ -602,7 +611,7 @@ async def main():
                     print("📝 失敗ログをシートに記録中...")
                     await log_to_sheet(
                         task_id=task_id,
-                        task_description=task.get("Description", task.get("Title", "")),
+                        task_description=task.get("Description", task.get("description", "")),
                         agent_role=agent_role,
                         output_summary=f"タスク実行失敗: {error_message}",
                         output_file_path="N/A",
