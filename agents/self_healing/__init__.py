@@ -7,6 +7,15 @@ Phase 5の自動修復機能を提供
 from .error_classifier import ErrorClassifier, ErrorInfo
 from .sheets_adapter import SheetsAdapter, RetryHistoryManager
 from .retry_manager import RetryManager, RetryConfig, RetryResult
+from .retry_strategies import (
+    RetryStrategy,
+    ExponentialBackoffStrategy,
+    TimeoutStrategy,
+    RateLimitStrategy,
+    SelectorStrategy,
+    AuthStrategy,
+    StrategyFactory,
+)
 
 __all__ = [
     "ErrorClassifier",
@@ -16,4 +25,11 @@ __all__ = [
     "RetryManager",
     "RetryConfig",
     "RetryResult",
+    "RetryStrategy",
+    "ExponentialBackoffStrategy",
+    "TimeoutStrategy",
+    "RateLimitStrategy",
+    "SelectorStrategy",
+    "AuthStrategy",
+    "StrategyFactory",
 ]
