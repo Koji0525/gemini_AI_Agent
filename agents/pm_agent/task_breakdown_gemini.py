@@ -18,7 +18,7 @@ class GeminiTaskBreakdownAgent:
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel("gemini-1.5-flash")
 
-    async def generate_tasks(self, goal_description: str) -> List[Dict[str, Any]]:
+    async def generate_tasks_for_goal(self, goal_description: str) -> List[Dict[str, Any]]:
         """タスク生成"""
 
         prompt = f"""あなたは経験豊富なプロジェクトマネージャーです。
