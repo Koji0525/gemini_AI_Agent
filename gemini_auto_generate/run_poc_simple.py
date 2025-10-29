@@ -23,7 +23,7 @@ except ImportError as e:
     print(f"❌ pm_agent インポートエラー: {e}")
 
 try:
-    from task_executor import TaskExecutor
+    from scripts.task_executor_v02-phase10 import TaskExecutor
     print("✅ task_executor をインポートしました")
 except ImportError as e:
     print(f"❌ task_executor インポートエラー: {e}")

@@ -71,7 +71,7 @@ async def test_basic_functionality():
         print("   ✅ SystemPrompts 動作正常")
         
         # タスク実行器のテスト
-        from task_executor import TaskExecutor
+        from scripts.task_executor_v02-phase10 import TaskExecutor
         executor = TaskExecutor()
         
         # テストタスク実行

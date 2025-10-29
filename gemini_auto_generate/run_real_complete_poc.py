@@ -254,7 +254,7 @@ class RealCompletePOCDemo:
     async def test_task_executor_integration(self):
         """タスク実行器連携テスト"""
         try:
-            from task_executor import TaskExecutor
+            from scripts.task_executor_v02-phase10 import TaskExecutor
             executor = TaskExecutor()
             
             test_tasks = [
