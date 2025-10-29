@@ -14,6 +14,7 @@ from .agent_template import (
 from .agent_generator import AgentGenerator
 from .test_generator import AgentTestGenerator, TestGenerator, create_test_case
 from .sandbox_runner import SandboxRunner
+from .agent_registry import AgentRegistry
 
 __all__ = [
     "AgentTemplate",
@@ -23,7 +24,8 @@ __all__ = [
     "DataProcessingAgentTemplate",
     "AgentGenerator",
     "AgentTestGenerator",
-    "TestGenerator",  # 後方互換性
+    "TestGenerator",
     "create_test_case",
     "SandboxRunner",
+    "AgentRegistry",
 ]
