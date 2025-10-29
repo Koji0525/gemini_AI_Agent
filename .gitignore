@@ -109,3 +109,4 @@ gemini_auto_generate/configuration/service_account.json
 **/*.pem
 **/credentials.json
 # 実行時生成ファイル
+docs/
