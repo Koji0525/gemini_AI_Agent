@@ -22,7 +22,7 @@ from configuration.config_loader import get_config
 # Phase 7: 自己修復システム
 try:
     from agents.self_healing.retry_manager import RetryManager
-    from agents.self_healing.error_classifier import ErrorClassifier
+    from agents.self_healing.utils.error_classifier import ErrorClassifier
 
     PHASE7_AVAILABLE = True
 except ImportError as e:
