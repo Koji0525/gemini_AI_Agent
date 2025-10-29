@@ -1,0 +1,116 @@
+"""
+{{AGENT_NAME}} - Auto-generated data processing agent
+
+Description: {{DESCRIPTION}}
+Version: {{VERSION}}
+Author: {{AUTHOR}}
+Created: {{CREATED_AT}}
+"""
+import asyncio
+from typing import Dict, Any, List
+from datetime import datetime
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from agents.dynamic.agent_template import AgentTemplate, AgentMetadata, AgentConfig
+
+
+class {{AGENT_CLASS}}(AgentTemplate):
+    """
+    {{DESCRIPTION}}
+    
+    This agent processes data according to specified operations.
+    """
+    
+    def __init__(self):
+        metadata = AgentMetadata(
+            name="{{AGENT_NAME}}",
+            version="{{VERSION}}",
+            description="{{DESCRIPTION}}",
+            author="{{AUTHOR}}",
+            created_at=datetime.fromisoformat("{{CREATED_AT}}"),
+            dependencies=["pandas", "numpy"],
+            capabilities=["data_processing", "transformation", "filtering"],
+            tags=["data", "processing", "auto-generated"]
+        )
+        
+        config = AgentConfig(
+            max_retries=3,
+            timeout=60,
+            async_mode=True,
+            logging_enabled=True
+        )
+        
+        super().__init__(metadata, config)
+    
+    async def execute(self, **kwargs) -> Dict[str, Any]:
+        """
+        Execute data processing
+        
+        Args:
+            data: Data to process (list, dict, or pandas DataFrame)
+            operation: Operation to perform (filter/transform/aggregate)
+            params: Operation parameters (optional)
+            
+        Returns:
+            Processed data
+        """
+        data = kwargs.get('data')
+        operation = kwargs.get('operation')
+        params = kwargs.get('params', {})
+        
+        if not data or not operation:
+            raise ValueError("Both data and operation are required")
+        
+        if operation == 'filter':
+            return await self._filter_data(data, params)
+        elif operation == 'transform':
+            return await self._transform_data(data, params)
+        elif operation == 'aggregate':
+            return await self._aggregate_data(data, params)
+        else:
+            raise ValueError(f"Unknown operation: {operation}")
+    
+    async def _filter_data(self, data: Any, params: Dict) -> Dict[str, Any]:
+        """Filter data based on criteria"""
+        # Implement filtering logic
+        return {'filtered_data': data}
+    
+    async def _transform_data(self, data: Any, params: Dict) -> Dict[str, Any]:
+        """Transform data"""
+        # Implement transformation logic
+        return {'transformed_data': data}
+    
+    async def _aggregate_data(self, data: Any, params: Dict) -> Dict[str, Any]:
+        """Aggregate data"""
+        # Implement aggregation logic
+        count = len(data) if isinstance(data, (list, dict)) else 0
+        return {'count': count, 'aggregated_data': data}
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters"""
+        return 'data' in kwargs and 'operation' in kwargs
+    
+    def get_required_params(self) -> List[str]:
+        """Get required parameters"""
+        return ['data', 'operation']
+
+
+async def main():
+    """Demo execution"""
+    agent = {{AGENT_CLASS}}()
+    
+    print(f"Agent: {agent}")
+    print(f"Metadata: {agent.get_metadata()}")
+    
+    # Example usage
+    result = await agent.run(
+        data=[1, 2, 3, 4, 5],
+        operation='aggregate'
+    )
+    print(f"Result: {result}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
