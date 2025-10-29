@@ -10,7 +10,8 @@ from typing import Callable, Dict, Any, Optional, List
 from datetime import datetime
 import traceback
 
-from .error_classifier import ErrorClassifier, ErrorInfo
+from .error_classifier import ErrorClassifier
+from .logging.context_logger import ContextLogger, DecisionContext
 from .sheets_adapter import SheetsAdapter
 
 
@@ -63,6 +64,7 @@ class RetryManager:
             config: リトライ設定
         """
         self.error_classifier = ErrorClassifier()
+        self.context_logger = ContextLogger(sheets_manager) if sheets_manager else None
         self.config = config or RetryConfig()
 
         # Sheets連携（オプション）
@@ -233,7 +235,7 @@ class RetryManager:
         self,
         task_name: str,
         attempt: int,
-        error_info: ErrorInfo,
+        error_info: Dict[str, Any],
         strategy: str,
         wait_time: float,
         success: bool,
