@@ -10,7 +10,7 @@ from typing import Callable, Dict, Any, Optional, List
 from datetime import datetime
 import traceback
 
-from .error_classifier import ErrorClassifier
+from .utils.error_classifier import ErrorClassifier
 from .logging.context_logger import ContextLogger, DecisionContext
 from .sheets_adapter import SheetsAdapter
 
