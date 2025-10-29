@@ -1,0 +1,106 @@
+"""
+{{AGENT_NAME}} - Auto-generated agent
+
+Description: {{DESCRIPTION}}
+Version: {{VERSION}}
+Author: {{AUTHOR}}
+Created: {{CREATED_AT}}
+"""
+import asyncio
+from typing import Dict, Any, List
+from datetime import datetime
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from agents.dynamic.agent_template import AgentTemplate, AgentMetadata, AgentConfig
+
+
+class {{AGENT_CLASS}}(AgentTemplate):
+    """
+    {{DESCRIPTION}}
+    
+    This agent is auto-generated from template.
+    """
+    
+    def __init__(self):
+        metadata = AgentMetadata(
+            name="{{AGENT_NAME}}",
+            version="{{VERSION}}",
+            description="{{DESCRIPTION}}",
+            author="{{AUTHOR}}",
+            created_at=datetime.fromisoformat("{{CREATED_AT}}"),
+            dependencies=["aiohttp", "requests"],
+            capabilities=["api_call", "http_request"],
+            tags=["api", "auto-generated"]
+        )
+        
+        config = AgentConfig(
+            max_retries=3,
+            timeout=30,
+            async_mode=True,
+            logging_enabled=True
+        )
+        
+        super().__init__(metadata, config)
+    
+    async def execute(self, **kwargs) -> Dict[str, Any]:
+        """
+        Execute API call
+        
+        Args:
+            url: API endpoint
+            method: HTTP method (default: GET)
+            headers: HTTP headers (optional)
+            data: Request body (optional)
+            
+        Returns:
+            API response
+        """
+        import aiohttp
+        
+        url = kwargs.get('url')
+        method = kwargs.get('method', 'GET')
+        headers = kwargs.get('headers', {})
+        data = kwargs.get('data', None)
+        
+        if not url:
+            raise ValueError("URL is required")
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.request(
+                method,
+                url,
+                headers=headers,
+                json=data,
+                timeout=aiohttp.ClientTimeout(total=self.config.timeout)
+            ) as response:
+                return {
+                    'status': response.status,
+                    'data': await response.text(),
+                    'headers': dict(response.headers)
+                }
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters"""
+        return 'url' in kwargs
+    
+    def get_required_params(self) -> List[str]:
+        """Get required parameters"""
+        return ['url']
+
+
+async def main():
+    """Demo execution"""
+    agent = {{AGENT_CLASS}}()
+    
+    print(f"Agent: {agent}")
+    print(f"Metadata: {agent.get_metadata()}")
+    
+    # Example usage (replace with actual API)
+    # result = await agent.run(url="https://api.example.com/data")
+    # print(f"Result: {result}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
