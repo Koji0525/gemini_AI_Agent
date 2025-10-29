@@ -3,7 +3,7 @@
 import asyncio
 import json
 from typing import Dict, Any, List, Optional
-from config.config_loader import config
+from configuration.config_loader import config
 
 
 class WordPressOrchestrator:
