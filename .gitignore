@@ -119,3 +119,7 @@ _ARCHIVE/
 # POCファイル
 *_poc.py
 run_poc_*.py
+_BACKUP/
+_ARCHIVE/
+Claude/
+demos/
