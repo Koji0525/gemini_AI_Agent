@@ -110,3 +110,12 @@ gemini_auto_generate/configuration/service_account.json
 **/credentials.json
 # 実行時生成ファイル
 docs/
+
+# 作業中ファイル
+_WIP/
+_BACKUP/
+_ARCHIVE/
+
+# POCファイル
+*_poc.py
+run_poc_*.py
