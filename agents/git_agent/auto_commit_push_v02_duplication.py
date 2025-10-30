@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Git自動コミット＆プッシュツール（重複チェック改善版）
-変更理由: __init__.py等の標準ファイルを重複チェックから除外
+変更理由: __init__.py等とバックアップディレクトリを除外
 """
 
 import subprocess
@@ -10,23 +10,22 @@ from pathlib import Path
 from collections import defaultdict
 
 # 重複チェックから除外するファイル名
-EXCLUDE_FROM_DUPLICATE_CHECK = {
+EXCLUDE_FILES = {
     '__init__.py',      # Pythonパッケージの標準ファイル
-    '__pycache__',      # Pythonキャッシュディレクトリ
-    '.pyc',             # コンパイル済みPython
     '.gitignore',       # Git設定ファイル
-    'README.md',        # 各ディレクトリのREADME
-    '.DS_Store',        # macOS設定ファイル
-    'Thumbs.db',        # Windows設定ファイル
+    'README.md',        # 各ディレクトリのREADME（実質的な重複は少ないが念のため）
 }
 
-# 除外するディレクトリパターン
+# 除外するディレクトリ（これらの配下は完全に無視）
 EXCLUDE_DIRECTORIES = {
     '__pycache__',
     '.git',
     'node_modules',
     '.venv',
     'venv',
+    '_ARCHIVE',         # アーカイブディレクトリ
+    '_BACKUP',          # バックアップディレクトリ
+    '_WIP',             # 作業中ディレクトリ
     '.pytest_cache',
     '.mypy_cache',
 }
@@ -34,34 +33,35 @@ EXCLUDE_DIRECTORIES = {
 def check_duplicates():
     """
     プロジェクト内の重複ファイル名をチェック
-    (__init__.py等の標準ファイルは除外)
+    （標準ファイルとバックアップディレクトリは除外）
     """
     print("\n" + "=" * 70)
-    print("🔍 重複ファイル名チェック（標準ファイル除外版）")
+    print("🔍 重複ファイル名チェック（標準ファイル・バックアップ除外版）")
     print("=" * 70)
     
     project_root = Path.cwd()
     file_map = defaultdict(list)
     
-    # すべてのPythonファイルとスクリプトを収集
+    # すべてのファイルを収集
     for file_path in project_root.rglob("*"):
         # ディレクトリをスキップ
         if file_path.is_dir():
             continue
         
         # 除外ディレクトリ内のファイルをスキップ
-        if any(exclude_dir in file_path.parts for exclude_dir in EXCLUDE_DIRECTORIES):
+        path_parts = file_path.parts
+        if any(exclude_dir in path_parts for exclude_dir in EXCLUDE_DIRECTORIES):
             continue
         
         # ファイル名を取得
         file_name = file_path.name
         
         # 除外対象ファイルをスキップ
-        if file_name in EXCLUDE_FROM_DUPLICATE_CHECK:
+        if file_name in EXCLUDE_FILES:
             continue
         
-        # 拡張子チェック（除外対象）
-        if any(file_name.endswith(ext) for ext in ['.pyc', '.pyo', '.pyd']):
+        # コンパイル済みファイルをスキップ
+        if file_name.endswith(('.pyc', '.pyo', '.pyd')):
             continue
         
         # 対象ファイル（.py, .sh, .md など）
@@ -119,7 +119,7 @@ def git_add_commit_push(commit_message):
         print("✅ コミット完了")
         
         # git push
-        print("🚀 プッシュ中...")
+        print("�� プッシュ中...")
         subprocess.run(["git", "push"], check=True)
         print("✅ プッシュ完了")
         
@@ -130,6 +130,7 @@ def git_add_commit_push(commit_message):
         return False
 
 def main():
+    """メイン処理"""
     if len(sys.argv) < 2:
         print("❌ 使用方法: python3 auto_commit_push_v02_duplication.py 'コミットメッセージ'")
         sys.exit(1)
@@ -139,7 +140,7 @@ def main():
     print("🚀 Git自動コミット＆プッシュツール（改善版）")
     print("=" * 70)
     
-    # 重複チェック（__init__.py等を除外）
+    # 重複チェック（__init__.py、_ARCHIVE、_BACKUP等を除外）
     check_duplicates()
     
     # Git操作実行
