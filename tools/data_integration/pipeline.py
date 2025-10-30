@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
+<<<<<<< HEAD
 データ統合パイプライン - 修正版
 
 統一初期化パターンを適用
+=======
+データ統合パイプライン - 簡易版
+
+循環インポートを防ぐための独立実装
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
 """
 
 import os
 from typing import List, Dict, Any
 from datetime import datetime
 
+<<<<<<< HEAD
 from tools.data_integration.models import UnifiedLogEntry
 from tools.data_integration.sources import DataSourceRegistry
 from tools.data_integration.extractors import PatternExtractor, PatternResult
@@ -22,17 +29,39 @@ class DataIntegrationPipeline:
     def __init__(self, config: Dict[str, Any]):
         """
         パイプライン初期化 - 統一パターン適用
+=======
+# 相対インポートを使用して循環を防ぐ
+from .models import UnifiedLogEntry
+from .sources import DataSourceRegistry
+from .extractors import PatternExtractor, PatternResult
+
+
+class DataIntegrationPipeline:
+    """データ統合パイプライン - 簡易版"""
+
+    def __init__(self, config: Dict[str, Any]):
+        """
+        パイプライン初期化
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
 
         Args:
             config: 設定ファイルの内容
         """
         self.config = config
 
+<<<<<<< HEAD
         # 統一初期化パターンでリソースを初期化
         self.sheets_manager = GoogleSheetsManager(
             spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="config/service_account.json"
         )
 
+=======
+        # 動的インポートで循環を防ぐ
+        from tools.sheets_manager import GoogleSheetsManager
+
+        # リソース初期化
+        self.sheets_manager = GoogleSheetsManager()
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
         self.source_registry = DataSourceRegistry(config, self.sheets_manager)
         self.pattern_extractor = PatternExtractor(config.get("pattern_extraction", {}))
 
@@ -103,7 +132,11 @@ class DataIntegrationPipeline:
 
         try:
             # シート取得または作成
+<<<<<<< HEAD
             spreadsheet = self.sheets_manager.gc.open_by_key(os.getenv("SPREADSHEET_ID"))
+=======
+            spreadsheet = self.sheets_manager.spreadsheet
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
 
             try:
                 sheet = spreadsheet.worksheet(sheet_name)
@@ -163,16 +196,36 @@ class DataIntegrationPipeline:
             return 0
 
 
+<<<<<<< HEAD
 # 統一初期化パターンを使用した代替ファクトリ
 def create_pipeline(config: Dict[str, Any]) -> DataIntegrationPipeline:
     """パイプライン作成ファクトリ - 統一パターン"""
+=======
+def create_pipeline(config: Dict[str, Any]) -> DataIntegrationPipeline:
+    """パイプライン作成ファクトリ"""
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
     return DataIntegrationPipeline(config)
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # テスト実行
     config = {"sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}}}
 
     pipeline = create_pipeline(config)
     results = pipeline.run()
     print(f"実行結果: {results}")
+=======
+    # テスト実行用の設定
+    config = {
+        "sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}},
+        "knowledge_base": {"sheet_name": "knowledge_base_test"},
+    }
+
+    try:
+        pipeline = create_pipeline(config)
+        results = pipeline.run()
+        print(f"🎯 実行結果: {results}")
+    except Exception as e:
+        print(f"❌ パイプライン実行失敗: {e}")
+>>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)

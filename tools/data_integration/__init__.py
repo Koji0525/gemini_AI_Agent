@@ -1,16 +1,24 @@
 """
-汎用データ統合フレームワーク
+Data Integration Package
 
-どんなログソースからもナレッジを抽出し、
-knowledge_baseに統合する汎用的なシステム
+データ統合機能を提供
 """
 
-from .pipeline import DataIntegrationPipeline
-from .models import UnifiedLogEntry
-from .sources import DataSourceRegistry
+from .models import UnifiedLogEntry, SourceType, ContentType
+from .pipeline import DataIntegrationPipeline, create_pipeline
+from .sources import DataSource, ConversationLogsSource, SpreadsheetLogsSource, DataSourceRegistry
+from .extractors import PatternExtractor, PatternResult
 
 __all__ = [
-    'DataIntegrationPipeline',
-    'UnifiedLogEntry',
-    'DataSourceRegistry',
+    "UnifiedLogEntry",
+    "SourceType",
+    "ContentType",
+    "DataIntegrationPipeline",
+    "create_pipeline",
+    "DataSource",
+    "ConversationLogsSource",
+    "SpreadsheetLogsSource",
+    "DataSourceRegistry",
+    "PatternExtractor",
+    "PatternResult",
 ]
