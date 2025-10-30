@@ -6,4 +6,4 @@
 from .task_executor_content import ContentTaskExecutor
 
 # 同じクラスを提供
-__all__ = ['ContentTaskExecutor']
+__all__ = ["ContentTaskExecutor"]

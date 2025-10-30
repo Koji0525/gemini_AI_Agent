@@ -11,6 +11,7 @@ from integrated_system_with_review import IntegratedSystemWithReview
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 async def continuous_monitor(interval_minutes: int = 5):
     """継続監視"""
     logger.info("=" * 80)
@@ -18,18 +19,18 @@ async def continuous_monitor(interval_minutes: int = 5):
     logger.info(f"   監視間隔: {interval_minutes}分")
     logger.info("   停止: Ctrl+C")
     logger.info("=" * 80)
-    
+
     cycle_count = 0
-    
+
     try:
         while True:
             cycle_count += 1
             logger.info(f"\n{'='*80}")
             logger.info(f"🔄 サイクル {cycle_count} - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             logger.info(f"{'='*80}")
-            
+
             system = IntegratedSystemWithReview()
-            
+
             try:
                 if await system.initialize():
                     await system.run_cycle()
@@ -39,12 +40,13 @@ async def continuous_monitor(interval_minutes: int = 5):
                 logger.error(f"❌ サイクルエラー: {e}")
             finally:
                 await system.cleanup()
-            
+
             logger.info(f"\n💤 次回実行まで {interval_minutes}分待機...")
             await asyncio.sleep(interval_minutes * 60)
-            
+
     except KeyboardInterrupt:
         logger.info("\n🛑 停止シグナル受信 - 終了します")
+
 
 if __name__ == "__main__":
     asyncio.run(continuous_monitor(interval_minutes=5))

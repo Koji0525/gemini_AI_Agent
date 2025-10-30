@@ -9,9 +9,10 @@ import difflib
 
 logger = logging.getLogger(__name__)
 
+
 class AutoFixAgent:
     """自動修正エージェント"""
-    
+
     FIX_SYSTEM_PROMPT = """あなたは優秀なPythonデバッグアシスタントです。
 
 【あなたの役割】

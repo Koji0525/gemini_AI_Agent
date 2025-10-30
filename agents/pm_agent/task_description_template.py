@@ -4,9 +4,10 @@
 タスクの品質を向上させるための標準化されたテンプレート
 """
 
+
 class TaskDescriptionTemplate:
     """タスク記述の詳細化テンプレート"""
-    
+
     # 詳細記述用のプロンプトテンプレート
     DETAILED_TEMPLATE = """
 【タスク記述の詳細化指示】
@@ -118,12 +119,11 @@ WordPress関連タスクの場合は、管理画面での確認方法も明記�
 """
 
     @staticmethod
-    def format_cpt_description(post_type_name: str, purpose: str, 
-                               custom_fields: str = "", taxonomies: str = "") -> str:
+    def format_cpt_description(post_type_name: str, purpose: str, custom_fields: str = "", taxonomies: str = "") -> str:
         """CPTタスク用の詳細記述を生成"""
         slug = post_type_name.lower().replace(" ", "-")
         post_type_label = post_type_name
-        
+
         return TaskDescriptionTemplate.WP_CPT_TEMPLATE.format(
             purpose=purpose,
             post_type_name=post_type_name,
@@ -131,50 +131,47 @@ WordPress関連タスクの場合は、管理画面での確認方法も明記�
             show_in_menu="true",
             custom_fields=custom_fields or "（後続タスクで設定）",
             taxonomies=taxonomies or "（後続タスクで設定）",
-            post_type_label=post_type_label
+            post_type_label=post_type_label,
         )
-    
+
     @staticmethod
-    def format_acf_description(field_group_name: str, post_type: str,
-                               purpose: str, field_details: str) -> str:
+    def format_acf_description(field_group_name: str, post_type: str, purpose: str, field_details: str) -> str:
         """ACFタスク用の詳細記述を生成"""
         field_count = field_details.count("\n   -") if field_details else 0
-        
+
         return TaskDescriptionTemplate.WP_ACF_TEMPLATE.format(
             purpose=purpose,
             field_group_name=field_group_name,
             post_type=post_type,
             field_count=field_count,
-            field_details=field_details
+            field_details=field_details,
         )
-    
+
     @staticmethod
-    def enhance_task_description(original_description: str, 
-                                 context: dict = None) -> str:
+    def enhance_task_description(original_description: str, context: dict = None) -> str:
         """
         簡潔なタスク記述を詳細化するためのプロンプトを生成
-        
+
         Args:
             original_description: 元の簡潔なタスク記述
             context: 追加のコンテキスト情報
-        
+
         Returns:
             Geminiに送信する詳細化プロンプト
         """
         context_str = ""
         if context:
             context_str = "\n".join([f"- {k}: {v}" for k, v in context.items()])
-        
+
         return TaskDescriptionTemplate.DETAILED_TEMPLATE.format(
-            original_task=original_description,
-            context=context_str or "（追加情報なし）"
+            original_task=original_description, context=context_str or "（追加情報なし）"
         )
 
 
 # テスト用のサンプル
 if __name__ == "__main__":
     template = TaskDescriptionTemplate()
-    
+
     # サンプル1: CPT作成タスク
     print("=" * 70)
     print("【サンプル1: CPTタスクの詳細記述】")
@@ -189,11 +186,11 @@ if __name__ == "__main__":
    - 案件ステータス（選択：交渉中/デューデリ/成約/終了）
    - 担当者（ユーザー選択）
         """,
-        taxonomies="地域（ウズベキスタンの州）、業種カテゴリー"
+        taxonomies="地域（ウズベキスタンの州）、業種カテゴリー",
     )
     print(cpt_desc)
     print()
-    
+
     # サンプル2: 簡潔な記述の詳細化プロンプト
     print("=" * 70)
     print("【サンプル2: 簡潔記述の詳細化プロンプト】")
@@ -203,7 +200,7 @@ if __name__ == "__main__":
         context={
             "プロジェクト": "ウズベキスタンM&Aポータルサイト",
             "技術スタック": "WordPress + ACF",
-            "目的": "M&A案件の管理と検索"
-        }
+            "目的": "M&A案件の管理と検索",
+        },
     )
     print(enhance_prompt)

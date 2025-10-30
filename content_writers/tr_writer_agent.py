@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class TurkishContentWriter(BaseContentWriter):
     """Türkçe özel içerik yazarı AI - Özbekistan M&A'ya odaklanmış"""
-    
+
     def get_language_code(self) -> str:
         """言語コード"""
         return "tr"
-    
+
     def get_language_name(self) -> str:
         """言語名"""
         return "Türkçe (トルコ語)"
-    
+
     def get_system_prompt(self) -> str:
         """トルコ語専用のシステムプロンプト"""
         return """Siz deneyimli bir Türkçe içerik yazarısınız. Özbekistan'ın M&A pazarı ve iş ortamı konusunda uzmansınız.
@@ -156,20 +156,20 @@ class TurkishContentWriter(BaseContentWriter):
 - Konuşma tarzı yanıtlar kesinlikle yasak
 
 **Türkçe olarak, HTML etiketlerini kullanarak eksiksiz bir makale yazın ve sonuna kadar tamamlayın.**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """トルコ語記事専用プロンプトを構築"""
         system_prompt = self.get_system_prompt()
-        
+
         # 参照URLがある場合は追加情報として提供
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【REFERANS BİLGİ】
 Aşağıdaki makaleyi referans alın (doğrudan kopyalamak yerine, içeriği anlayıp özgün makale yazın):
 Referans URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【SPESIFIK YAZIM TALEBİ】
@@ -200,5 +200,5 @@ Tahmini Okuma Süresi: 7-10 dakika
 6. "Anlaşıldı" gibi yanıtlar yasak, sadece HTML çıktısı
 
 **Şimdi, Türkçe olarak HTML etiketlerini kullanarak eksiksiz bir makale yazmaya başlayın.**"""
-        
+
         return full_prompt

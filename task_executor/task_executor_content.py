@@ -7,100 +7,101 @@ import os
 import asyncio
 from datetime import datetime
 
+
 class ContentTaskExecutor:
     """コンテンツ生成タスク実行クラス"""
-    
+
     def __init__(self):
         self.content_types = {
-            'blog_post': self._generate_blog_post,
-            'news_article': self._generate_news_article,
-            'guide': self._generate_guide,
-            'case_study': self._generate_case_study
+            "blog_post": self._generate_blog_post,
+            "news_article": self._generate_news_article,
+            "guide": self._generate_guide,
+            "case_study": self._generate_case_study,
         }
-    
+
     async def execute(self, task_info):
         """コンテンツ生成タスクを実行"""
         content_type = self._detect_content_type(task_info)
         generator = self.content_types.get(content_type, self._generate_blog_post)
-        
+
         result = await generator(task_info)
         return result
-    
+
     def _detect_content_type(self, task_info):
         """コンテンツタイプを検出"""
-        description = task_info.get('description', '').lower()
-        
-        if 'ニュース' in description or 'news' in description:
-            return 'news_article'
-        elif 'ガイド' in description or 'guide' in description:
-            return 'guide'
-        elif '事例' in description or 'case study' in description:
-            return 'case_study'
+        description = task_info.get("description", "").lower()
+
+        if "ニュース" in description or "news" in description:
+            return "news_article"
+        elif "ガイド" in description or "guide" in description:
+            return "guide"
+        elif "事例" in description or "case study" in description:
+            return "case_study"
         else:
-            return 'blog_post'
-    
+            return "blog_post"
+
     async def _generate_blog_post(self, task_info):
         """ブログ記事を生成"""
         print(f"      📖 ブログ記事生成: {task_info['task_id']}")
-        
+
         # 実際のコンテンツ生成ロジック
         content = {
-            'title': f"M&A関連記事: {task_info['description'][:30]}...",
-            'content': self._generate_sample_content(task_info),
-            'word_count': 1200,
-            'keywords': ['M&A', '企業価値', '買収', '合併'],
-            'status': 'draft'
+            "title": f"M&A関連記事: {task_info['description'][:30]}...",
+            "content": self._generate_sample_content(task_info),
+            "word_count": 1200,
+            "keywords": ["M&A", "企業価値", "買収", "合併"],
+            "status": "draft",
         }
-        
+
         await asyncio.sleep(2)  # 生成時間のシミュレーション
-        
+
         return content
-    
+
     async def _generate_news_article(self, task_info):
         """ニュース記事を生成"""
         print(f"      📰 ニュース記事生成: {task_info['task_id']}")
-        
+
         content = {
-            'title': f"M&Aニュース: {task_info['description'][:40]}...",
-            'content': self._generate_news_content(task_info),
-            'word_count': 800,
-            'keywords': ['M&Aニュース', '企業買収', '業界動向'],
-            'status': 'draft'
+            "title": f"M&Aニュース: {task_info['description'][:40]}...",
+            "content": self._generate_news_content(task_info),
+            "word_count": 800,
+            "keywords": ["M&Aニュース", "企業買収", "業界動向"],
+            "status": "draft",
         }
-        
+
         await asyncio.sleep(1.5)
         return content
-    
+
     async def _generate_guide(self, task_info):
         """ガイドを生成"""
         print(f"      📚 ガイド生成: {task_info['task_id']}")
-        
+
         content = {
-            'title': f"M&Aガイド: {task_info['description'][:30]}...",
-            'content': self._generate_guide_content(task_info),
-            'word_count': 2000,
-            'keywords': ['M&Aガイド', '手続き', 'チェックリスト'],
-            'status': 'draft'
+            "title": f"M&Aガイド: {task_info['description'][:30]}...",
+            "content": self._generate_guide_content(task_info),
+            "word_count": 2000,
+            "keywords": ["M&Aガイド", "手続き", "チェックリスト"],
+            "status": "draft",
         }
-        
+
         await asyncio.sleep(3)
         return content
-    
+
     async def _generate_case_study(self, task_info):
         """事例研究を生成"""
         print(f"      📊 事例研究生成: {task_info['task_id']}")
-        
+
         content = {
-            'title': f"M&A事例: {task_info['description'][:35]}...",
-            'content': self._generate_case_study_content(task_info),
-            'word_count': 1500,
-            'keywords': ['M&A事例', '成功事例', '失敗事例'],
-            'status': 'draft'
+            "title": f"M&A事例: {task_info['description'][:35]}...",
+            "content": self._generate_case_study_content(task_info),
+            "word_count": 1500,
+            "keywords": ["M&A事例", "成功事例", "失敗事例"],
+            "status": "draft",
         }
-        
+
         await asyncio.sleep(2.5)
         return content
-    
+
     def _generate_sample_content(self, task_info):
         """サンプルコンテンツを生成"""
         return f"""
@@ -123,7 +124,7 @@ M&Aの基本を理解することが重要です。
 
 生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
-    
+
     def _generate_news_content(self, task_info):
         """ニュースコンテンツを生成"""
         return f"""
@@ -137,7 +138,7 @@ M&Aの基本を理解することが重要です。
 
 発信日: {datetime.now().strftime('%Y-%m-%d')}
 """
-    
+
     def _generate_guide_content(self, task_info):
         """ガイドコンテンツを生成"""
         return f"""
@@ -153,7 +154,7 @@ M&Aの基本を理解することが重要です。
 
 作成日: {datetime.now().strftime('%Y-%m-%d')}
 """
-    
+
     def _generate_case_study_content(self, task_info):
         """事例研究コンテンツを生成"""
         return f"""
@@ -171,15 +172,13 @@ M&Aの基本を理解することが重要です。
 分析日: {datetime.now().strftime('%Y-%m-%d')}
 """
 
+
 if __name__ == "__main__":
     # テスト実行
     async def test():
         executor = ContentTaskExecutor()
-        test_task = {
-            'task_id': 'CONTENT-001',
-            'description': 'M&Aの基本戦略について'
-        }
+        test_task = {"task_id": "CONTENT-001", "description": "M&Aの基本戦略について"}
         result = await executor.execute(test_task)
         print(f"コンテンツ生成結果: {result}")
-    
+
     asyncio.run(test())

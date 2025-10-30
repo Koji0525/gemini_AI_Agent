@@ -42,7 +42,7 @@ new_handlers = """
 # handle_wp_taskの前に挿入
 content = content.replace(
     "    async def handle_wp_task(self, task: Dict) -> bool:",
-    new_handlers + "\n    async def handle_wp_task(self, task: Dict) -> bool:"
+    new_handlers + "\n    async def handle_wp_task(self, task: Dict) -> bool:",
 )
 
 # 保存
@@ -53,4 +53,3 @@ print("✅ 役割マッピング拡張完了")
 print("\n追加された役割:")
 print("  - wp_dev: WordPress開発")
 print("  - wp_cpt: カスタム投稿タイプ")
-

@@ -10,60 +10,50 @@ from typing import Dict, Any, List
 
 class TaskExportAgent:
     """タスク詳細をMarkdownファイルにエクスポート"""
-    
+
     def __init__(self, output_folder: str = "agent_outputs/task_details"):
         self.output_folder = Path(output_folder)
         self.output_folder.mkdir(parents=True, exist_ok=True)
         print(f"📁 TaskExportAgent初期化: {self.output_folder}")
-    
-    def export_tasks(
-        self,
-        goal_id: str,
-        goal_title: str,
-        tasks: List[Dict[str, Any]]
-    ) -> str:
+
+    def export_tasks(self, goal_id: str, goal_title: str, tasks: List[Dict[str, Any]]) -> str:
         """
         タスクリストをMarkdownファイルにエクスポート
-        
+
         Args:
             goal_id: 目標ID
             goal_title: 目標タイトル
             tasks: タスクリスト
-        
+
         Returns:
             エクスポートしたファイルのパス
         """
         if not tasks:
             print("⚠️ エクスポートするタスクがありません")
             return ""
-        
+
         print(f"\n📤 タスク詳細をエクスポート中（目標{goal_id}）...")
-        
+
         # ファイル名を生成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"goal_{goal_id}_tasks_{timestamp}.md"
         filepath = self.output_folder / filename
-        
+
         # Markdownコンテンツを生成
         content = self._generate_markdown(goal_id, goal_title, tasks)
-        
+
         # ファイルに保存
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
-        
+
         print(f"✅ エクスポート完了: {filepath}")
         print(f"   タスク数: {len(tasks)}個")
-        
+
         return str(filepath)
-    
-    def _generate_markdown(
-        self,
-        goal_id: str,
-        goal_title: str,
-        tasks: List[Dict[str, Any]]
-    ) -> str:
+
+    def _generate_markdown(self, goal_id: str, goal_title: str, tasks: List[Dict[str, Any]]) -> str:
         """Markdownコンテンツを生成"""
-        
+
         content = f"""# 📋 目標{goal_id}のタスク詳細
 
 ## 目標情報
@@ -75,17 +65,17 @@ class TaskExportAgent:
 ---
 
 """
-        
+
         # 各タスクの詳細を追加
         for i, task in enumerate(tasks, 1):
-            task_title = task.get('title', 'タイトル未設定')
-            description = task.get('description', '説明なし')
-            agent = task.get('agent', 'unknown')
-            execution_type = task.get('execution_type', 'gemini')
-            priority = task.get('priority', 'medium')
-            estimated_hours = task.get('estimated_hours', 0)
-            dependencies = task.get('dependencies', '')
-            
+            task_title = task.get("title", "タイトル未設定")
+            description = task.get("description", "説明なし")
+            agent = task.get("agent", "unknown")
+            execution_type = task.get("execution_type", "gemini")
+            priority = task.get("priority", "medium")
+            estimated_hours = task.get("estimated_hours", 0)
+            dependencies = task.get("dependencies", "")
+
             content += f"""## タスク{i}: {task_title}
 
 **基本情報**
@@ -102,7 +92,7 @@ class TaskExportAgent:
 ---
 
 """
-        
+
         # フッター
         content += f"""
 ## 📊 サマリー
@@ -121,7 +111,7 @@ class TaskExportAgent:
 **生成元**: Gemini AI統合版PM Agent  
 **エクスポート日時**: {datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")}
 """
-        
+
         return content
 
 
@@ -131,9 +121,9 @@ def test_task_exporter():
     print("=" * 70)
     print("🧪 TaskExportAgentのテスト")
     print("=" * 70)
-    
+
     exporter = TaskExportAgent()
-    
+
     # テストデータ
     test_tasks = [
         {
@@ -160,7 +150,7 @@ WordPressのベストプラクティスに従う""",
             "execution_type": "gemini",
             "priority": "high",
             "estimated_hours": 4,
-            "dependencies": ""
+            "dependencies": "",
         },
         {
             "title": "M&A案件CPT実装",
@@ -184,17 +174,13 @@ M&A案件を管理するカスタム投稿タイプを作成
             "execution_type": "wordpress",
             "priority": "medium",
             "estimated_hours": 8,
-            "dependencies": "1"
-        }
+            "dependencies": "1",
+        },
     ]
-    
+
     # エクスポート
-    filepath = exporter.export_tasks(
-        goal_id="4",
-        goal_title="ウズベキスタンM&A案件管理システム構築",
-        tasks=test_tasks
-    )
-    
+    filepath = exporter.export_tasks(goal_id="4", goal_title="ウズベキスタンM&A案件管理システム構築", tasks=test_tasks)
+
     print("\n" + "=" * 70)
     print(f"✅ テスト完了")
     print(f"📄 生成されたファイル: {filepath}")
