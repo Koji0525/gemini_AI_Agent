@@ -173,6 +173,30 @@ class FileVersionManager:
         else:
             # 空ファイル作成（ヘッダー付き）
             header = f'''#!/usr/bin/env python3
+
+    def backup_before_edit(self, file_path: str, reason: str = ""):
+        """修正前の自動バックアップ"""
+        from pathlib import Path
+        from datetime import datetime
+        
+        if not Path(file_path).exists():
+            print(f"❌ ファイルが見つかりません: {file_path}")
+            return False
+        
+        # バックアップディレクトリ作成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        reason_slug = reason.replace(" ", "_") if reason else "backup"
+        backup_dir = Path(f"_BACKUP/{timestamp}_{reason_slug}")
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        
+        # ファイルコピー
+        import shutil
+        dest = backup_dir / Path(file_path).name
+        shutil.copy2(file_path, dest)
+        
+        print(f"✅ バックアップ作成: {dest}")
+        return True
+
 """
 {filename}
 

@@ -488,3 +488,23 @@ Week 11-12| Phase 7 | 統合ダッシュボード          | 目標: 95%
 ## 📝 変更履歴
 
 # エラー修正: Week 5 Day 3
+
+## 🔧 開発時の運用ルール
+
+### ファイル修正時（必須）
+```bash
+# 修正前に必ずバックアップ
+python3 tools/file_version_manager.py \
+    --backup agents/pm_agent/automation_v11_rca.py \
+    --reason "pending取得ロジック修正"
+
+# これにより:
+# 1. _BACKUPにタイムスタンプ付きバックアップ
+# 2. いつでもロールバック可能
+```
+
+### AIへの依頼テンプレート
+```
+ファイルを修正する前に、必ず以下を実行してください：
+python3 tools/file_version_manager.py --backup <ファイルパス> --reason "<修正理由>"
+```

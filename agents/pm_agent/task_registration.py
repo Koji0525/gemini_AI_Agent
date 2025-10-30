@@ -116,7 +116,7 @@ class TaskRegistrationAgent:
             row = [
                 task_id,  # 1. task_id (A)
                 goal_id,  # 2. parent_goal_id (B)
-                task.get("title", ""),  # 3. description (C)
+                task.get("task_name", ""),  # 3. description (C)
                 task.get("required_role", "pm"),  # 4. required_role (D)
                 task.get("status", "pending"),  # 5. status (E)
                 task.get("priority", "medium"),  # 6. priority (F)
