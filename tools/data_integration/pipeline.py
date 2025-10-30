@@ -1,231 +1,115 @@
 #!/usr/bin/env python3
 """
-<<<<<<< HEAD
-データ統合パイプライン - 修正版
-
-統一初期化パターンを適用
-=======
-データ統合パイプライン - 簡易版
-
-循環インポートを防ぐための独立実装
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
+データ統合パイプライン - 複数ソースからデータを統合
+変更理由: 新規作成 - ダッシュボードから呼び出される統合処理
 """
 
-import os
-from typing import List, Dict, Any
+import sys
+from pathlib import Path
 from datetime import datetime
+from typing import Dict, List, Any
+import logging
 
-<<<<<<< HEAD
-from tools.data_integration.models import UnifiedLogEntry
-from tools.data_integration.sources import DataSourceRegistry
-from tools.data_integration.extractors import PatternExtractor, PatternResult
-from tools.sheets_manager import GoogleSheetsManager
-from tools.unified_initializer import init
+# プロジェクトルート設定
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
+try:
+    from tools.sheets_manager import GoogleSheetsManager
+except ImportError:
+    # フォールバック
+    import importlib.util
 
-class DataIntegrationPipeline:
-    """データ統合パイプライン - 統一初期化適用"""
-
-    def __init__(self, config: Dict[str, Any]):
-        """
-        パイプライン初期化 - 統一パターン適用
-=======
-# 相対インポートを使用して循環を防ぐ
-from .models import UnifiedLogEntry
-from .sources import DataSourceRegistry
-from .extractors import PatternExtractor, PatternResult
+    spec = importlib.util.spec_from_file_location("sheets_manager", project_root / "tools" / "sheets_manager.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    GoogleSheetsManager = module.GoogleSheetsManager
 
 
 class DataIntegrationPipeline:
-    """データ統合パイプライン - 簡易版"""
+    """データ統合パイプライン"""
 
     def __init__(self, config: Dict[str, Any]):
-        """
-        パイプライン初期化
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
-
-        Args:
-            config: 設定ファイルの内容
-        """
         self.config = config
-
-<<<<<<< HEAD
-        # 統一初期化パターンでリソースを初期化
-        self.sheets_manager = GoogleSheetsManager(
-            spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="config/service_account.json"
-        )
-
-=======
-        # 動的インポートで循環を防ぐ
-        from tools.sheets_manager import GoogleSheetsManager
-
-        # リソース初期化
+        self.logger = logging.getLogger(__name__)
         self.sheets_manager = GoogleSheetsManager()
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
-        self.source_registry = DataSourceRegistry(config, self.sheets_manager)
-        self.pattern_extractor = PatternExtractor(config.get("pattern_extraction", {}))
+        self.results = {"total_entries": 0, "sources_processed": [], "errors": []}
 
     def run(self) -> Dict[str, Any]:
         """パイプライン実行"""
-        print("🔄 データ統合パイプライン開始")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        self.logger.info("🚀 データ統合パイプライン開始")
 
-        # STEP 1: データ抽出
-        print("📥 STEP 1: データ抽出")
-        all_entries = self._extract_data()
-        print(f"   合計: {len(all_entries)}件")
+        # 各ソースからデータを取得
+        sources = self.config.get("sources", {})
 
-        # STEP 2: パターン抽出
-        print("🔍 STEP 2: パターン抽出")
-        patterns = self._extract_patterns(all_entries)
+        if sources.get("conversation_logs", {}).get("enabled"):
+            self._process_conversation_logs()
 
-        # STEP 3: knowledge_base保存
-        print("💾 STEP 3: knowledge_base保存")
-        saved_count = self._save_to_knowledge_base(all_entries, patterns)
+        if sources.get("spreadsheet_logs", {}).get("enabled"):
+            self._process_spreadsheet_logs()
 
-        # メトリクス集計
-        metrics = {
-            "total_entries": len(all_entries),
-            "saved_count": saved_count,
-            "patterns_found": sum(len(p) for p in patterns.values()),
-            "timestamp": datetime.now(),
-        }
+        self.logger.info("✅ データ統合パイプライン完了")
+        return self.results
 
-        print("✅ パイプライン完了")
-        return metrics
-
-    def _extract_data(self) -> List[UnifiedLogEntry]:
-        """全データソースからデータ抽出"""
-        all_entries = []
-
-        for source in self.source_registry.get_all_sources():
-            source_name = source.__class__.__name__
-            print(f"   🔍 {source_name}...", end="")
-
-            if source.validate():
-                entries = source.extract()
-                print(f" ✅ {len(entries)}件")
-                all_entries.extend(entries)
-            else:
-                print(" ❌ 検証失敗")
-
-        return all_entries
-
-    def _extract_patterns(self, entries: List[UnifiedLogEntry]) -> Dict[str, List[PatternResult]]:
-        """パターン抽出"""
-        patterns = self.pattern_extractor.extract_all_patterns(entries)
-
-        # 結果表示
-        for pattern_type, pattern_list in patterns.items():
-            print(f"   📊 {pattern_type}: {len(pattern_list)}パターン")
-            for pattern in pattern_list:
-                print(f"      • {pattern.name} (信頼度: {pattern.confidence:.2f}, 件数: {pattern.count})")
-
-        return patterns
-
-    def _save_to_knowledge_base(self, entries: List[UnifiedLogEntry], patterns: Dict[str, List[PatternResult]]) -> int:
-        """knowledge_baseに保存"""
-        kb_config = self.config.get("knowledge_base", {})
-        sheet_name = kb_config.get("sheet_name", "knowledge_base")
-        max_entries = kb_config.get("max_entries_per_run", 1000)
-        deduplicate = kb_config.get("deduplicate", True)
-
+    def _process_conversation_logs(self):
+        """会話ログを処理"""
         try:
-            # シート取得または作成
-<<<<<<< HEAD
-            spreadsheet = self.sheets_manager.gc.open_by_key(os.getenv("SPREADSHEET_ID"))
-=======
-            spreadsheet = self.sheets_manager.spreadsheet
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
+            self.logger.info("📝 会話ログを処理中...")
 
-            try:
-                sheet = spreadsheet.worksheet(sheet_name)
-                existing_data = sheet.get_all_values()
-            except:
-                # シートが存在しない場合は作成
-                sheet = spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
-                existing_data = []
+            # knowledge_baseシートからデータ取得
+            kb_data = self.sheets_manager.read_range("knowledge_base")
 
-            # 保存対象エントリを選択
-            entries_to_save = entries[:max_entries]
-
-            if deduplicate and existing_data:
-                # 簡易的な重複除去
-                existing_ids = set()
-                if len(existing_data) > 1:
-                    headers = existing_data[0]
-                    if "source_id" in headers:
-                        id_index = headers.index("source_id")
-                        existing_ids = {row[id_index] for row in existing_data[1:] if len(row) > id_index}
-
-                entries_to_save = [entry for entry in entries_to_save if entry.source_id not in existing_ids]
-
-            # 保存用データ作成
-            if not existing_data:
-                headers = ["timestamp", "source_type", "source_id", "content_type", "content", "metadata"]
-                data_to_save = [headers]
+            if kb_data and len(kb_data) > 1:
+                entries = len(kb_data) - 1  # ヘッダー除く
+                self.results["total_entries"] += entries
+                self.results["sources_processed"].append("conversation_logs")
+                self.logger.info(f"✅ 会話ログ: {entries}件 処理完了")
             else:
-                data_to_save = []
-
-            for entry in entries_to_save:
-                row = [
-                    entry.timestamp.isoformat(),
-                    entry.source_type.value,
-                    entry.source_id,
-                    entry.content_type.value,
-                    entry.content[:500],
-                    str(entry.metadata),
-                ]
-                data_to_save.append(row)
-
-            # 保存実行
-            if len(data_to_save) > (1 if not existing_data else 0):
-                if not existing_data:
-                    sheet.update("A1", data_to_save)
-                else:
-                    sheet.append_rows(data_to_save[1:] if len(data_to_save) > 1 else [])
-
-                print(f"   💾 {len(entries_to_save)}件を{sheet_name}に保存")
-                return len(entries_to_save)
-            else:
-                print("   ⏭️  新しいデータなし（スキップ）")
-                return 0
+                self.logger.warning("⚠️ 会話ログが見つかりません")
 
         except Exception as e:
-            print(f"   ❌ 保存失敗: {e}")
-            return 0
+            error_msg = f"会話ログ処理エラー: {e}"
+            self.logger.error(f"❌ {error_msg}")
+            self.results["errors"].append(error_msg)
+
+    def _process_spreadsheet_logs(self):
+        """スプレッドシートログを処理"""
+        try:
+            self.logger.info("📊 スプレッドシートログを処理中...")
+
+            # task_execution_logシートからデータ取得
+            task_data = self.sheets_manager.read_range("task_execution_log")
+
+            if task_data and len(task_data) > 1:
+                entries = len(task_data) - 1  # ヘッダー除く
+                self.results["total_entries"] += entries
+                self.results["sources_processed"].append("spreadsheet_logs")
+                self.logger.info(f"✅ タスクログ: {entries}件 処理完了")
+            else:
+                self.logger.warning("⚠️ タスクログが見つかりません")
+
+        except Exception as e:
+            error_msg = f"スプレッドシートログ処理エラー: {e}"
+            self.logger.error(f"❌ {error_msg}")
+            self.results["errors"].append(error_msg)
 
 
-<<<<<<< HEAD
-# 統一初期化パターンを使用した代替ファクトリ
 def create_pipeline(config: Dict[str, Any]) -> DataIntegrationPipeline:
-    """パイプライン作成ファクトリ - 統一パターン"""
-=======
-def create_pipeline(config: Dict[str, Any]) -> DataIntegrationPipeline:
-    """パイプライン作成ファクトリ"""
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
+    """パイプラインを作成"""
     return DataIntegrationPipeline(config)
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     # テスト実行
-    config = {"sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}}}
+    logging.basicConfig(level=logging.INFO)
 
-    pipeline = create_pipeline(config)
+    test_config = {"sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}}}
+
+    pipeline = create_pipeline(test_config)
     results = pipeline.run()
-    print(f"実行結果: {results}")
-=======
-    # テスト実行用の設定
-    config = {
-        "sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}},
-        "knowledge_base": {"sheet_name": "knowledge_base_test"},
-    }
 
-    try:
-        pipeline = create_pipeline(config)
-        results = pipeline.run()
-        print(f"🎯 実行結果: {results}")
-    except Exception as e:
-        print(f"❌ パイプライン実行失敗: {e}")
->>>>>>> 1ae43e3 (🔧 ツール追加: 認証管理、自動リトライ、データ可視化、エンタープライズパス解決)
+    print("\n📊 パイプライン実行結果:")
+    print(f"   処理データ数: {results['total_entries']}件")
+    print(f"   処理ソース: {', '.join(results['sources_processed'])}")
+    if results["errors"]:
+        print(f"   エラー: {len(results['errors'])}件")

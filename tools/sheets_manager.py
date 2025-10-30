@@ -1,222 +1,163 @@
 #!/usr/bin/env python3
 """
-Google Sheets Manager - 企業対応版
-
-企業レベルの信頼性と保守性を実現
+Google Sheets Manager - 環境変数統一版
+変更理由: GOOGLE_SERVICE_ACCOUNT_FILE に統一して.envと整合
 """
 
 import os
-import gspread
-from google.oauth2 import service_account
-from typing import Dict, Any, List, Optional
+import sys
 from pathlib import Path
+from typing import Optional, List
+import logging
 
-from tools.enterprise_path_resolver import resolve_path, get_environment_info
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# 環境変数読み込み
+try:
+    from dotenv import load_dotenv
+
+    env_paths = [project_root / ".env", Path.cwd() / ".env"]
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+            break
+except ImportError:
+    print("⚠️ python-dotenvをインストール中...")
+    import subprocess
+
+    subprocess.run([sys.executable, "-m", "pip", "install", "python-dotenv", "--break-system-packages"], check=True)
+    from dotenv import load_dotenv
+
+    load_dotenv(project_root / ".env", override=True)
+
+# Google APIライブラリ
+try:
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
+except ImportError:
+    print("⚠️ Google APIライブラリをインストール中...")
+    import subprocess
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "google-api-python-client",
+            "google-auth-httplib2",
+            "google-auth-oauthlib",
+            "--break-system-packages",
+        ],
+        check=True,
+    )
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
 
 
-class EnterpriseSheetsManager:
-    """
-    Google Sheets操作マネージャー - 企業対応版
+class GoogleSheetsManager:
+    """Google Sheetsマネージャー（環境変数統一版）"""
 
-    特徴:
-    - 企業レベルのエラーハンドリング
-    - 詳細な監査ログ
-    - マルチ環境対応
-    - 自動リトライ機能
-    """
+    def __init__(self, spreadsheet_id: Optional[str] = None):
+        self.logger = logging.getLogger(__name__)
 
-    def __init__(self, spreadsheet_id: str = None, service_account_path: str = None):
-        self.logger = self._setup_logger()
-        self.logger.info("🏢 EnterpriseSheetsManager 初期化開始")
-
-        # 企業レベルの設定解決
+        # 環境変数から取得（統一名称）
         self.spreadsheet_id = spreadsheet_id or os.getenv("SPREADSHEET_ID")
-        self.service_account_path = service_account_path
+        self.service_account_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json")
 
-        self._validate_enterprise_config()
+        self._validate_config()
+        self.service = self._initialize_service()
 
-        # 企業レベルの初期化
-        self.gc = self._initialize_enterprise_client()
-        self.spreadsheet = self._connect_to_spreadsheet_enterprise()
+    def _validate_config(self):
+        """設定検証"""
+        errors = []
 
-        self.logger.info("✅ EnterpriseSheetsManager 初期化完了")
-
-    def _setup_logger(self):
-        """企業レベルのログ設定"""
-        import logging
-
-        logger = logging.getLogger("EnterpriseSheetsManager")
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-            logger.setLevel(logging.INFO)
-        return logger
-
-    def _validate_enterprise_config(self):
-        """企業レベルの設定検証"""
-        self.logger.info("🔍 企業設定を検証中...")
-
-        # スプレッドシートIDの検証
         if not self.spreadsheet_id:
-            raise ValueError(
-                "🚨 スプレッドシートIDが設定されていません\n"
-                "💡 環境変数 SPREADSHEET_ID を設定してください\n"
-                "   export SPREADSHEET_ID=your_spreadsheet_id"
-            )
+            errors.append("SPREADSHEET_ID が未設定")
 
-        self.logger.info(f"📊 スプレッドシートID: {self.spreadsheet_id}")
-
-        # サービスアカウントパスの解決
-        try:
-            resolved_path = resolve_path(self.service_account_path)
-            self.service_account_path = str(resolved_path)
-            self.logger.info(f"🔐 サービスアカウントパス: {self.service_account_path}")
-        except FileNotFoundError as e:
-            self.logger.error("❌ サービスアカウントファイルの解決に失敗")
-            # 環境情報を提供してから再エラー
-            env_info = get_environment_info()
-            self.logger.info("�� 環境情報:\n" + str(env_info))
-            raise
-
-    def _initialize_enterprise_client(self) -> gspread.Client:
-        """企業レベルのクライアント初期化"""
-        self.logger.info("🔐 企業認証を初期化中...")
-
-        try:
-            # サービスアカウント認証
-            credentials = service_account.Credentials.from_service_account_file(
-                self.service_account_path,
-                scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
-            )
-
-            gc = gspread.authorize(credentials)
-            self.logger.info("✅ 企業認証で Google Sheets に接続しました")
-            return gc
-
-        except Exception as e:
-            self.logger.error(f"❌ 企業認証に失敗: {e}")
-            self._log_enterprise_troubleshooting()
-            raise
-
-    def _connect_to_spreadsheet_enterprise(self):
-        """企業レベルのスプレッドシート接続"""
-        self.logger.info(f"📊 スプレッドシートに接続中: {self.spreadsheet_id}")
-
-        try:
-            spreadsheet = self.gc.open_by_key(self.spreadsheet_id)
-            self.logger.info("✅ スプレッドシートに接続しました")
-
-            # 監査ログ: 利用可能なシート
-            worksheets = spreadsheet.worksheets()
-            self.logger.info(f"📋 利用可能なシート: {[ws.title for ws in worksheets]}")
-
-            return spreadsheet
-
-        except Exception as e:
-            self.logger.error(f"❌ スプレッドシート接続失敗: {e}")
-            self._log_spreadsheet_troubleshooting()
-            raise
-
-    def _log_enterprise_troubleshooting(self):
-        """企業レベルの認証トラブルシューティング"""
-        self.logger.info("🔧 企業トラブルシューティングガイド:")
-
-        troubleshooting_steps = [
-            "1. 🔐 サービスアカウントファイルの確認:",
-            f"   ls -la {self.service_account_path}",
-            "2. 🌐 環境変数の確認:",
-            "   env | grep GOOGLE",
-            "   env | grep SPREADSHEET",
-            "3. 📁 ファイル権限の確認:",
-            f"   ls -la $(dirname {self.service_account_path})/",
-            "4. 🏢 企業設定の確認:",
-            "   python3 tools/enterprise_path_resolver.py",
-        ]
-
-        for step in troubleshooting_steps:
-            self.logger.info(f"   {step}")
-
-    def _log_spreadsheet_troubleshooting(self):
-        """企業レベルのスプレッドシートトラブルシューティング"""
-        self.logger.info("🔧 スプレッドシートトラブルシューティング:")
-
-        steps = [
-            "1. 🔗 スプレッドシートIDが正しいか確認",
-            "2. 👥 サービスアカウントにアクセス権限があるか確認",
-            "3. 🌐 ネットワーク接続を確認",
-            "4. 🏢 企業ポリシーを確認 (ドメイン制限など)",
-        ]
-
-        for step in steps:
-            self.logger.info(f"   {step}")
-
-    def get_worksheet(self, sheet_name: str):
-        """ワークシートを取得（企業版）"""
-        try:
-            worksheet = self.spreadsheet.worksheet(sheet_name)
-            self.logger.info(f"✅ ワークシートを取得: {sheet_name}")
-            return worksheet
-        except Exception as e:
-            self.logger.warning(f"⚠️  ワークシート '{sheet_name}' が見つかりません: {e}")
-            return None
-
-    def read_range(self, sheet_name: str, range_name: str = None) -> List[List[Any]]:
-        """範囲を読み取り（企業版）"""
-        worksheet = self.get_worksheet(sheet_name)
-        if not worksheet:
-            return []
-
-        try:
-            if range_name:
-                data = worksheet.get(range_name)
+        service_account_path = Path(self.service_account_file)
+        if not service_account_path.exists():
+            # プロジェクトルートからの相対パスも試す
+            alt_path = project_root / self.service_account_file
+            if alt_path.exists():
+                self.service_account_file = str(alt_path)
             else:
-                data = worksheet.get_all_values()
+                errors.append(f"認証ファイルが見つかりません: {self.service_account_file}")
 
-            self.logger.info(f"✅ データを読み取り: {sheet_name} ({len(data)}行)")
-            return data
+        if errors:
+            self.logger.error("🚨 設定エラー:")
+            for error in errors:
+                self.logger.error(f"   • {error}")
+            self.logger.error("\n💡 .envファイルを確認してください:")
+            self.logger.error(f"   SPREADSHEET_ID={os.getenv('SPREADSHEET_ID', '未設定')}")
+            self.logger.error(f"   GOOGLE_SERVICE_ACCOUNT_FILE={os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', '未設定')}")
+            raise ValueError(f"{len(errors)}件の設定エラー")
+
+    def _initialize_service(self):
+        """Google Sheets API初期化"""
+        try:
+            scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+            credentials = Credentials.from_service_account_file(self.service_account_file, scopes=scopes)
+            return build("sheets", "v4", credentials=credentials)
         except Exception as e:
-            self.logger.error(f"❌ データ読み取り失敗: {sheet_name} - {e}")
-            return []
+            self.logger.error(f"❌ API初期化エラー: {e}")
+            raise
 
-    def write_range(self, sheet_name: str, data: List[List[Any]], range_name: str = "A1"):
-        """範囲に書き込み（企業版）"""
-        worksheet = self.get_worksheet(sheet_name)
-        if worksheet:
-            try:
-                worksheet.update(range_name, data)
-                self.logger.info(f"✅ データを書き込み: {sheet_name} {range_name}")
-            except Exception as e:
-                self.logger.error(f"❌ データ書き込み失敗: {sheet_name} - {e}")
+    def read_range(self, range_name: str) -> List[List[str]]:
+        """範囲読み取り"""
+        try:
+            result = (
+                self.service.spreadsheets().values().get(spreadsheetId=self.spreadsheet_id, range=range_name).execute()
+            )
+            return result.get("values", [])
+        except Exception as e:
+            self.logger.error(f"❌ 読み取りエラー: {e}")
+            raise
+
+    def write_range(self, range_name: str, values: List[List[str]]):
+        """範囲書き込み"""
+        try:
+            body = {"values": values}
+            return (
+                self.service.spreadsheets()
+                .values()
+                .update(spreadsheetId=self.spreadsheet_id, range=range_name, valueInputOption="RAW", body=body)
+                .execute()
+            )
+        except Exception as e:
+            self.logger.error(f"❌ 書き込みエラー: {e}")
+            raise
+
+    def append_rows(self, range_name: str, values: List[List[str]]):
+        """行追加"""
+        try:
+            body = {"values": values}
+            return (
+                self.service.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=self.spreadsheet_id,
+                    range=range_name,
+                    valueInputOption="RAW",
+                    insertDataOption="INSERT_ROWS",
+                    body=body,
+                )
+                .execute()
+            )
+        except Exception as e:
+            self.logger.error(f"❌ 追加エラー: {e}")
+            raise
 
 
-# 後方互換性のためのエイリアス
-GoogleSheetsManager = EnterpriseSheetsManager
-
-
-def create_sheets_manager(spreadsheet_id: str = None, service_account_file: str = None) -> EnterpriseSheetsManager:
-    """SheetsManagerを作成（企業版）"""
-    return EnterpriseSheetsManager(spreadsheet_id, service_account_file)
-
-
-def get_default_sheets_manager() -> EnterpriseSheetsManager:
-    """デフォルトのSheetsManagerを取得（企業版）"""
-    return EnterpriseSheetsManager()
-
+# エイリアス
+EnterpriseSheetsManager = GoogleSheetsManager
 
 if __name__ == "__main__":
-    # 企業レベルのテスト実行
+    logging.basicConfig(level=logging.INFO)
+    print("🧪 GoogleSheetsManager テスト")
     try:
-        print("🏢 EnterpriseSheetsManager テスト開始...")
-        manager = EnterpriseSheetsManager()
-        print("✅ EnterpriseSheetsManager テスト成功")
-
-        # 環境レポートを表示
-        env_info = get_environment_info()
-        print("\n📊 環境レポート:")
-        for key, value in env_info.items():
-            print(f"  {key}: {value}")
-
+        manager = GoogleSheetsManager()
+        print(f"✅ 初期化成功: {manager.spreadsheet_id[:20]}...")
     except Exception as e:
-        print(f"❌ EnterpriseSheetsManager テスト失敗: {e}")
+        print(f"❌ エラー: {e}")
