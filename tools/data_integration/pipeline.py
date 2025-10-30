@@ -1,204 +1,178 @@
 #!/usr/bin/env python3
 """
-データ統合パイプライン（レート制限対策版）
+データ統合パイプライン - 修正版
 
-全てのログソースからナレッジを抽出し、
-knowledge_baseに統合する
+統一初期化パターンを適用
 """
 
-import sys
 import os
-import time
 from typing import List, Dict, Any
 from datetime import datetime
 
-sys.path.insert(0, '/workspaces/gemini_AI_Agent')
-
-from dotenv import load_dotenv
-load_dotenv('.env')
-
-from tools.data_integration.models import UnifiedLogEntry, IntegrationMetrics
+from tools.data_integration.models import UnifiedLogEntry
 from tools.data_integration.sources import DataSourceRegistry
-from tools.data_integration.extractors import PatternExtractor
-from tools.data_integration.rate_limiter import RateLimiter, batch_write
+from tools.data_integration.extractors import PatternExtractor, PatternResult
 from tools.sheets_manager import GoogleSheetsManager
+from tools.unified_initializer import init
+
 
 class DataIntegrationPipeline:
-    """データ統合パイプライン"""
-    
-    def __init__(self, config: Dict[str, Any], sheets_manager: GoogleSheetsManager):
+    """データ統合パイプライン - 統一初期化適用"""
+
+    def __init__(self, config: Dict[str, Any]):
+        """
+        パイプライン初期化 - 統一パターン適用
+
+        Args:
+            config: 設定ファイルの内容
+        """
         self.config = config
-        self.sheets_manager = sheets_manager
-        self.spreadsheet = sheets_manager.gc.open_by_key(os.getenv("SPREADSHEET_ID"))
-        
-        # コンポーネント初期化
-        self.source_registry = DataSourceRegistry(config, sheets_manager)
-        self.pattern_extractor = PatternExtractor(config)
-        self.rate_limiter = RateLimiter(max_retries=5, base_delay=3.0)
-        
-        # バッチサイズ（設定ファイルから取得）
-        self.batch_size = config.get('global', {}).get('batch_size', 50)
-        
-        # メトリクス
-        self.metrics = IntegrationMetrics()
-    
-    def run(self) -> IntegrationMetrics:
+
+        # 統一初期化パターンでリソースを初期化
+        self.sheets_manager = GoogleSheetsManager(
+            spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="config/service_account.json"
+        )
+
+        self.source_registry = DataSourceRegistry(config, self.sheets_manager)
+        self.pattern_extractor = PatternExtractor(config.get("pattern_extraction", {}))
+
+    def run(self) -> Dict[str, Any]:
         """パイプライン実行"""
-        
-        start_time = time.time()
-        
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("🔄 データ統合パイプライン開始")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print()
-        
+
         # STEP 1: データ抽出
         print("📥 STEP 1: データ抽出")
-        all_entries = self._extract_all_data()
+        all_entries = self._extract_data()
         print(f"   合計: {len(all_entries)}件")
-        print()
-        
+
         # STEP 2: パターン抽出
         print("🔍 STEP 2: パターン抽出")
         patterns = self._extract_patterns(all_entries)
-        print(f"   失敗パターン: {len(patterns['failure_patterns'])}件")
-        print(f"   修正レシピ: {len(patterns['fix_recipes'])}件")
-        print(f"   成功パターン: {len(patterns['success_patterns'])}件")
-        print()
-        
-        # STEP 3: knowledge_base に保存（バッチ書き込み）
-        print("💾 STEP 3: knowledge_base に保存（バッチ処理）")
-        saved_count = self._save_to_knowledge_base_batch(patterns)
-        print(f"   保存完了: {saved_count}件")
-        print()
-        
-        # メトリクス計算
-        self.metrics.execution_time = time.time() - start_time
-        self.metrics.total_entries = len(all_entries)
-        self.metrics.patterns_extracted = {
-            'failure_patterns': len(patterns['failure_patterns']),
-            'fix_recipes': len(patterns['fix_recipes']),
-            'success_patterns': len(patterns['success_patterns'])
+
+        # STEP 3: knowledge_base保存
+        print("💾 STEP 3: knowledge_base保存")
+        saved_count = self._save_to_knowledge_base(all_entries, patterns)
+
+        # メトリクス集計
+        metrics = {
+            "total_entries": len(all_entries),
+            "saved_count": saved_count,
+            "patterns_found": sum(len(p) for p in patterns.values()),
+            "timestamp": datetime.now(),
         }
-        
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("✅ 統合完了")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        
-        self._print_summary()
-        
-        return self.metrics
-    
-    def _extract_all_data(self) -> List[UnifiedLogEntry]:
-        """全データソースから抽出"""
-        
+
+        print("✅ パイプライン完了")
+        return metrics
+
+    def _extract_data(self) -> List[UnifiedLogEntry]:
+        """全データソースからデータ抽出"""
         all_entries = []
-        sources = self.source_registry.get_all_sources()
-        
-        for source in sources:
+
+        for source in self.source_registry.get_all_sources():
             source_name = source.__class__.__name__
-            
-            if not source.validate():
-                print(f"   ⚠️  {source_name}: 利用不可")
-                continue
-            
-            try:
+            print(f"   🔍 {source_name}...", end="")
+
+            if source.validate():
                 entries = source.extract()
+                print(f" ✅ {len(entries)}件")
                 all_entries.extend(entries)
-                
-                # メトリクス更新
-                self.metrics.entries_by_source[source_name] = len(entries)
-                
-                print(f"   ✅ {source_name}: {len(entries)}件")
-            except Exception as e:
-                print(f"   ❌ {source_name}: エラー - {e}")
-                self.metrics.errors.append(f"{source_name}: {e}")
-        
+            else:
+                print(" ❌ 検証失敗")
+
         return all_entries
-    
-    def _extract_patterns(self, entries: List[UnifiedLogEntry]) -> Dict[str, List[Dict]]:
+
+    def _extract_patterns(self, entries: List[UnifiedLogEntry]) -> Dict[str, List[PatternResult]]:
         """パターン抽出"""
-        
-        return self.pattern_extractor.extract_all_patterns(entries)
-    
-    def _save_to_knowledge_base_batch(self, patterns: Dict[str, List[Dict]]) -> int:
-        """
-        knowledge_baseに保存（バッチ書き込み版）
-        
-        レート制限対策:
-        - バッチサイズ単位で書き込み
-        - Exponential Backoff
-        - 自動リトライ
-        """
-        
-        kb_sheet = self.spreadsheet.worksheet('knowledge_base')
-        
-        # 全パターンを1つのリストにまとめる
-        all_rows = []
-        row_counter = 0
-        
+        patterns = self.pattern_extractor.extract_all_patterns(entries)
+
+        # 結果表示
         for pattern_type, pattern_list in patterns.items():
+            print(f"   📊 {pattern_type}: {len(pattern_list)}パターン")
             for pattern in pattern_list:
-                kb_id = f"KB_{pattern_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{row_counter}"
-                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                
+                print(f"      • {pattern.name} (信頼度: {pattern.confidence:.2f}, 件数: {pattern.count})")
+
+        return patterns
+
+    def _save_to_knowledge_base(self, entries: List[UnifiedLogEntry], patterns: Dict[str, List[PatternResult]]) -> int:
+        """knowledge_baseに保存"""
+        kb_config = self.config.get("knowledge_base", {})
+        sheet_name = kb_config.get("sheet_name", "knowledge_base")
+        max_entries = kb_config.get("max_entries_per_run", 1000)
+        deduplicate = kb_config.get("deduplicate", True)
+
+        try:
+            # シート取得または作成
+            spreadsheet = self.sheets_manager.gc.open_by_key(os.getenv("SPREADSHEET_ID"))
+
+            try:
+                sheet = spreadsheet.worksheet(sheet_name)
+                existing_data = sheet.get_all_values()
+            except:
+                # シートが存在しない場合は作成
+                sheet = spreadsheet.add_worksheet(title=sheet_name, rows=1000, cols=10)
+                existing_data = []
+
+            # 保存対象エントリを選択
+            entries_to_save = entries[:max_entries]
+
+            if deduplicate and existing_data:
+                # 簡易的な重複除去
+                existing_ids = set()
+                if len(existing_data) > 1:
+                    headers = existing_data[0]
+                    if "source_id" in headers:
+                        id_index = headers.index("source_id")
+                        existing_ids = {row[id_index] for row in existing_data[1:] if len(row) > id_index}
+
+                entries_to_save = [entry for entry in entries_to_save if entry.source_id not in existing_ids]
+
+            # 保存用データ作成
+            if not existing_data:
+                headers = ["timestamp", "source_type", "source_id", "content_type", "content", "metadata"]
+                data_to_save = [headers]
+            else:
+                data_to_save = []
+
+            for entry in entries_to_save:
                 row = [
-                    kb_id,
-                    timestamp,
-                    pattern['knowledge_type'],
-                    pattern.get('source', 'data_integration'),
-                    str(pattern),
-                    pattern.get('context', ''),
-                    '',
-                    pattern.get('confidence', 0.8),
-                    0,
-                    0,
-                    '',
-                    ','.join(pattern.get('tags', [])) if isinstance(pattern.get('tags', []), list) else '',
-                    ''
+                    entry.timestamp.isoformat(),
+                    entry.source_type.value,
+                    entry.source_id,
+                    entry.content_type.value,
+                    entry.content[:500],
+                    str(entry.metadata),
                 ]
-                
-                all_rows.append(row)
-                row_counter += 1
-        
-        # バッチ書き込み（レート制限対策付き）
-        if all_rows:
-            print(f"   総件数: {len(all_rows)}件")
-            print(f"   バッチサイズ: {self.batch_size}件")
-            print()
-            
-            batch_write(
-                data=all_rows,
-                sheet=kb_sheet,
-                batch_size=self.batch_size,
-                rate_limiter=self.rate_limiter
-            )
-        
-        return len(all_rows)
-    
-    def _print_summary(self):
-        """サマリー表示"""
-        
-        print()
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("📊 統合サマリー")
-        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print()
-        
-        print("データソース別:")
-        for source, count in self.metrics.entries_by_source.items():
-            print(f"   {source}: {count}件")
-        
-        print()
-        print("パターン抽出:")
-        for pattern_type, count in self.metrics.patterns_extracted.items():
-            print(f"   {pattern_type}: {count}件")
-        
-        print()
-        print(f"実行時間: {self.metrics.execution_time:.2f}秒")
-        
-        if self.metrics.errors:
-            print()
-            print("エラー:")
-            for error in self.metrics.errors:
-                print(f"   ⚠️  {error}")
+                data_to_save.append(row)
+
+            # 保存実行
+            if len(data_to_save) > (1 if not existing_data else 0):
+                if not existing_data:
+                    sheet.update("A1", data_to_save)
+                else:
+                    sheet.append_rows(data_to_save[1:] if len(data_to_save) > 1 else [])
+
+                print(f"   💾 {len(entries_to_save)}件を{sheet_name}に保存")
+                return len(entries_to_save)
+            else:
+                print("   ⏭️  新しいデータなし（スキップ）")
+                return 0
+
+        except Exception as e:
+            print(f"   ❌ 保存失敗: {e}")
+            return 0
+
+
+# 統一初期化パターンを使用した代替ファクトリ
+def create_pipeline(config: Dict[str, Any]) -> DataIntegrationPipeline:
+    """パイプライン作成ファクトリ - 統一パターン"""
+    return DataIntegrationPipeline(config)
+
+
+if __name__ == "__main__":
+    # テスト実行
+    config = {"sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}}}
+
+    pipeline = create_pipeline(config)
+    results = pipeline.run()
+    print(f"実行結果: {results}")
