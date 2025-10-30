@@ -45,34 +45,21 @@ class WordPressDevAgent:
 
         try:
             # タスク内容に応じて適切なエージェントに振り分け
-            if any(
-                keyword in description_lower
-                for keyword in ["cpt", "custom post type", "カスタム投稿"]
-            ):
+            if any(keyword in description_lower for keyword in ["cpt", "custom post type", "カスタム投稿"]):
                 print("📝 CPTエージェントで処理中...")
                 result = await self.cpt_agent.create_cpt_from_description(description)
                 return {"status": "success", "output": result}
 
             elif any(
-                keyword in description_lower
-                for keyword in ["acf", "advanced custom fields", "カスタムフィールド"]
+                keyword in description_lower for keyword in ["acf", "advanced custom fields", "カスタムフィールド"]
             ):
                 print("📝 ACFエージェントで処理中...")
-                result = await self.acf_agent.configure_acf_from_description(
-                    description
-                )
+                result = await self.acf_agent.configure_acf_from_description(description)
                 return {"status": "success", "output": result}
 
-            elif any(
-                keyword in description_lower
-                for keyword in ["要件", "requirements", "仕様"]
-            ):
+            elif any(keyword in description_lower for keyword in ["要件", "requirements", "仕様"]):
                 print("📝 要件定義エージェントで処理中...")
-                result = (
-                    await self.requirements_agent.create_requirements_from_description(
-                        description
-                    )
-                )
+                result = await self.requirements_agent.create_requirements_from_description(description)
                 return {"status": "success", "output": result}
 
             else:

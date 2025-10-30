@@ -18,14 +18,14 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # プロジェクトルートをパスに追加
-sys.path.insert(0, '/workspaces/gemini_AI_Agent')
+sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
 from configuration.config_loader import ConfigLoader
 
 
 class ConfigValidator:
     """設定確認を実行するクラス（Phase 1）"""
-    
+
     def __init__(self):
         """初期化"""
         self.config = ConfigLoader()
@@ -35,68 +35,68 @@ class ConfigValidator:
             "site_info": {},
             "agents": {},
             "errors": [],
-            "report_path": ""
+            "report_path": "",
         }
-    
+
     async def run_validation(self) -> Dict[str, Any]:
         """
         設定確認を実行
-        
+
         Returns:
             Dict: 確認結果
         """
         print("=" * 80)
         print("🚀 Phase 1: 基本的な設定確認を開始します (v1.2)")
         print("=" * 80)
-        
+
         # 1. WordPress接続テスト
         print("\n📡 STEP 1: WordPress接続テスト")
         await self._test_wordpress_connection()
-        
+
         # 2. サイト情報取得
         print("\n📊 STEP 2: サイト情報取得")
         await self._fetch_site_info()
-        
+
         # 3. エージェント状態確認
         print("\n🤖 STEP 3: エージェント状態確認")
         await self._check_agent_status()
-        
+
         # 4. 重要モジュールの確認
         print("\n🔧 STEP 4: 重要モジュール確認")
         await self._check_important_modules()
-        
+
         # 5. 結果サマリー表示
         print("\n" + "=" * 80)
         print("✅ Phase 1: 設定確認が完了しました")
         print("=" * 80)
         self._print_summary()
-        
+
         return self.validation_result
-    
+
     async def _test_wordpress_connection(self) -> None:
         """WordPress接続テスト"""
         try:
             wp_url = self.config._config.get("WP_URL")
             wp_user = self.config._config.get("wp_user")
             wp_pass = self.config._config.get("wp_pass")
-            
+
             if not all([wp_url, wp_user, wp_pass]):
                 self.validation_result["wp_connection"] = {
                     "status": "failed",
-                    "error": "WordPress設定が不完全です (.env を確認)"
+                    "error": "WordPress設定が不完全です (.env を確認)",
                 }
                 print("❌ WordPress設定が不完全です")
                 return
-            
+
             # 基本的な接続テスト
             print(f"   URL: {wp_url}")
             response = requests.get(wp_url, timeout=10)
-            
+
             if response.status_code == 200:
                 self.validation_result["wp_connection"] = {
                     "status": "success",
                     "url": wp_url,
-                    "status_code": response.status_code
+                    "status_code": response.status_code,
                 }
                 print(f"✅ WordPress接続成功 (Status: {response.status_code})")
             else:
@@ -104,60 +104,50 @@ class ConfigValidator:
                     "status": "warning",
                     "url": wp_url,
                     "status_code": response.status_code,
-                    "error": f"予期しないステータスコード: {response.status_code}"
+                    "error": f"予期しないステータスコード: {response.status_code}",
                 }
                 print(f"⚠️  接続成功だが予期しないステータス: {response.status_code}")
-                
+
         except Exception as e:
-            self.validation_result["wp_connection"] = {
-                "status": "failed",
-                "error": str(e)
-            }
+            self.validation_result["wp_connection"] = {"status": "failed", "error": str(e)}
             print(f"❌ WordPress接続失敗: {e}")
             self.validation_result["errors"].append(f"WordPress接続: {e}")
-    
+
     async def _fetch_site_info(self) -> None:
         """サイト情報取得"""
         try:
             wp_url = self.config._config.get("WP_URL")
             wp_user = self.config._config.get("wp_user")
             wp_pass = self.config._config.get("wp_pass")
-            
+
             if self.validation_result["wp_connection"].get("status") != "success":
                 print("⏭️  WordPress接続が成功していないため、スキップします")
                 return
-            
+
             # REST API エンドポイント
             api_base = f"{wp_url}/wp-json/wp/v2"
             auth = (wp_user, wp_pass)
-            
+
             # REST API利用可能性チェック
             try:
                 response = requests.get(api_base, auth=auth, timeout=10)
                 if response.status_code in [200, 401]:  # 401も接続は成功
-                    self.validation_result["rest_api"] = {
-                        "available": True,
-                        "limited": response.status_code == 401
-                    }
+                    self.validation_result["rest_api"] = {"available": True, "limited": response.status_code == 401}
                     print(f"✅ REST API利用可能")
                     if response.status_code == 401:
                         print("   ℹ️  認証が必要な操作は制限される可能性があります")
                 else:
-                    self.validation_result["rest_api"] = {
-                        "available": False
-                    }
+                    self.validation_result["rest_api"] = {"available": False}
                     print(f"❌ REST API利用不可 (Status: {response.status_code})")
                     return
             except Exception as e:
-                self.validation_result["rest_api"] = {
-                    "available": False
-                }
+                self.validation_result["rest_api"] = {"available": False}
                 print(f"❌ REST APIチェック失敗: {e}")
                 return
-            
+
             # サイト情報を取得
             site_info = {}
-            
+
             # 投稿タイプ取得
             try:
                 response = requests.get(f"{api_base}/types", auth=auth, timeout=10)
@@ -169,7 +159,7 @@ class ConfigValidator:
                     print(f"   ⚠️  投稿タイプ取得失敗 (Status: {response.status_code})")
             except Exception as e:
                 print(f"   ⚠️  投稿タイプ取得エラー: {e}")
-            
+
             # プラグイン情報取得（401エラーは正常動作の範囲内）
             try:
                 response = requests.get(f"{wp_url}/wp-json/wp/v2/plugins", auth=auth, timeout=10)
@@ -185,7 +175,7 @@ class ConfigValidator:
                     print(f"   ⚠️  プラグイン情報取得失敗 (Status: {response.status_code})")
             except Exception as e:
                 print(f"   ⚠️  プラグイン情報取得エラー: {e}")
-            
+
             # テーマ情報取得（401エラーは正常動作の範囲内）
             try:
                 response = requests.get(f"{api_base}/themes", auth=auth, timeout=10)
@@ -196,7 +186,7 @@ class ConfigValidator:
                         if active_theme:
                             site_info["theme"] = {
                                 "name": active_theme.get("name", "Unknown"),
-                                "version": active_theme.get("version", "Unknown")
+                                "version": active_theme.get("version", "Unknown"),
                             }
                             print(f"   🎨 テーマ: {active_theme.get('name')}")
                 elif response.status_code == 401:
@@ -207,25 +197,25 @@ class ConfigValidator:
                     print(f"   ⚠️  テーマ情報取得失敗 (Status: {response.status_code})")
             except Exception as e:
                 print(f"   ⚠️  テーマ情報取得エラー: {e}")
-            
+
             self.validation_result["site_info"] = site_info
-            
+
         except Exception as e:
             print(f"❌ サイト情報取得失敗: {e}")
             self.validation_result["errors"].append(f"サイト情報取得: {e}")
-    
+
     async def _check_agent_status(self) -> None:
         """エージェント状態確認（実際に存在するファイルのみ）"""
         try:
             agents_status = {}
-            
+
             # 実装済みWordPressエージェント
             implemented_agents = [
                 ("wp_design_agent", "agents/wordpress/wp_design_agent.py"),
                 ("wp_design_generator", "agents/wordpress/wp_design_generator.py"),
                 ("wp_orchestrator", "agents/wordpress/wp_orchestrator.py"),
             ]
-            
+
             # 計画中のエージェント（未実装）
             planned_agents = [
                 ("wp_cpt_agent", "agents/wordpress/specialized/wp_cpt_agent.py"),
@@ -237,7 +227,7 @@ class ConfigValidator:
                 ("wp_post_editor", "agents/wordpress/wp_post_editor.py"),
                 ("wp_post_creator", "agents/wordpress/wp_post_creator.py"),
             ]
-            
+
             print("   --- 実装済みエージェント ---")
             for agent_name, agent_file in implemented_agents:
                 full_path = f"/workspaces/gemini_AI_Agent/{agent_file}"
@@ -253,7 +243,7 @@ class ConfigValidator:
                 else:
                     agents_status[agent_name] = "not_found"
                     print(f"   ❌ {agent_name}: ファイルが見つかりません")
-            
+
             print("   --- 計画中エージェント（未実装） ---")
             planned_count = 0
             for agent_name, agent_file in planned_agents:
@@ -271,27 +261,27 @@ class ConfigValidator:
                     agents_status[agent_name] = "planned"
                     print(f"   📋 {agent_name}: 未実装")
                     planned_count += 1
-            
+
             print(f"   └─ 未実装エージェント: {planned_count}個")
-            
+
             self.validation_result["agents"] = agents_status
-            
+
         except Exception as e:
             print(f"❌ エージェント状態確認失敗: {e}")
             self.validation_result["errors"].append(f"エージェント確認: {e}")
-    
+
     async def _check_important_modules(self) -> None:
         """重要モジュールの確認"""
         try:
             modules_status = {}
-            
+
             important_modules = [
                 ("SheetsManager", "tools/sheets_manager.py"),
                 ("BrowserController", "browser_control/browser_controller.py"),
                 ("ConfigLoader", "configuration/config_loader.py"),
                 ("GeminiAPIClient", "browser_control/gemini_api_client.py"),
             ]
-            
+
             for module_name, module_file in important_modules:
                 full_path = f"/workspaces/gemini_AI_Agent/{module_file}"
                 if os.path.exists(full_path):
@@ -305,41 +295,41 @@ class ConfigValidator:
                 else:
                     modules_status[module_name] = "not_found"
                     print(f"   ❌ {module_name}: ファイルが見つかりません")
-            
+
             # 結果に追加
             if "modules" not in self.validation_result:
                 self.validation_result["modules"] = {}
             self.validation_result["modules"] = modules_status
-            
+
         except Exception as e:
             print(f"❌ 重要モジュール確認失敗: {e}")
             self.validation_result["errors"].append(f"モジュール確認: {e}")
-    
+
     def _print_summary(self) -> None:
         """結果サマリーを表示"""
         print("\n📊 確認結果サマリー:")
         print("-" * 80)
-        
+
         # WordPress接続
         wp_status = self.validation_result["wp_connection"].get("status", "unknown")
         wp_icon = "✅" if wp_status == "success" else "⚠️" if wp_status == "warning" else "❌"
         print(f"{wp_icon} WordPress接続: {wp_status}")
-        
+
         # REST API
         rest_available = self.validation_result["rest_api"].get("available", False)
         rest_icon = "✅" if rest_available else "❌"
         print(f"{rest_icon} REST API: {'利用可能' if rest_available else '利用不可'}")
-        
+
         # サイト情報
         site_info = self.validation_result["site_info"]
         if site_info:
             print(f"📝 投稿タイプ: {site_info.get('post_types', 0)}個")
-            plugins = site_info.get('plugins', 0)
+            plugins = site_info.get("plugins", 0)
             if plugins > 0:
                 print(f"🔌 プラグイン: {plugins}個")
             if "theme" in site_info:
                 print(f"🎨 テーマ: {site_info['theme'].get('name')}")
-        
+
         # エージェント
         agents = self.validation_result["agents"]
         if agents:
@@ -349,20 +339,20 @@ class ConfigValidator:
             print(f"🤖 エージェント: {available}/{total}個 利用可能")
             if planned > 0:
                 print(f"   └─ 未実装: {planned}個")
-        
+
         # 重要モジュール
         modules = self.validation_result.get("modules", {})
         if modules:
             available_modules = sum(1 for v in modules.values() if v == "available")
             total_modules = len(modules)
             print(f"🔧 重要モジュール: {available_modules}/{total_modules}個 利用可能")
-        
+
         # エラー
         if self.validation_result["errors"]:
             print(f"\n⚠️  エラー数: {len(self.validation_result['errors'])}")
             for error in self.validation_result["errors"]:
                 print(f"   - {error}")
-        
+
         # 総合判定
         print("\n" + "=" * 80)
         wp_ok = wp_status == "success"
@@ -370,7 +360,7 @@ class ConfigValidator:
         site_ok = bool(site_info.get("post_types", 0) > 0)
         agents_ok = sum(1 for v in agents.values() if v == "initialized") >= 1
         modules_ok = sum(1 for v in modules.values() if v == "available") >= 3
-        
+
         if all([wp_ok, rest_ok, site_ok, agents_ok, modules_ok]):
             print("🎉 総合判定: 合格 - システムは基本的な動作が可能です")
         elif wp_ok and rest_ok and site_ok:
@@ -387,21 +377,22 @@ async def main():
         env_path = "/workspaces/gemini_AI_Agent/.env"
         load_dotenv(env_path)
         print(f"✅ 環境変数を読み込みました: {env_path}\n")
-        
+
         # ConfigValidator インスタンス作成
         validator = ConfigValidator()
-        
+
         # Phase 1実行
         result = await validator.run_validation()
-        
+
         print("\n✅ Phase 1 (v1.2) が完了しました")
         print(f"結果オブジェクト: {len(result)}個のキーを含む")
-        
+
         return result
-        
+
     except Exception as e:
         print(f"❌ エラーが発生しました: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 

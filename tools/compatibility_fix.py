@@ -7,12 +7,13 @@ import asyncio
 import sys
 import warnings
 
+
 def apply_windows_async_fix():
     """Windows環境での非同期問題を修正"""
     if sys.platform == "win32":
         # ResourceWarningを無視（一時的対応）
         warnings.filterwarnings("ignore", category=ResourceWarning)
-        
+
         # イベントループポリシーを設定
         if sys.version_info >= (3, 13):
             try:
@@ -20,6 +21,7 @@ def apply_windows_async_fix():
             except Exception:
                 # 既に設定されている場合は無視
                 pass
+
 
 def safe_async_shutdown():
     """安全な非同期シャットダウン"""

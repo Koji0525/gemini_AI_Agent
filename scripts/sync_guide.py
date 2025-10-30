@@ -4,7 +4,8 @@
 """
 
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from configuration.sync_settings import *
@@ -35,7 +36,8 @@ print("\n⏰ 定期実行の設定方法:")
 
 print("\n1. 🌐 GitHub Actionsを使う場合 (推奨)")
 print("   .github/workflows/sync-progress.yml を作成:")
-print("""
+print(
+    """
 name: Sync Progress
 on:
   schedule:
@@ -56,7 +58,8 @@ jobs:
         run: python3 scripts/configurable_sync_manager.py
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-""")
+"""
+)
 
 print("\n2. 🐧 Linux cronを使う場合")
 print("   crontab -e で以下を追加:")
