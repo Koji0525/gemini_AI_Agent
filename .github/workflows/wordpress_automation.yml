@@ -1,0 +1,62 @@
+name: WordPress自動投稿
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      companies_count:
+        description: '投稿する企業数'
+        required: false
+        default: '5'
+
+jobs:
+  wordpress-auto-post:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 依存関係インストール
+        run: |
+          pip install requests --break-system-packages
+      
+      - name: 環境変数設定
+        env:
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_PASSWORD: ${{ secrets.WP_PASSWORD }}
+        run: |
+          cd uz-manda-portal
+          echo "WP_URL=${WP_URL}" > .env
+          echo "WP_USERNAME=${WP_USERNAME}" >> .env
+          echo "WP_PASSWORD=${WP_PASSWORD}" >> .env
+      
+      - name: WordPress自動投稿実行
+        run: |
+          cd uz-manda-portal
+          python3 scripts/run_day4_integrated.py
+      
+      - name: 実行結果アップロード
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: execution-results
+          path: |
+            uz-manda-portal/logs/day4/*.json
+            uz-manda-portal/reports/day4/*.md
+      
+      - name: 結果コミット
+        if: success()
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add uz-manda-portal/logs/ uz-manda-portal/reports/ || true
+          git commit -m "🤖 自動実行結果 $(date +'%Y-%m-%d %H:%M:%S')" || echo "変更なし"
+          git push || echo "プッシュ不要"
