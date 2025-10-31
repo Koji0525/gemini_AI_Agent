@@ -1,5 +1,25 @@
 [
   {
+    "name": "wordpress_sec_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1762104474%7Cw55L9BNqz0ZHlqTaadMMVBRjX5FQj9Vp7swZydGMFof%7Cf94dba20dc0167c900869d85c494ad451731ac71f9097e563403d267d83d3696",
+    "domain": "uzbek-ma.com",
+    "path": "/wp-content/plugins",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_sec_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1762104474%7Cw55L9BNqz0ZHlqTaadMMVBRjX5FQj9Vp7swZydGMFof%7Cf94dba20dc0167c900869d85c494ad451731ac71f9097e563403d267d83d3696",
+    "domain": "uzbek-ma.com",
+    "path": "/wp-admin",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
     "name": "_gcl_au",
     "value": "1.1.1205691292.1760753153",
     "domain": "gemini.google.com",
@@ -14,7 +34,7 @@
     "value": "GA1.1.1951044678.1760753154",
     "domain": "gemini.google.com",
     "path": "/",
-    "expires": 1796350146.968756,
+    "expires": 1796350539.566874,
     "httpOnly": false,
     "secure": false,
     "sameSite": "Lax"
@@ -451,48 +471,8 @@
   },
   {
     "name": "NID",
-    "value": "526=SWS-56Crm0WJcSrb1qy1cORBQ8Vu-IPr_nTbY1ocgtIkaRPHcGq0eEIht-nj-mY9BPkR8ZKIS4sqnNjZHW2-IZx2WlVGAjRiiwGpMbKs8j8ZKcABpNEArIx4p29VhgFJF_yNGB8byJVvmBCHuES2VJF_CJpHNW8HmI1tKcxskpfARQsG0AKfCtRWR7JEZPgP",
-    "domain": "google.com",
-    "path": "/",
-    "expires": 1777601345.659283,
-    "httpOnly": true,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "_ga_BF8Q35BMLM",
-    "value": "GS2.1.s1761788955$o39$g1$t1761790146$j60$l0$h0",
-    "domain": "gemini.google.com",
-    "path": "/",
-    "expires": 1796350146.968342,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "_ga_WC57KJ50ZZ",
-    "value": "GS2.1.s1761788955$o39$g1$t1761790147$j59$l0$h0",
-    "domain": "gemini.google.com",
-    "path": "/",
-    "expires": 1796350147.120006,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "_gcl_au",
-    "value": "1.1.1205691292.1760753153",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1768529153,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
-    "name": "NID",
     "value": "526=Rt3WQJnCyLC2-bzR_aChvhrHFF0oSGDM0vHmhV-h8pkYcBdL6yoFkzULy4J7Y3pJBjHo8sKD1VF1pCnvVTnghmnzUjGUYUqrE5ELxxyB90tGUQtuHruT36gVlYHChKwrHACc2JC4t9H5fmohV6E6pFXsxhwdEVPI88Gc5aHcEOcvrb3gSd9RkZ9494MBLJaV",
-    "domain": ".google.com",
+    "domain": "google.com",
     "path": "/",
     "expires": 1777601738.19851,
     "httpOnly": true,
@@ -500,19 +480,9 @@
     "sameSite": "Lax"
   },
   {
-    "name": "_ga",
-    "value": "GA1.1.1951044678.1760753154",
-    "domain": ".gemini.google.com",
-    "path": "/",
-    "expires": 1796350539.566874,
-    "httpOnly": false,
-    "secure": false,
-    "sameSite": "Lax"
-  },
-  {
     "name": "_ga_BF8Q35BMLM",
     "value": "GS2.1.s1761788955$o39$g1$t1761790539$j60$l0$h0",
-    "domain": ".gemini.google.com",
+    "domain": "gemini.google.com",
     "path": "/",
     "expires": 1796350539.566468,
     "httpOnly": false,
@@ -522,10 +492,30 @@
   {
     "name": "_ga_WC57KJ50ZZ",
     "value": "GS2.1.s1761788955$o39$g1$t1761790539$j60$l0$h0",
-    "domain": ".gemini.google.com",
+    "domain": "gemini.google.com",
     "path": "/",
     "expires": 1796350539.706438,
     "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_test_cookie",
+    "value": "WP%20Cookie%20check",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_logged_in_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1762104474%7Cw55L9BNqz0ZHlqTaadMMVBRjX5FQj9Vp7swZydGMFof%7Cc738a2f5cc9be5e380a2e9cd7eef836eda60c4d9bbc243e6f676eb7f6336f3c2",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
     "secure": false,
     "sameSite": "Lax"
   }

@@ -53,7 +53,7 @@ class BrowserController:
 
         os.makedirs(self.download_folder, exist_ok=True)
 
-    async def setup_browser(self) -> None:
+    async def setup_browser(self, headless=True) -> None:
         """ブラウザを初期化"""
         print("🌐 ブラウザを初期化中...")
 
@@ -61,7 +61,7 @@ class BrowserController:
             self.playwright = await async_playwright().start()
 
             self.browser = await self.playwright.chromium.launch(
-                headless=True,
+                headless=headless,
                 args=[
                     "--no-sandbox",
                     "--disable-setuid-sandbox",

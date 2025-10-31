@@ -1,0 +1,71 @@
+name: WordPress自動化＆改善サイクル
+
+on:
+  schedule:
+    # 毎日6時間ごとに実行（0時、6時、12時、18時）
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  wordpress-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: 依存関係インストール
+        run: |
+          pip install playwright python-dotenv
+          playwright install chromium
+      
+      - name: .env設定
+        run: |
+          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
+          echo "WP_USER=${{ secrets.WP_USER }}" >> .env
+          echo "WP_PASS=${{ secrets.WP_PASS }}" >> .env
+      
+      - name: WordPress自動化実行
+        run: |
+          python3 scripts/run_wordpress_tasks.py
+      
+      - name: 結果をGitHubにコミット
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add logs/
+          git commit -m "🤖 WordPress自動化実行結果 $(date +'%Y-%m-%d %H:%M')" || true
+          git push
+      
+      - name: 品質スコア確認
+        run: |
+          python3 scripts/check_quality_score.py
+      
+      - name: 改善タスク生成（スコア<7の場合）
+        if: failure()
+        run: |
+          python3 agents/dynamic_task_generator.py
+
+  self-learning:
+    needs: wordpress-automation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 自己学習パイプライン実行
+        run: |
+          python3 scripts/run_integration.py
+      
+      - name: 知識ベース更新をコミット
+        run: |
+          git add knowledge_base/
+          git commit -m "🧠 知識ベース自動更新 $(date +'%Y-%m-%d %H:%M')" || true
+          git push
+
