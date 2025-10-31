@@ -1,0 +1,50 @@
+═══════════════════════════════════════════════════════════════
+M&Aポータル実装チェックリスト（印刷用）
+═══════════════════════════════════════════════════════════════
+
+□ STEP 1: 環境チェック（30秒）
+  □ python3 tools/wordpress_readiness_checker.py 実行
+  □ WordPress接続OK確認
+
+□ STEP 2: functions.phpコード追加（2分）
+  □ cat wordpress_projects/ma_portal/PASTE_TO_WORDPRESS.txt
+  □ コードをコピー
+  □ https://uzbek-ma.com/wp-admin/theme-editor.php を開く
+  □ functions.phpを選択
+  □ 既存コードのバックアップ作成
+  □ ファイルの最後にコードを貼り付け
+  □ 「ファイルを更新」をクリック
+  □ エラーなしを確認
+  □ 「M&A企業情報」メニュー表示を確認
+
+□ STEP 3: ACFフィールド設定（3分）
+  □ ACF → フィールドグループ → 新規追加
+  □ グループ名: 企業詳細情報
+  □ フィールド1: 所在地 (location / テキスト / 必須)
+  □ フィールド2: 資本金 (capital / 数値 / 必須)
+  □ フィールド3: 従業員数 (employees / 数値 / 必須)
+  □ フィールド4: 年商 (revenue / 数値 / 必須)
+  □ フィールド5: 希望条件 (deal_type / 選択 / 必須)
+  □ 表示ルール: 投稿タイプ = ma_company
+  □ 公開
+
+□ STEP 4: デモデータ投入（30秒）
+  □ python3 tools/demo_data_importer.py scripts/ma_demo_data.json
+  □ 5社のデータ投入成功確認
+
+□ STEP 5: 動作確認
+  □ M&A企業情報一覧に5社表示
+  □ カスタムカラム表示確認
+  □ 業種カテゴリー6個作成確認
+  □ 新規投稿でフィールド表示確認
+
+□ STEP 6: タスク完了報告
+  □ python3 scripts/update_task_status.py MA_PORTAL_1 completed
+  □ python3 scripts/update_task_status.py MA_PORTAL_2 completed
+  □ python3 scripts/update_task_status.py MA_PORTAL_3 completed
+
+═══════════════════════════════════════════════════════════════
+実施日: _____年____月____日
+実施者: _______________________________
+所要時間: _____分
+═══════════════════════════════════════════════════════════════

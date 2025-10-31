@@ -1,18 +1,30 @@
 """
-WordPress開発専門エージェント統合パッケージ
+WordPress開発エージェント群（簡易版）
+変更理由: 依存関係の問題を解決、REST API直接版を優先
 """
-from .wp_requirements_agent import WordPressRequirementsAgent
-from .wp_cpt_agent import WordPressCPTAgent
-# from .wp_taxonomy_agent import WordPressTaxonomyAgent  # 未実装
-from .wp_acf_agent import WordPressACFAgent
-from .wp_dev_agent import WordPressDevAgent  # 統合エージェント
 
-__all__ = [
-    'WordPressRequirementsAgent',
-    'WordPressCPTAgent',
-    # 'WordPressTaxonomyAgent',  # 未実装
-    'WordPressACFAgent',
-    'WordPressDevAgent'  # 追加
-]
-
-__version__ = '1.0.1'
+# 簡易版エージェント（playwright不要）
+try:
+    from wordpress.wp_dev.wp_simple_agents import (
+        SimpleCPTAgent,
+        SimpleACFAgent,
+        SimplePostCreator,
+    )
+    
+    # エイリアス（既存コードとの互換性）
+    WordPressCPTAgent = SimpleCPTAgent
+    WordPressACFAgent = SimpleACFAgent
+    WordPressTaxonomyAgent = SimpleCPTAgent  # タクソノミーは簡易版で対応
+    
+    __all__ = [
+        'SimpleCPTAgent',
+        'SimpleACFAgent',
+        'SimplePostCreator',
+        'WordPressCPTAgent',
+        'WordPressACFAgent',
+        'WordPressTaxonomyAgent',
+    ]
+    
+except Exception as e:
+    print(f"⚠️ 簡易版エージェントのインポートエラー: {e}")
+    __all__ = []
