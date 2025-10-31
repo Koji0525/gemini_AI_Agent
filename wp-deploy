@@ -1,0 +1,4 @@
+#!/bin/bash
+# WordPress自動デプロイ（セットアップ済みの場合）
+
+python3 tools/wp_plugin_manager.py --deploy
