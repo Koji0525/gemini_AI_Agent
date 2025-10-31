@@ -1,0 +1,63 @@
+{
+  "key": "group_ma_company_details",
+  "title": "企業詳細情報",
+  "fields": [
+    {
+      "key": "field_location",
+      "label": "所在地",
+      "name": "location",
+      "type": "text",
+      "required": 1,
+      "placeholder": "例: 東京都渋谷区"
+    },
+    {
+      "key": "field_capital",
+      "label": "資本金（万円）",
+      "name": "capital",
+      "type": "number",
+      "required": 1,
+      "min": 0,
+      "placeholder": "例: 10000"
+    },
+    {
+      "key": "field_employees",
+      "label": "従業員数",
+      "name": "employees",
+      "type": "number",
+      "required": 1,
+      "min": 0,
+      "placeholder": "例: 50"
+    },
+    {
+      "key": "field_revenue",
+      "label": "年商（万円）",
+      "name": "revenue",
+      "type": "number",
+      "required": 1,
+      "min": 0,
+      "placeholder": "例: 100000"
+    },
+    {
+      "key": "field_deal_type",
+      "label": "希望条件",
+      "name": "deal_type",
+      "type": "select",
+      "choices": {
+        "売却希望": "売却希望",
+        "買収希望": "買収希望"
+      },
+      "default_value": "売却希望",
+      "ui": 1,
+      "required": 1
+    }
+  ],
+  "location": [
+    [
+      {
+        "param": "post_type",
+        "operator": "==",
+        "value": "ma_company"
+      }
+    ]
+  ]
+}
