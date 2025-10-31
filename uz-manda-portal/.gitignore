@@ -27,3 +27,24 @@ __pycache__/
 # 環境変数（機密情報）
 .env
 
+
+# WordPress coreファイル（重複を防ぐ）
+wordpress-core/
+
+# 一時ファイル
+*.tmp
+*.cache
+
+
+# WordPress Core（重複防止）
+wordpress-core/
+
+# 一時ファイル
+*.tmp
+*.cache
+__pycache__/
+*.pyc
+
+# 環境変数（機密情報）
+.env
+
