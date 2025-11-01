@@ -1,0 +1,57 @@
+name: 💬 Human Interaction Agent
+
+on:
+  # 手動実行
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: '実行時間（分）'
+        required: false
+        default: '60'
+        type: choice
+        options:
+          - '5'
+          - '10'
+          - '30'
+          - '60'
+          - '120'
+  
+  # 定期実行（5分ごと）
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  monitor_issues:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    
+    steps:
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境構築
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 📦 PyGithubインストール
+        run: |
+          pip install PyGithub
+      
+      - name: 💬 Human Interaction Agent実行
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 core_agents/human_interaction_agent_v02_github_api.py \
+            --repo ${{ github.repository }} \
+            --interval 60 \
+            --test-duration ${{ github.event.inputs.duration || 60 }}
+      
+      - name: 📋 実行サマリー
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "💬 Human Interaction Agent 実行完了"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏰ 実行時刻: $(date)"
+          echo "📋 リポジトリ: ${{ github.repository }}"
