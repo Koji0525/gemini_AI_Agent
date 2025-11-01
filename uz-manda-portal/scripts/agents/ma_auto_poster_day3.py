@@ -117,7 +117,7 @@ class MAAutoPosterDay3:
 
                     # エラー分類（セルフヒーリングがあれば）
                     if self.error_classifier:
-                        error_type = self.error_classifier.classify_error(error_msg)
+                        error_type = "unknown_error"  # TODO: ErrorClassifierが未実装(error_msg)
                         print(f"⚠️ エラー分類: {error_type}")
 
                     raise Exception(error_msg)
