@@ -3,7 +3,7 @@
 import asyncio
 import json
 from typing import Dict, Any, List, Optional
-from configuration.config_loader import get_config
+from configuration.config_loader import config
 
 
 class WordPressOrchestrator:
@@ -12,9 +12,9 @@ class WordPressOrchestrator:
     def __init__(self, design_spec: Dict[str, Any], wp_credentials: Dict = None):
         self.design_spec = design_spec
         self.wp_credentials = wp_credentials or {
-            "url": get_config().WP_URL,
-            "username": get_config().WP_USER,
-            "password": get_config().WP_PASS,
+            "url": config.WP_URL,
+            "username": config.WP_USER,
+            "password": config.WP_PASS,
         }
 
         # API版エージェントを初期化
