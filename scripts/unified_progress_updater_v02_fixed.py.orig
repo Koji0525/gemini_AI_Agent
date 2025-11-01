@@ -22,7 +22,7 @@ class UnifiedProgressUpdater:
 
     def __init__(self):
         # 正しいConfigLoader使用方法
-        self.spreadsheet_id = get_config('spreadsheet_id')
+        self.spreadsheet_id = get_config('SPREADSHEET_ID')
         
         print("🔧 統一設定を使用:")
         print(f"   スプレッドシート: {self.spreadsheet_id}")
