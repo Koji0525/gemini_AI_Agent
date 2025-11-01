@@ -48,7 +48,7 @@ from datetime import datetime
 from typing import Optional, Dict
 
 try:
-    from github import Github, GithubException
+    from github import Github, Auth, GithubException
     GITHUB_AVAILABLE = True
 except ImportError:
     GITHUB_AVAILABLE = False
@@ -91,7 +91,8 @@ class HumanInteractionAgent:
         if not GITHUB_AVAILABLE:
             raise ImportError("PyGithubライブラリが必要です")
         
-        self.github = Github(github_token)
+        auth = Auth.Token(github_token)
+        self.github = Github(auth=auth)
         self.repo = self.github.get_repo(repo_name)
         
         print(f"✅ GitHub API接続成功: {repo_name}")
