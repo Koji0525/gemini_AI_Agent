@@ -23,7 +23,7 @@ class IntegratedSelfHealingOrchestrator:
 
         # Phase 5: 自己修復基盤
         try:
-            from agents.self_healing.core.retry_manager import RetryManager
+            from agents.self_healing.retry_manager import RetryManager
             from agents.self_healing.utils.error_classifier import ErrorClassifier
 
             self.components["retry_manager"] = RetryManager(max_retries=3)
@@ -43,7 +43,7 @@ class IntegratedSelfHealingOrchestrator:
 
         # Phase 9: 判断支援
         try:
-            from agents.decision_support.decision_support_system import DecisionSupportSystem
+            from agents.self_healing.logging.decision_support_system import DecisionSupportSystem
             from agents.knowledge_base.similarity_search_engine import SimilaritySearchEngine
 
             self.components["decision_support"] = DecisionSupportSystem()
