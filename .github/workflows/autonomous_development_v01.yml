@@ -1,0 +1,111 @@
+name: 🤖 24時間自律開発システム v1.0
+
+on:
+  # 🔴 手動スタート（目標入力ボタン）
+  workflow_dispatch:
+    inputs:
+      development_goal:
+        description: '開発目標（例: M&Aポータルの検索機能実装）'
+        required: true
+        type: string
+      priority:
+        description: '優先度'
+        required: false
+        default: 'high'
+        type: choice
+        options:
+          - critical
+          - high
+          - medium
+          - low
+      goal_type:
+        description: '目標タイプ'
+        required: false
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - maintenance
+          - improvement
+  
+  # 🔄 自動継続実行（6時間ごと）
+  schedule:
+    - cron: '0 */6 * * *'  # 0時、6時、12時、18時（UTC）
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350  # 5.8時間（余裕を持たせる）
+    
+    steps:
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🔧 環境構築
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境構築
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🧹 キャッシュクリア
+        run: |
+          ./sh/clean_cache.sh
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🔐 認証情報セットアップ
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔑 環境変数設定
+        run: |
+          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
+          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
+          echo "WP_USER=${{ secrets.WP_USER }}" >> .env
+          echo "WP_PASS=${{ secrets.WP_PASS }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+      
+      - name: 📝 Google認証情報配置
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > service_account.json
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🎯 目標入力（手動実行時のみ）
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📝 開発目標を登録
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/goal_input_agent_v01_initial.py \
+            --goal "${{ github.event.inputs.development_goal }}" \
+            --priority "${{ github.event.inputs.priority }}" \
+            --type "${{ github.event.inputs.goal_type }}"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🚀 自律開発サイクル実行
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔄 開発サイクル実行（最大5.5時間）
+        run: |
+          python3 scripts/integrated_orchestrator_v01_hub.py \
+            --max-duration 330
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📊 結果報告
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📈 進捗ダッシュボード更新
+        if: always()
+        run: |
+          python3 scripts/update_progress_dashboard.py || echo "⚠️ ダッシュボード更新スキップ"
+      
+      - name: 📋 実行サマリー出力
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏁 開発サイクル完了"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏰ 実行時刻: $(date)"
+          echo "🔄 次回実行: 6時間後（Cron）"
