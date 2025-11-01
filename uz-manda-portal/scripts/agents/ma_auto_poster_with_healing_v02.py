@@ -108,7 +108,7 @@ class MAAutoPosterV2:
                 result = self.retry_manager.execute_with_retry(post_operation)
                 return result
             except Exception as e:
-                error_type = self.error_classifier.classify_error(str(e)) if self.error_classifier else "UNKNOWN"
+                error_type = "unknown_error"  # TODO: ErrorClassifierが未実装(str(e)) if self.error_classifier else "UNKNOWN"
                 print(f"❌ 投稿作成エラー ({error_type}): {str(e)}")
                 return None
         else:

@@ -138,7 +138,7 @@ class MAAutoPosterWithHealing:
                 return result
 
             except Exception as e:
-                error_type = self.error_classifier.classify_error(str(e))
+                error_type = "unknown_error"  # TODO: ErrorClassifierが未実装(str(e))
                 self.context_logger.log_error(
                     error=str(e), error_type=error_type, recovery_actions=["check_cpt_endpoint", "verify_permissions"]
                 )
