@@ -349,7 +349,7 @@ class IntegratedOrchestrator:
 
         try:
             retry_result: RetryResult = await self.retry_manager.execute_with_retry(
-                execute_func, task_name=f"execute_task_{task.get('task_id', 'unknown')}"
+                execute_func, context={"task_id": task.get("task_id", "unknown")}
             )
 
             if retry_result.success:

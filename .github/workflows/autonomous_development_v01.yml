@@ -1,32 +1,19 @@
 name: 🤖 24時間自律開発システム v1.0
 
 on:
-  # 🔴 手動スタート（目標入力ボタン）
+  # 🔴 手動スタート（開発目標入力）
   workflow_dispatch:
     inputs:
       development_goal:
-        description: '開発目標（例: M&Aポータルの検索機能実装）'
-        required: true
+        description: '開発目標（例: WordPress記事自動投稿機能の実装）'
+        required: false
         type: string
-      priority:
-        description: '優先度'
+        default: 'pm_task_queue のタスクを実行'
+      max_duration:
+        description: '最大実行時間（分）'
         required: false
-        default: 'high'
-        type: choice
-        options:
-          - critical
-          - high
-          - medium
-          - low
-      goal_type:
-        description: '目標タイプ'
-        required: false
-        default: 'development'
-        type: choice
-        options:
-          - development
-          - maintenance
-          - improvement
+        type: number
+        default: 330
   
   # 🔄 自動継続実行（6時間ごと）
   schedule:
@@ -42,10 +29,10 @@ jobs:
       # 🔧 環境構築
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: 📥 リポジトリチェックアウト
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
-      - name: 🐍 Python環境構築
-        uses: actions/setup-python@v4
+      - name: 🐍 Python 3.11 セットアップ
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -54,58 +41,80 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
-      - name: 🧹 キャッシュクリア
-        run: |
-          ./sh/clean_cache.sh
+          playwright install chromium
+          playwright install-deps
       
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       # 🔐 認証情報セットアップ
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: 🔑 環境変数設定
         run: |
-          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
-          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
-          echo "WP_USER=${{ secrets.WP_USER }}" >> .env
-          echo "WP_PASS=${{ secrets.WP_PASS }}" >> .env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          cat > .env << 'ENVEOF'
+          SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}
+          WP_URL=${{ secrets.WP_URL }}
+          WP_USER=${{ secrets.WP_USER }}
+          WP_PASS=${{ secrets.WP_PASS }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          ENVEOF
+          
+          # 読み取り専用に設定（運用ルール 4.5.2A）
+          chmod 444 .env
       
       - name: 📝 Google認証情報配置
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > service_account.json
+          chmod 444 service_account.json
       
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      # 🎯 目標入力（手動実行時のみ）
+      # 🧹 キャッシュクリア（運用ルール 4.2）
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      - name: 📝 開発目標を登録
-        if: github.event_name == 'workflow_dispatch'
+      - name: 🧹 Pythonキャッシュクリア
         run: |
-          python3 scripts/goal_input_agent_v01_initial.py \
-            --goal "${{ github.event.inputs.development_goal }}" \
-            --priority "${{ github.event.inputs.priority }}" \
-            --type "${{ github.event.inputs.goal_type }}"
+          find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find . -type f -name "*.pyc" -delete 2>/dev/null || true
+          echo "✅ キャッシュクリア完了"
       
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       # 🚀 自律開発サイクル実行
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      - name: 🔄 開発サイクル実行（最大5.5時間）
+      - name: 🔄 開発サイクル実行
         run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 開発目標: ${{ github.event.inputs.development_goal }}"
+          echo "⏰ 最大実行時間: ${{ github.event.inputs.max_duration }}分"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
           python3 scripts/integrated_orchestrator_v01_hub.py \
-            --max-duration 330
+            --max-duration ${{ github.event.inputs.max_duration }}
       
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      # 📊 結果報告
+      # 📊 結果報告（常に実行）
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      - name: 📈 進捗ダッシュボード更新
-        if: always()
-        run: |
-          python3 scripts/update_progress_dashboard.py || echo "⚠️ ダッシュボード更新スキップ"
-      
-      - name: 📋 実行サマリー出力
+      - name: 📋 実行サマリー
         if: always()
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🏁 開発サイクル完了"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "⏰ 実行時刻: $(date)"
-          echo "🔄 次回実行: 6時間後（Cron）"
+          echo "🔄 次回実行: 6時間後（Cronによる自動実行）"
+          echo ""
+          echo "📊 進捗確認:"
+          echo "   → Google Sheets: https://docs.google.com/spreadsheets/d/${{ secrets.SPREADSHEET_ID }}"
+          echo ""
+          echo "💬 制御方法:"
+          echo "   → GitHub Issues でコマンド送信可能"
+          echo "   → 例: @bot stop（システム停止）"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # �� ログアップロード（エラー時）
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📤 エラーログアップロード
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-logs
+          path: |
+            logs/
+            agent_outputs/
+          retention-days: 7
