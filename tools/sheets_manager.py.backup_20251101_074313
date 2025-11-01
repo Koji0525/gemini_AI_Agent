@@ -68,7 +68,6 @@ class GoogleSheetsManager:
 
         self._validate_config()
         self.service = self._initialize_service()
-        self.gc = self.service  # gspread client互換性
 
     def _validate_config(self):
         """設定検証"""
