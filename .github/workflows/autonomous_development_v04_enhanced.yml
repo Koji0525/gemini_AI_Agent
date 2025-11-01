@@ -1,0 +1,355 @@
+name: 🤖 24時間自律開発システム v4.0 (強化版)
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: '🎯 開発目標'
+        required: true
+        default: 'システム動作確認テスト'
+      priority:
+        description: '⚡ 優先度'
+        required: true
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+        default: 'high'
+      dry_run:
+        description: '🧪 ドライラン（実際には実行せず確認のみ）'
+        required: false
+        type: boolean
+        default: false
+  
+  schedule:
+    # 日本時間: 0:00, 6:00, 12:00, 18:00 (UTC: 15:00, 21:00, 3:00, 9:00)
+    - cron: '0 15,21 * * *'  # 0:00, 6:00 JST
+    - cron: '0 3,9 * * *'    # 12:00, 18:00 JST
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # 全履歴取得（バージョン管理用）
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+          # キャッシュクリア（運用ルール 4.2）
+          python3 -c "
+          import sys
+          sys.dont_write_bytecode = True
+          from pathlib import Path
+          import shutil
+          for cache in Path('.').rglob('__pycache__'):
+              shutil.rmtree(cache, ignore_errors=True)
+          for cache in Path('.').rglob('*.pyc'):
+              cache.unlink(missing_ok=True)
+          print('✅ Pythonキャッシュクリア完了')
+          "
+      
+      - name: 🔐 認証情報セットアップ
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_PASS: ${{ secrets.WP_PASS }}
+        run: |
+          # .env ファイル作成（運用ルール 4.4準拠）
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          GEMINI_API_KEY=${GEMINI_API_KEY}
+          WP_URL=${WP_URL}
+          WP_USERNAME=${WP_USER}
+          WP_PASSWORD=${WP_PASS}
+          WP_API_URL=${WP_URL}/wp-json/wp/v2
+          LOG_LEVEL=INFO
+          EXECUTION_INTERVAL=6
+          BATCH_SIZE=5
+          DISPLAY=:1
+          DEBUG=false
+          TEST_MODE=false
+          PROJECT_ROOT=/home/runner/work/$(echo ${{ github.repository }} | cut -d'/' -f2)
+          LOG_DIR=logs
+          EOF
+          
+          # サービスアカウントファイル作成
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+          
+          # 読み取り専用に設定（運用ルール 4.4.1）
+          chmod 444 .env
+          chmod 444 configuration/service_account.json
+          
+          echo "✅ 認証情報セットアップ完了"
+      
+      - name: 🔍 事前ヘルスチェック
+        id: pre_check
+        run: |
+          python3 << 'HEALTH_CHECK_EOF'
+          import sys
+          from pathlib import Path
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              print("🔍 システムヘルスチェック開始...")
+              manager = GoogleSheetsManager()
+              
+              # 1. スプレッドシート接続確認
+              test_read = manager.read_range('project_goal!A1:A1')
+              print("  ✅ スプレッドシート接続成功")
+              
+              # 2. 既存データ確認
+              goals = manager.read_range('project_goal!A2:F100')
+              tasks = manager.read_range('pm_tasks!A2:K100')
+              
+              active_goals = [g for g in goals if len(g) > 3 and g[3] == 'active']
+              pending_tasks = [t for t in tasks if len(t) > 3 and t[3] == 'pending']
+              
+              print(f"  ✅ アクティブ目標: {len(active_goals)}件")
+              print(f"  ✅ 保留タスク: {len(pending_tasks)}件")
+              
+              # GitHub Actions出力
+              import os
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"active_goals={len(active_goals)}\n")
+                  f.write(f"pending_tasks={len(pending_tasks)}\n")
+                  f.write("health_status=healthy\n")
+              
+              print("\n✅ ヘルスチェック完了")
+              
+          except Exception as e:
+              print(f"❌ ヘルスチェック失敗: {e}")
+              import traceback
+              traceback.print_exc()
+              
+              import os
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write("health_status=unhealthy\n")
+              sys.exit(1)
+          HEALTH_CHECK_EOF
+      
+      - name: 📝 目標登録（手動トリガー時のみ）
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        run: |
+          python3 << 'GOAL_REGISTER_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          goal = "${{ github.event.inputs.goal }}"
+          priority = "${{ github.event.inputs.priority }}"
+          
+          print(f"🎯 目標登録中...")
+          print(f"  目標: {goal}")
+          print(f"  優先度: {priority}")
+          
+          sheets_manager = GoogleSheetsManager()
+          
+          # 既存の同じ目標をチェック
+          existing_goals = sheets_manager.read_range('project_goal!A2:F100')
+          duplicate = any(
+              len(row) > 1 and row[1] == goal and len(row) > 3 and row[3] == 'active'
+              for row in existing_goals
+          )
+          
+          if duplicate:
+              print("⚠️ 同じ目標が既にアクティブです。スキップします。")
+          else:
+              goal_data = [[
+                  f"GOAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                  goal,
+                  priority,
+                  "active",
+                  "0%",
+                  datetime.now().isoformat()
+              ]]
+              
+              sheets_manager.append_rows('project_goal', goal_data)
+              print(f"✅ 目標登録完了: {goal}")
+          GOAL_REGISTER_EOF
+      
+      - name: 🔍 ドライラン実行
+        if: inputs.dry_run
+        run: |
+          echo "🧪 ドライランモード"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "【実行される処理の確認】"
+          echo "1. アクティブ目標数: ${{ steps.pre_check.outputs.active_goals }}"
+          echo "2. 保留タスク数: ${{ steps.pre_check.outputs.pending_tasks }}"
+          echo "3. 目標: ${{ github.event.inputs.goal }}"
+          echo "4. 優先度: ${{ github.event.inputs.priority }}"
+          echo ""
+          echo "✅ ドライラン完了（実際の実行はしていません）"
+      
+      - name: 🎹 統合オーケストレーター実行
+        if: '!inputs.dry_run'
+        id: orchestrator
+        run: |
+          echo "🚀 統合オーケストレーター開始..."
+          python3 scripts/integrated_orchestrator_v05_final.py
+      
+      - name: 📊 実行結果サマリー
+        id: summary
+        if: always() && !inputs.dry_run
+        run: |
+          python3 << 'SUMMARY_EOF'
+          import sys
+          from pathlib import Path
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          try:
+              sheets_manager = GoogleSheetsManager()
+              
+              # タスクデータ取得
+              tasks_data = sheets_manager.read_range('pm_tasks!A2:K100')
+              
+              total = len(tasks_data)
+              completed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'completed')
+              failed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'failed')
+              in_progress = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'in_progress')
+              
+              progress = (completed / total * 100) if total > 0 else 0
+              
+              # エラー情報取得
+              errors = sheets_manager.read_range('error_analysis!A2:E100')
+              unresolved_errors = sum(1 for row in errors if len(row) > 3 and row[3] != 'resolved')
+              
+              # 品質スコア取得
+              execution_log = sheets_manager.read_range('task_execution_log!A2:J100')
+              quality_scores = [
+                  float(row[9]) for row in execution_log 
+                  if len(row) > 9 and row[9] and row[9] != 'Quality_Score'
+              ]
+              avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0
+              
+              print(f"📊 実行結果サマリー")
+              print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              print(f"総タスク数: {total}")
+              print(f"完了: {completed} ({progress:.1f}%)")
+              print(f"実行中: {in_progress}")
+              print(f"失敗: {failed}")
+              print(f"未解決エラー: {unresolved_errors}件")
+              print(f"平均品質スコア: {avg_quality:.2f}/10")
+              print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              
+              # GitHub Actions出力
+              import os
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write(f"total={total}\n")
+                  f.write(f"completed={completed}\n")
+                  f.write(f"failed={failed}\n")
+                  f.write(f"in_progress={in_progress}\n")
+                  f.write(f"progress={progress:.1f}\n")
+                  f.write(f"unresolved_errors={unresolved_errors}\n")
+                  f.write(f"avg_quality={avg_quality:.2f}\n")
+              
+          except Exception as e:
+              print(f"❌ サマリー生成エラー: {e}")
+              import traceback
+              traceback.print_exc()
+          SUMMARY_EOF
+      
+      - name: 📈 品質レポート生成
+        if: always() && !inputs.dry_run
+        run: |
+          python3 << 'QUALITY_REPORT_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              manager = GoogleSheetsManager()
+              
+              # 最新のタスクを分析
+              tasks = manager.read_range('pm_tasks!A2:K100')
+              
+              print("\n📈 品質レポート")
+              print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              
+              if tasks:
+                  task_types = {}
+                  for task in tasks:
+                      if len(task) > 1:
+                          task_type = task[1] if len(task) > 1 else 'unknown'
+                          status = task[3] if len(task) > 3 else 'unknown'
+                          
+                          if task_type not in task_types:
+                              task_types[task_type] = {'total': 0, 'completed': 0, 'failed': 0}
+                          
+                          task_types[task_type]['total'] += 1
+                          if status == 'completed':
+                              task_types[task_type]['completed'] += 1
+                          elif status == 'failed':
+                              task_types[task_type]['failed'] += 1
+                  
+                  print("\n【タスクタイプ別成功率】")
+                  for task_type, stats in sorted(task_types.items(), key=lambda x: x[1]['total'], reverse=True)[:5]:
+                      success_rate = (stats['completed'] / stats['total'] * 100) if stats['total'] > 0 else 0
+                      print(f"  {task_type}: {success_rate:.1f}% ({stats['completed']}/{stats['total']})")
+              
+              print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              
+          except Exception as e:
+              print(f"⚠️ 品質レポート生成エラー: {e}")
+          QUALITY_REPORT_EOF
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          # 認証情報削除
+          rm -f configuration/service_account.json
+          rm -f .env
+          
+          echo "✅ クリーンアップ完了"
+      
+      - name: �� 実行完了通知
+        if: always() && !inputs.dry_run
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎉 24時間自律開発システム v4.0 実行完了"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "【実行結果】"
+          echo "  総タスク: ${{ steps.summary.outputs.total }}"
+          echo "  完了: ${{ steps.summary.outputs.completed }}"
+          echo "  失敗: ${{ steps.summary.outputs.failed }}"
+          echo "  実行中: ${{ steps.summary.outputs.in_progress }}"
+          echo "  進捗率: ${{ steps.summary.outputs.progress }}%"
+          echo "  未解決エラー: ${{ steps.summary.outputs.unresolved_errors }}件"
+          echo "  平均品質: ${{ steps.summary.outputs.avg_quality }}/10"
+          echo ""
+          echo "スプレッドシートで詳細を確認:"
+          echo "https://docs.google.com/spreadsheets/d/${{ secrets.SPREADSHEET_ID }}"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
