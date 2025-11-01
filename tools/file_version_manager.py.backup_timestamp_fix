@@ -186,15 +186,6 @@ class FileVersionManager:
         # バックアップディレクトリ作成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         reason_slug = reason.replace(" ", "_") if reason else "backup"
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # タイムスタンプ生成
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
         backup_dir = Path(f"_BACKUP/{timestamp}_{reason_slug}")
         backup_dir.mkdir(parents=True, exist_ok=True)
         
