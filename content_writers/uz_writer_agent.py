@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class UzbekContentWriter(BaseContentWriter):
     """ウズベク語専用コンテンツライターAI - O'zbekistonda M&A mutaxassisi"""
-    
+
     def get_language_code(self) -> str:
         """Til kodi"""
         return "uz"
-    
+
     def get_language_name(self) -> str:
         """Til nomi"""
         return "O'zbek tili"
-    
+
     def get_system_prompt(self) -> str:
         """ウズベク語専用システムプロンプト"""
         return """Siz O'zbekistondagi M&A bozori va biznes muhitiga ixtisoslashgan tajribali o'zbek tili kontent yozuvchisisiz.
@@ -138,20 +138,20 @@ class UzbekContentWriter(BaseContentWriter):
 - Xalqaro hamkorlik va texnologiya transferi imkoniyatlarini ko'rsating
 
 **O'zbek tilida HTML teglaridan foydalanib to'liq maqolani darhol yozishni boshlang.**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """ウズベク語記事用プロンプトを構築"""
         system_prompt = self.get_system_prompt()
-        
+
         # 参照URL情報を追加（利用可能な場合）
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【Ma'lumotnoma Ma'lumoti】
 Iltimos, quyidagi maqolaga murojaat qiling (mazmunni tushuning va original maqola yozing, to'g'ridan-to'g'ri nusxa ko'chirmang):
 Ma'lumotnoma URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【Aniq Yozish So'rovi】
@@ -183,5 +183,5 @@ Kutilayotgan O'qish Vaqti: 6-9 daqiqa
 6. "Tushundim" kabi suhbat javoblarisiz, faqat HTML chiqarish
 
 **O'zbek tilida HTML teglaridan foydalanib to'liq maqolani darhol yozishni boshlang.**"""
-        
+
         return full_prompt

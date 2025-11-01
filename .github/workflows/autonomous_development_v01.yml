@@ -1,0 +1,69 @@
+name: 🤖 24時間自律開発システム v1.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      development_goal:
+        description: '開発目標（例: M&Aポータルの検索機能実装）'
+        required: true
+        type: string
+      priority:
+        description: '優先度'
+        required: false
+        default: 'high'
+        type: choice
+        options:
+          - critical
+          - high
+          - medium
+          - low
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    
+    steps:
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+        with:
+          submodules: false
+      
+      - name: 🐍 Python環境構築
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔑 環境変数設定
+        run: |
+          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
+          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
+          echo "WP_USER=${{ secrets.WP_USER }}" >> .env
+          echo "WP_PASS=${{ secrets.WP_PASS }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          echo "WP_API_URL=${{ secrets.WP_API_URL }}" >> .env
+      
+      - name: 📝 Google認証情報配置
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > service_account.json
+      
+      - name: 🔄 開発サイクル実行（最大5.5時間）
+        run: |
+          python3 scripts/integrated_orchestrator_v01_hub.py --max-duration 330
+      
+      - name: 📋 実行サマリー出力
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏁 開発サイクル完了"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏰ 実行時刻: $(date)"
+          echo "🔄 次回実行: 6時間後（Cron）"

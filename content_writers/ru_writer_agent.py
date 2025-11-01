@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class RussianContentWriter(BaseContentWriter):
     """ロシア語専用コンテンツライターAI - Специалист по M&A в Узбекистане"""
-    
+
     def get_language_code(self) -> str:
         """Код языка"""
         return "ru"
-    
+
     def get_language_name(self) -> str:
         """Название языка"""
         return "Русский"
-    
+
     def get_system_prompt(self) -> str:
         """Системный промпт для русского языка"""
         return """Вы опытный контент-райтер на русском языке, специализирующийся на рынке слияний и поглощений (M&A) Узбекистана и бизнес-среде Центральной Азии.
@@ -128,20 +128,20 @@ class RussianContentWriter(BaseContentWriter):
 - Обращать внимание на особенности менталитета центральноазиатского рынка
 
 **Начните писать полную статью на русском языке, используя HTML теги немедленно.**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """Построить промпт для русской статьи"""
         system_prompt = self.get_system_prompt()
-        
+
         # Добавить информацию о справочном URL, если доступно
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【Справочная Информация】
 Пожалуйста, обратитесь к следующей статье (поймите содержание и напишите оригинальную статью, не копируйте напрямую):
 Справочный URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【Конкретный Запрос на Написание】
@@ -172,5 +172,5 @@ class RussianContentWriter(BaseContentWriter):
 6. Никаких разговорных ответов типа "Понял", только вывод HTML
 
 **Начните писать полную статью на русском языке, используя HTML теги немедленно.**"""
-        
+
         return full_prompt

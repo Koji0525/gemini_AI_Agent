@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class EnglishContentWriter(BaseContentWriter):
     """英語専用コンテンツライターAI - Uzbekistan M&A Specialist"""
-    
+
     def get_language_code(self) -> str:
         """Language code"""
         return "en"
-    
+
     def get_language_name(self) -> str:
         """Language name"""
         return "English"
-    
+
     def get_system_prompt(self) -> str:
         """English-specific system prompt"""
         return """You are an experienced English content writer specializing in Uzbekistan's M&A market and business environment.
@@ -107,20 +107,20 @@ class EnglishContentWriter(BaseContentWriter):
 - Conversational responses are strictly prohibited
 
 **Write a complete article in English using HTML tags from start to finish.**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """Build English article-specific prompt"""
         system_prompt = self.get_system_prompt()
-        
+
         # Add reference URL information if available
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【Reference Information】
 Please refer to the following article (understand the content and write an original article, do not copy directly):
 Reference URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【Specific Writing Request】
@@ -149,5 +149,5 @@ Expected Reading Time: 5-7 minutes
 6. No conversational responses like "Understood", output HTML only
 
 **Start writing a complete article in English using HTML tags immediately.**"""
-        
+
         return full_prompt

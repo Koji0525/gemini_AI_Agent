@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class JapaneseContentWriter(BaseContentWriter):
     """日本語専用コンテンツライターAI - ウズベキスタンM&A特化"""
-    
+
     def get_language_code(self) -> str:
         """言語コード"""
         return "ja"
-    
+
     def get_language_name(self) -> str:
         """言語名"""
         return "日本語"
-    
+
     def get_system_prompt(self) -> str:
         """日本語専用のシステムプロンプト"""
         return """あなたは経験豊富な日本語コンテンツライターです。ウズベキスタンのM&A市場とビジネス環境に精通しています。
@@ -107,20 +107,20 @@ class JapaneseContentWriter(BaseContentWriter):
 - 会話形式の応答は一切禁止
 
 **日本語で、HTMLタグを使用した完全な記事を最後まで書き切ってください。**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """日本語記事専用プロンプトを構築"""
         system_prompt = self.get_system_prompt()
-        
+
         # 参照URLがある場合は追加情報として提供
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【参考情報】
 以下の記事を参考にしてください（そのままコピーするのではなく、内容を理解した上でオリジナルの記事を執筆）:
 参照URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【具体的な執筆依頼】
@@ -149,5 +149,5 @@ Polylang設定: {task.get('polylang_lang', 'ja')}
 6. 「了解しました」などの応答は不要、HTMLのみ出力
 
 **今すぐ、日本語でHTMLタグを使用した完全な記事を書き始めてください。**"""
-        
+
         return full_prompt

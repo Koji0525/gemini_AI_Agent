@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class KoreanContentWriter(BaseContentWriter):
     """韓国語専用コンテンツライターAI - 우즈베키스탄 M&A 전문가"""
-    
+
     def get_language_code(self) -> str:
         """언어 코드"""
         return "ko"
-    
+
     def get_language_name(self) -> str:
         """언어 이름"""
         return "한국어"
-    
+
     def get_system_prompt(self) -> str:
         """韓国語専用システムプロンプト"""
         return """당신은 우즈베키스탄의 M&A 시장과 비즈니스 환경을 전문으로 하는 경험 많은 한국어 콘텐츠 작가입니다.
@@ -151,19 +151,19 @@ class KoreanContentWriter(BaseContentWriter):
 - 단계별 실행 가능한 가이드
 
 **지금 즉시 한국어와 HTML 태그를 사용하여 완전한 기사 작성을 시작하십시오.**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """韓国語記事用プロンプトを構築"""
         system_prompt = self.get_system_prompt()
-        
+
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【참고 정보】
 다음 기사를 참고하십시오 (내용을 이해한 후 독창적인 기사 작성, 직접 복사하지 말 것):
 참고 URL: {task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【구체적 작성 요청】
@@ -196,5 +196,5 @@ Polylang 설정: {task.get('polylang_lang', 'ko')}
 6. "알겠습니다" 같은 대화형 응답 없이 HTML만 출력
 
 **지금 즉시 한국어와 HTML 태그를 사용하여 완전한 기사 작성을 시작하십시오.**"""
-        
+
         return full_prompt

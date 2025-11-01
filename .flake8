@@ -1,0 +1,21 @@
+[flake8]
+max-line-length = 120
+extend-ignore = 
+    E402,  # モジュールレベルインポートの位置
+    F401,  # 未使用インポート
+    F541,  # f-string missing placeholders
+    W503,  # 演算子前の改行
+    E203,  # コロンの前の空白
+    E501,  # 行が長すぎる
+per-file-ignores = 
+    __init__.py:F401
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv,
+    venv,
+    node_modules,
+    .vscode,
+    .idea

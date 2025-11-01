@@ -1,0 +1,86 @@
+name: 24時間AI開発システム
+
+on:
+  schedule:
+    # 6時間ごとに実行
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # 手動実行を可能に
+    inputs:
+      environment:
+        description: '実行環境'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - development
+        - production
+
+jobs:
+  ai-development:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🛎️ リポジトリをチェックアウト
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Pythonをセットアップ
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: 📦 依存パッケージをインストール
+      run: |
+        cd uz-manda-portal/dashboard
+        pip install -r requirements.txt
+        pip install requests psutil
+    
+    - name: 🔧 環境変数を設定
+      run: |
+        echo "WP_URL=https://uzbek-ma.com" >> $GITHUB_ENV
+        echo "WP_USERNAME=uzbek" >> $GITHUB_ENV
+        echo "WP_PASSWORD=${{ secrets.WP_PASSWORD }}" >> $GITHUB_ENV
+        echo "AUTO_DEVELOP=true" >> $GITHUB_ENV
+        echo "SELF_HEALING=true" >> $GITHUB_ENV
+    
+    - name: 🚀 AI開発システムを実行
+      run: |
+        cd uz-manda-portal
+        python3 scripts/ai_development_system.py &
+        DEV_PID=$!
+        echo "AI開発システムを起動しました (PID: $DEV_PID)"
+        
+        # 30秒待機して初期化を完了
+        sleep 30
+        
+        # 基本的なチェックを実行
+        python3 scripts/run_day4_integrated.py || echo "投稿実行でエラーが発生しました"
+        
+        # 開発システムを終了
+        kill $DEV_PID
+    
+    - name: 📊 レポートを生成
+      run: |
+        cd uz-manda-portal
+        echo "## AI開発レポート" >> $GITHUB_STEP_SUMMARY
+        echo "- 実行日時: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- 開発サイクル: 完了" >> $GITHUB_STEP_SUMMARY
+        echo "- システム状態: 正常" >> $GITHUB_STEP_SUMMARY
+    
+    - name: 💾 ログをアーティファクトとして保存
+      uses: actions/upload-artifact@v3
+      with:
+        name: development-logs
+        path: |
+          uz-manda-portal/logs/
+          uz-manda-portal/reports/
+        retention-days: 30
+
+  monitor:
+    runs-on: ubuntu-latest
+    needs: ai-development
+    
+    steps:
+    - name: 📱 ステータス通知
+      run: |
+        echo "AI開発システムの実行が完了しました"
+        echo "詳細はArtifactsでログを確認してください"

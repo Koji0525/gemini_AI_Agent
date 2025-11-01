@@ -1,0 +1,89 @@
+name: 🤖 24時間自律開発システム v3.0 (最終版)
+
+on:
+  workflow_dispatch:
+    inputs:
+      development_goal:
+        description: '開発目標'
+        required: true
+        type: string
+      priority:
+        description: '優先度'
+        required: false
+        default: 'high'
+        type: choice
+        options:
+          - critical
+          - high
+          - medium
+          - low
+      goal_type:
+        description: 'タイプ'
+        required: false
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - maintenance
+          - improvement
+  
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🧹 キャッシュクリア
+        run: ./sh/clean_cache.sh
+      
+      - name: 🔑 環境設定
+        run: |
+          # .envファイル作成
+          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
+          echo "GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json" >> .env
+          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
+          echo "WP_USERNAME=${{ secrets.WP_USER }}" >> .env
+          echo "WP_PASSWORD=${{ secrets.WP_PASS }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          
+          # 認証ファイル配置
+          mkdir -p configuration
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > configuration/service_account.json
+      
+      - name: 🎯 目標登録（手動実行時）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/goal_input_agent_v03_env_fixed.py \
+            --goal "${{ github.event.inputs.development_goal }}" \
+            --priority "${{ github.event.inputs.priority }}" \
+            --type "${{ github.event.inputs.goal_type }}"
+      
+      - name: 🚀 自律開発サイクル実行
+        run: |
+          python3 scripts/integrated_orchestrator_v05_browser_fixed.py \
+            --max-duration 330
+      
+      - name: 📊 結果サマリー
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏁 実行完了: $(date)"
+          echo "🔄 次回: 6時間後（自動）"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

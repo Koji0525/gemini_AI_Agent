@@ -1,0 +1,68 @@
+name: Auto Format (改善版 - _WIP除外)
+
+on:
+  push:
+    branches:
+      - 'v*'
+      - main
+    paths:
+      - '**.py'
+      - '!_WIP/**'      # _WIPは除外
+      - '!_BACKUP/**'   # _BACKUPは除外
+      - '!_ARCHIVE/**'  # _ARCHIVEは除外
+
+jobs:
+  auto-format:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install tools
+      run: |
+        pip install black isort flake8 --break-system-packages
+    
+    - name: Run Black (本番コードのみ)
+      run: |
+        echo "🎨 Black実行中（_WIP/除外）..."
+        # 本番ディレクトリのみ対象
+        black --line-length 120 \
+          --exclude '(_WIP|_BACKUP|_ARCHIVE|__pycache__|\.pyc)' \
+          agents/ core_agents/ tools/ browser_control/ configuration/ || true
+    
+    - name: Run isort (本番コードのみ)
+      run: |
+        echo "📦 isort実行中..."
+        isort --profile black --line-length 120 \
+          --skip _WIP --skip _BACKUP --skip _ARCHIVE --skip __pycache__ \
+          agents/ core_agents/ tools/ browser_control/ configuration/ || true
+    
+    - name: Run flake8
+      continue-on-error: true
+      run: |
+        echo "🔍 flake8実行中..."
+        flake8 --max-line-length=120 \
+          --exclude=_WIP,_BACKUP,_ARCHIVE,__pycache__ \
+          --extend-ignore=E203,W503 . || echo "⚠️ 警告あり"
+    
+    - name: Commit changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add agents/ core_agents/ tools/ browser_control/ configuration/
+        if git diff --staged --quiet; then
+          echo "✅ 変更なし"
+        else
+          git commit -m "🤖 自動整形: Black + isort適用（本番コードのみ）"
+          git push
+          echo "✅ 本番コードを自動整形してコミット"
+        fi

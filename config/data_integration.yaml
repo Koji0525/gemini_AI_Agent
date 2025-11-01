@@ -1,0 +1,89 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# データ統合パイプライン設定
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+global:
+  batch_size: 50  # Google Sheets 書き込みバッチサイズ
+  rate_limit_delay: 1.0  # API呼び出し間隔（秒）
+  max_retries: 5  # 最大リトライ回数
+
+# データソース設定
+sources:
+  # 会話ログ（Claude会話）
+  conversation_logs:
+    enabled: true
+    sheets:
+      - conversation_tasks
+      - conversation_errors
+      - conversation_insights
+    priority: 1
+    
+  # スプレッドシートログ（タスク実行履歴）
+  spreadsheet_logs:
+    enabled: true
+    sheets:
+      - task_execution_log
+      - retry_history
+      - error_analysis
+    priority: 2
+    
+    # 列マッピング（柔軟に対応）
+    column_mapping:
+      timestamp: 
+        - timestamp
+        - created_at
+        - datetime
+      content:
+        - output_summary
+        - description
+        - message
+        - content
+      error:
+        - error
+        - error_message
+        - failure_reason
+      status:
+        - status
+        - result
+      agent:
+        - agent_role
+        - role
+        - agent_name
+
+# パターン抽出設定
+pattern_extraction:
+  # 失敗パターン
+  failure_patterns:
+    min_confidence: 0.6
+    keywords:
+      - error
+      - failed
+      - エラー
+      - 失敗
+      - exception
+      - traceback
+  
+  # 修正レシピ
+  fix_recipes:
+    min_confidence: 0.7
+    success_indicators:
+      - 解決
+      - 修正
+      - fix
+      - resolved
+      - success
+  
+  # 成功パターン
+  success_patterns:
+    min_confidence: 0.8
+    keywords:
+      - 成功
+      - success
+      - completed
+      - 完了
+
+# knowledge_base 設定
+knowledge_base:
+  sheet_name: knowledge_base
+  deduplicate: true  # 重複除去
+  max_entries_per_run: 1000  # 1回の実行での最大保存件数

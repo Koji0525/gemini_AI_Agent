@@ -1,0 +1,22 @@
+# 変更理由テンプレート
+
+## 何が起きた:
+<問題・状況を記載>
+
+## 原因:
+<根本原因を記載>
+
+## 狙い:
+<この変更で達成したいことを記載>
+
+## 例:
+# 何が起きた:
+# wp_orchestrator.pyがconfig/config_loader.pyを参照
+# でも実際はconfiguration/config_loader.pyに存在
+# 
+# 原因:
+# specialized/版は旧パス(config/)を使用
+# プロジェクトは新パス(configuration/)に移行済み
+# 
+# 狙い:
+# パスを統一して正常にインポート
