@@ -111,10 +111,7 @@ class ContextLogger:
             sheets_manager: GoogleSheetsManagerインスタンス
         """
         self.sheets_manager = sheets_manager
-        # 互換性のため、gc属性またはservice属性を取得
-        self.gc = getattr(sheets_manager, "gc", None)
-        if self.gc is None and hasattr(sheets_manager, "service"):
-            self.gc = sheets_manager.service
+        self.gc = sheets_manager.gc
         self.spreadsheet_id = sheets_manager.spreadsheet_id
         self._ensure_sheet_exists()
         print("✅ ContextLogger初期化完了")
