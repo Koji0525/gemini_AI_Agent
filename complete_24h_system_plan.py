@@ -48,7 +48,7 @@ def create_enhanced_github_actions():
                 "steps": [
                     {
                         "name": "🎯 目標受信と設定",
-                        "run": |
+    "run": "具体的な実行コマンドをここに記載",
                             echo "開発目標: ${{ github.event.inputs.development_goal }}"
                             echo "優先度: ${{ github.event.inputs.priority }}"
                             echo "最大実行時間: ${{ github.event.inputs.max_duration }}時間"
