@@ -45,7 +45,7 @@ def create_enhanced_github_workflow():
                 "steps": [
                     {
                         "name": "🎯 目標受信とスプレッドシート登録",
-                        "run": |
+    "run": "統合テスト実行コマンド",
                             echo "目標: ${{ github.event.inputs.development_goal }}"
                             python3 scripts/goal_to_spreadsheet.py \
                                 --goal "${{ github.event.inputs.development_goal }}" \
