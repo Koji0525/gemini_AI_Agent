@@ -1,16 +1,14 @@
 #!/bin/bash
-"""
-🔧 便利なエイリアスを設定
+# 🔧 便利なエイリアスを設定
+#
+# 【エイリアス一覧】
+# ✅ touch_smart    - スマートファイル作成
+# ✅ fvm            - File Version Manager
+# ✅ git_push       - Git自動プッシュ
+# ✅ archive_old    - 古いバージョンアーカイブ
+# ✅ check_dup      - 重複チェック
 
-【エイリアス一覧】
-✅ touch_smart    - スマートファイル作成
-✅ fvm            - File Version Manager
-✅ git_push       - Git自動プッシュ
-✅ archive_old    - 古いバージョンアーカイブ
-✅ check_dup      - 重複チェック
-"""
-
-# エイリアス定義
+# エイリアス定義を ~/.bashrc に追加
 cat >> ~/.bashrc << 'ALIASES'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
