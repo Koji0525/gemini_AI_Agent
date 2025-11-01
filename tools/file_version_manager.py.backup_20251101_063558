@@ -180,7 +180,7 @@ class FileVersionManager:
         from datetime import datetime
         
         if not Path(file_path).exists():
-            print(f"❌ ファイルが見つかりません: {filepath}")
+            print(f"❌ ファイルが見つかりません: {file_path}")
             return False
         
         # バックアップディレクトリ作成
