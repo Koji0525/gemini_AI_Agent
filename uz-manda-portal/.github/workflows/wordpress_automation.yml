@@ -1,0 +1,76 @@
+name: WordPress自動投稿 - 6時間ごと実行
+
+on:
+  schedule:
+    # 6時間ごとに実行（0:00, 6:00, 12:00, 18:00 UTC）
+    - cron: '0 0,6,12,18 * * *'
+  
+  # 手動実行も可能
+  workflow_dispatch:
+    inputs:
+      companies_count:
+        description: '投稿する企業数'
+        required: false
+        default: '5'
+
+jobs:
+  wordpress-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 リポジトリをチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          cd uz-manda-portal
+          pip install requests --break-system-packages
+      
+      - name: 🔐 環境変数設定
+        env:
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_PASSWORD: ${{ secrets.WP_PASSWORD }}
+        run: |
+          cd uz-manda-portal
+          echo "WP_URL=${WP_URL}" > .env
+          echo "WP_USERNAME=${WP_USERNAME}" >> .env
+          echo "WP_PASSWORD=${WP_PASSWORD}" >> .env
+      
+      - name: 🚀 WordPress自動投稿実行
+        run: |
+          cd uz-manda-portal
+          python3 scripts/run_day4_integrated.py
+      
+      - name: 📊 実行結果をアップロード
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-logs
+          path: |
+            uz-manda-portal/logs/day4/*.json
+            uz-manda-portal/reports/day4/*.md
+            uz-manda-portal/logs/learning/*.md
+      
+      - name: 📝 結果をコミット
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add uz-manda-portal/logs/ uz-manda-portal/reports/
+          git commit -m "🤖 自動実行結果 $(date +'%Y-%m-%d %H:%M:%S')" || echo "変更なし"
+          git push || echo "プッシュ不要"
+
+  notify-results:
+    needs: wordpress-automation
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📧 実行結果を通知
+        run: |
+          echo "実行完了通知（Slack/Email連携は次のステップで実装）"
+

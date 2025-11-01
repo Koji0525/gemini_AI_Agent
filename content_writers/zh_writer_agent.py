@@ -9,15 +9,15 @@ logger = logging.getLogger(__name__)
 
 class ChineseContentWriter(BaseContentWriter):
     """中国語専用コンテンツライターAI - 乌兹别克斯坦并购专家"""
-    
+
     def get_language_code(self) -> str:
         """语言代码"""
         return "zh"
-    
+
     def get_language_name(self) -> str:
         """语言名称"""
         return "中文"
-    
+
     def get_system_prompt(self) -> str:
         """中国語専用システムプロンプト"""
         return """您是一位经验丰富的中文内容撰稿人，专注于乌兹别克斯坦并购市场和商业环境。
@@ -151,19 +151,19 @@ class ChineseContentWriter(BaseContentWriter):
 - 实用的操作指南和步骤
 
 **立即开始用中文和HTML标签撰写完整文章。**"""
-    
+
     def _build_prompt(self, task: dict, task_info: dict) -> str:
         """中国語記事用プロンプトを構築"""
         system_prompt = self.get_system_prompt()
-        
+
         url_instruction = ""
-        if task_info.get('url'):
+        if task_info.get("url"):
             url_instruction = f"""
 【参考信息】
 请参考以下文章（理解内容后撰写原创文章，不要直接复制）：
 参考网址：{task_info['url']}
 """
-        
+
         full_prompt = f"""{system_prompt}
 
 【具体写作要求】
@@ -196,5 +196,5 @@ Polylang设置：{task.get('polylang_lang', 'zh')}
 6. 不要有"明白了"等对话式回应，仅输出HTML
 
 **立即开始用中文和HTML标签撰写完整文章。**"""
-        
+
         return full_prompt

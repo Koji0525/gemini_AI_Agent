@@ -1,0 +1,62 @@
+[
+  {
+    "name": "wordpress_sec_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1761468766%7CbHMTI2oBS5mImvncCHOq8pEqSPyHcwQhtdZ5ppPNLsm%7C414cb70f23024f29c7df83f1cffa495cf7e73400d513ace4707b9b9e5f767ca8",
+    "domain": "uzbek-ma.com",
+    "path": "/wp-content/plugins",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_sec_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1761468766%7CbHMTI2oBS5mImvncCHOq8pEqSPyHcwQhtdZ5ppPNLsm%7C414cb70f23024f29c7df83f1cffa495cf7e73400d513ace4707b9b9e5f767ca8",
+    "domain": "uzbek-ma.com",
+    "path": "/wp-admin",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_test_cookie",
+    "value": "WP%20Cookie%20check",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wordpress_logged_in_c519f3faf8e2e054c074118d1701ff39",
+    "value": "uzbek%7C1761468766%7CbHMTI2oBS5mImvncCHOq8pEqSPyHcwQhtdZ5ppPNLsm%7Cebff61ebbab9e02226ad0e401694290640299e0b8e67ee2dee00de7be1be9d44",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wp-settings-1",
+    "value": "posts_list_mode%3Dlist%26libraryContent%3Dbrowse",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": 1792831968.343859,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wp-settings-time-1",
+    "value": "1761295966",
+    "domain": "uzbek-ma.com",
+    "path": "/",
+    "expires": 1792831968.343997,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  }
+]

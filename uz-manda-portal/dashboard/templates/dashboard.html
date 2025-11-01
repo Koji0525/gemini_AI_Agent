@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>常時AI開発システム</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 常時AI開発システム</h1>
+            <p>WordPressサイトを24時間自動開発</p>
+        </div>
+        
+        <div class="controls">
+            <button id="start-ai-btn" class="btn">🚀 AIシステム起動</button>
+            <button id="refresh-btn" class="btn">🔄 統計更新</button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>AIシステム状態</h3>
+                <p id="ai-status">🔍 チェック中...</p>
+                <p id="ai-message">-</p>
+            </div>
+            <div class="stat-card">
+                <h3>WordPress状態</h3>
+                <p id="wp-status">🔍 チェック中...</p>
+            </div>
+            <div class="stat-card">
+                <h3>開発サイクル数</h3>
+                <p id="dev-cycles">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>CPU使用率</h3>
+                <p id="cpu-usage">0%</p>
+            </div>
+            <div class="stat-card">
+                <h3>メモリ使用率</h3>
+                <p id="memory-usage">0%</p>
+            </div>
+            <div class="stat-card">
+                <h3>ディスク使用率</h3>
+                <p id="disk-usage">0%</p>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <h3>🔄 リアルタイム監視</h3>
+            <p>最終更新: <span id="timestamp">-</span></p>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>🎯 開発中の機能</h3>
+            <ul>
+                <li>自動テーマ改善</li>
+                <li>パフォーマンス監視</li>
+                <li>セキュリティ強化</li>
+                <li>ユーザー分析</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,512 +1,489 @@
-# browser_controller.py
-"""ブラウザ制御クラス（分割リファクタリング版）"""
+"""
+BrowserController - 完全修正版
+- Pathオブジェクト使用
+- VNC解像度 1150x600
+- 既存モジュール正しく統合
+"""
+
 import asyncio
+import os
 from pathlib import Path
 from typing import Optional, Dict
-import logging
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page, Playwright
+from dataclasses import dataclass
 
-from browser_control.browser_lifecycle import BrowserLifecycleManager
-from browser_control.brower_cookie_and_session import CookieSessionManager  # ファイル名修正
-from browser_control.browser_ai_chat_agent import AIChatAgent
-from browser_control.browser_wp_session_manager import WPSessionManager
-from configuration.config_utils import config, ErrorHandler
 
-logger = logging.getLogger(__name__)
+class BrowserOperationError(Exception):
+    """ブラウザ操作エラー"""
+
+    pass
+
+
+@dataclass
+class BrowserConfig:
+    """ブラウザ設定"""
+
+    GEMINI_URL: str = "https://gemini.google.com/app"
+    NAVIGATION_TIMEOUT: int = 60000
+    VIEWPORT: Dict[str, int] = None
+
+    def __post_init__(self):
+        if self.VIEWPORT is None:
+            # 正しい解像度: 1150x600
+            self.VIEWPORT = {"width": 1150, "height": 600}
+
 
 class BrowserController:
-    """ブラウザ制御ファサードクラス"""
-    
-    def __init__(self, download_folder: Path, mode: str = "image", service: str = "google", credentials: Dict = None):
-        self.download_folder = download_folder
-        self.mode = mode
-        self.service = service.lower()
-        self.credentials = credentials or {}
-        
-        # 設定ファイルのパス
-        self.cookies_file = Path(config.COOKIES_FILE) if config.COOKIES_FILE else None
-        self.browser_data_dir = Path(config.BROWSER_DATA_DIR) if config.BROWSER_DATA_DIR else None
-        self.wp_cookies_file = Path(config.BROWSER_DATA_DIR) / "wp_cookies.json" if config.BROWSER_DATA_DIR else None
-        
-        # マネージャーの初期化（setup_browserで完全初期化）
-        self.lifecycle_manager: Optional[BrowserLifecycleManager] = None
-        self.session_manager: Optional[CookieSessionManager] = None
-        self.ai_agent: Optional[AIChatAgent] = None
-        self.wp_manager: Optional[WPSessionManager] = None
-    
-    async def setup_browser(self) -> None:
-        """ブラウザのセットアップ - すべてのマネージャーを初期化"""
+    """ブラウザ制御のファサード（完全修正版）"""
+
+    def __init__(self, download_folder: str = None):
+        self.config = BrowserConfig()
+        self.download_folder = download_folder or "./downloads"
+
+        # Playwright関連
+        self.playwright: Optional[Playwright] = None
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
+        self.gemini_page: Optional[Page] = None  # Gemini専用ページ
+
+        # 専門モジュール（後で初期化）
+        self.cookie_manager = None
+        self.wp_session = None
+
+        os.makedirs(self.download_folder, exist_ok=True)
+
+    async def setup_browser(self, headless=True) -> None:
+        """ブラウザを初期化"""
+        print("🌐 ブラウザを初期化中...")
+
         try:
-            # ライフサイクルマネージャーの初期化とセットアップ
-            self.lifecycle_manager = BrowserLifecycleManager(
-                browser_data_dir=self.browser_data_dir,
-                download_folder=self.download_folder
+            self.playwright = await async_playwright().start()
+
+            self.browser = await self.playwright.chromium.launch(
+                headless=headless,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-blink-features=AutomationControlled",
+                ],
             )
-            await self.lifecycle_manager.setup_browser()
-            
-            # セッションマネージャーの初期化
-            self.session_manager = CookieSessionManager(
-                context=self.lifecycle_manager.context,
-                cookies_file=self.cookies_file
+
+            self.context = await self.browser.new_context(
+                viewport=self.config.VIEWPORT, user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
             )
-            
-            # AIチャットエージェントの初期化
-            self.ai_agent = AIChatAgent(
-                page=self.lifecycle_manager.page,
-                service=self.service,
-                credentials=self.credentials
-            )
-            
-            # WordPressセッションマネージャーの初期化
-            self.wp_manager = WPSessionManager(
-                context=self.lifecycle_manager.context,
-                wp_cookies_file=self.wp_cookies_file
-            )
-            
-            logger.info(f"✅ ブラウザ制御ファサード初期化完了（サービス: {self.service}）")
-            
+
+            # 専門モジュール初期化
+            await self._initialize_managers()
+
+            self.page = await self.context.new_page()
+            self.gemini_page = self.page  # Gemini専用ページとして保存
+            self.page.set_default_timeout(self.config.NAVIGATION_TIMEOUT)
+
+            print("✅ ブラウザ初期化完了")
+
         except Exception as e:
-            ErrorHandler.log_error(e, "ブラウザファサードセットアップ")
-            raise
-    
-    # プロパティの委譲
-    @property
-    def context(self):
-        return self.lifecycle_manager.context if self.lifecycle_manager else None
-    
-    @property
-    def page(self):
-        return self.lifecycle_manager.page if self.lifecycle_manager else None
-    
-    @property
-    def wp_page(self):
-        return self.wp_manager.wp_page if self.wp_manager else None
-    
-    @property
-    def is_logged_in(self):
-        return self.wp_manager.is_logged_in if self.wp_manager else False
-    
-    # AIチャット関連メソッドの委譲
-    async def navigate_to_gemini(self) -> None:
-        """Geminiにナビゲート - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        await self.ai_agent.navigate_to_gemini()
-    
-    async def navigate_to_deepseek(self) -> None:
-        """DeepSeekにナビゲート - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        await self.ai_agent.navigate_to_deepseek()
-    
-    async def send_prompt(self, prompt: str) -> None:
-        """プロンプト送信 - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        await self.ai_agent.send_prompt(prompt)
-    
-    async def wait_for_text_generation(self, max_wait: int = 180) -> bool:
+            print(f"❌ ブラウザ初期化エラー: {e}")
+            await self.cleanup()
+            raise BrowserOperationError(f"ブラウザ初期化失敗: {e}")
+
+    async def _initialize_managers(self):
+        """専門モジュールを初期化（修正版：Pathオブジェクト使用）"""
+        try:
+            from .brower_cookie_and_session import CookieSessionManager
+
+            # 重要：Pathオブジェクトとして渡す
+            cookies_file = Path("./gemini_cookies.json")
+
+            self.cookie_manager = CookieSessionManager(
+                context=self.context, cookies_file=cookies_file  # Pathオブジェクト
+            )
+
+            # クッキーを読み込む
+            await self.cookie_manager.load_cookies()
+            print("✅ CookieSessionManager 初期化完了")
+
+        except ImportError as e:
+            print(f"⚠️  CookieSessionManager インポートエラー: {e}")
+        except Exception as e:
+            print(f"⚠️  CookieSessionManager 初期化エラー: {e}")
+
+    async def navigate_to_gemini(self, max_retries: int = 3) -> bool:
         """
-        テキスト生成完了を待機（強化版）
-            
+        Gemini AIに移動（リトライ機能付き）
+
         Args:
-            max_wait: 最大待機時間（秒）
-                
+            max_retries: 最大リトライ回数
+
         Returns:
-            bool: 生成完了フラグ
+            bool: ログイン状態
+        """
+        for attempt in range(max_retries):
+            try:
+                print(f"📱 Gemini AIに移動中... (試行 {attempt + 1}/{max_retries})")
+
+                # タイムアウトを段階的に増加（30秒 → 60秒 → 90秒）
+                timeout = 30000 + (attempt * 30000)
+
+                await self.page.goto(
+                    "https://gemini.google.com/app",
+                    timeout=timeout,
+                    wait_until="domcontentloaded",  # networkidle より軽い
+                )
+
+                # ページ読み込み待機
+                await asyncio.sleep(3)
+
+                # ログイン状態確認
+                is_logged_in = await self._check_login_status()
+
+                if is_logged_in:
+                    print("✅ ログイン状態: True")
+                    return True
+                else:
+                    print("⚠️  ログインが必要です")
+                    return False
+
+            except Exception as e:
+                print(f"⚠️  試行 {attempt + 1} 失敗: {e}")
+
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5
+                    print(f"   {wait_time}秒後に再試行...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    print(f"❌ {max_retries}回試行しましたが失敗しました")
+                    raise
+
+    async def _check_login_status(self) -> bool:
+        """ログイン状態をチェック（修正版）"""
+        try:
+            # Geminiの新しいUI: contenteditable div
+            contenteditable = await self.page.locator("[contenteditable='true']").count()
+            if contenteditable > 0:
+                return True
+
+            # 古いUI: textarea（念のため）
+            textarea = await self.page.locator("div[contenteditable='true']").count()
+            if textarea > 0:
+                return True
+
+            # ログインボタンがあれば未ログイン
+            login_button = await self.page.locator("text=Sign in").count()
+            if login_button > 0:
+                return False
+
+            return False
+        except:
+            return False
+
+    async def send_prompt(self, prompt: str, timeout: int = 60000, max_retries: int = 3) -> None:
+        """
+        Geminiにプロンプトを送信（.ql-editor使用版）
+
+        Args:
+            prompt: 送信するプロンプト
+            timeout: タイムアウト時間（ミリ秒）
+            max_retries: 最大リトライ回数
+        """
+        page = self.gemini_page if self.gemini_page else self.page
+
+        for attempt in range(max_retries):
+            try:
+                print(f"📝 プロンプト送信: {prompt[:80]}...")
+
+                # .ql-editorを直接使用（rich-textareaの内部要素）
+                textarea = await page.locator(".ql-editor").first
+
+                if not await textarea.is_visible():
+                    if attempt < max_retries - 1:
+                        wait_time = 3 * (attempt + 1)
+                        print(f"⚠️  試行 {attempt + 1}/{max_retries} 失敗: 入力欄が見えません")
+                        print(f"   {wait_time}秒後に再試行...")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception("入力欄が見つかりません")
+
+                print(f"✅ 入力欄発見: .ql-editor")
+
+                # クリックしてフォーカス
+                await textarea.click()
+                await asyncio.sleep(0.5)
+
+                # クリア（Ctrl+A → Delete）
+                await page.keyboard.press("Control+A")
+                await asyncio.sleep(0.2)
+                await page.keyboard.press("Backspace")
+                await asyncio.sleep(0.3)
+
+                # テキスト入力（type使用）
+                await textarea.type(prompt, delay=50)
+                await asyncio.sleep(0.5)
+
+                # Enter送信
+                await page.keyboard.press("Enter")
+
+                print("✅ プロンプト送信完了")
+                return
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = 5 * (attempt + 1)
+                    print(f"⚠️  エラー発生（試行 {attempt + 1}/{max_retries}）: {e}")
+                    print(f"   {wait_time}秒後に再試行...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    await page.screenshot(path="error_send_prompt.png")
+                    raise Exception(f"プロンプト送信失敗: {e}")
+
+    async def wait_for_text_generation(self, max_wait: int = 120, min_stable_time: int = 7) -> bool:
+        """
+        Geminiのテキスト生成完了を待機（長文対応版）
+
+        Args:
+            max_wait: 最大待機時間（秒）デフォルト120秒
+            min_stable_time: 安定判定の回数（秒）デフォルト7秒
+
+        Returns:
+            bool: 生成完了したかどうか
+
+        判定ロジック:
+        - 1秒ごとに文字数をチェック
+        - 短文（1,000文字未満）: 3秒安定で完了
+        - 中文（1,000-3,000文字）: 5秒安定で完了
+        - 長文（3,000文字以上）: 7秒安定で完了
         """
         try:
-            logger.info(f"⏱️ テキスト生成待機開始（最大{max_wait}秒）")
-                
+            print("⏳ レスポンス生成を待機中...")
+
             start_time = asyncio.get_event_loop().time()
-            check_interval = 2.0  # 2秒ごとにチェック
             last_length = 0
             stable_count = 0
-            required_stable = 3  # 3回連続で変化なしで完了と判定
-                
-            while True:
-                elapsed = asyncio.get_event_loop().time() - start_time
-                    
-                if elapsed > max_wait:
-                    logger.warning(f"⏱️ タイムアウト（{max_wait}秒）")
-                    return False
-                    
-                # 現在のテキスト長を取得
-                try:
-                    current_text = await self._get_current_text_quick()
-                    current_length = len(current_text)
-                        
-                    # テキストが増えているか確認
-                    if current_length > last_length:
-                        logger.info(f"📝 生成中: {current_length}文字（経過: {int(elapsed)}秒）")
-                        last_length = current_length
-                        stable_count = 0
+            max_length_seen = 0  # これまでの最大文字数
+
+            while (asyncio.get_event_loop().time() - start_time) < max_wait:
+                # レスポンス要素を探す
+                selectors = [".response-container", ".model-response-text", ".markdown"]
+
+                current_text = ""
+
+                for selector in selectors:
+                    try:
+                        elements = await self.page.locator(selector).all()
+                        if elements:
+                            last_elem = elements[-1]
+                            if await last_elem.is_visible():
+                                current_text = await last_elem.text_content() or ""
+                                break
+                    except:
+                        continue
+
+                current_length = len(current_text.strip())
+
+                # 最大文字数を記録
+                if current_length > max_length_seen:
+                    max_length_seen = current_length
+
+                # 50文字以上なら実際のレスポンス
+                if current_length > 50:
+                    # 文字数に応じて必要な安定時間を決定
+                    if current_length < 1000:
+                        required_stable = 3  # 短文: 3秒
+                    elif current_length < 3000:
+                        required_stable = 5  # 中文: 5秒
                     else:
-                        # 長さが変わらない
+                        required_stable = 7  # 長文: 7秒
+
+                    # 文字数が安定しているか確認
+                    if current_length == last_length:
                         stable_count += 1
-                        logger.info(f"⏸️ 安定: {stable_count}/{required_stable}（{current_length}文字）")
-                            
+
+                        # 必要な安定時間に達したら完了
                         if stable_count >= required_stable:
-                            logger.info(f"✅ 生成完了（{current_length}文字、{int(elapsed)}秒）")
+                            print(f"✅ レスポンス生成完了（{current_length} 文字、{required_stable}秒安定）")
                             return True
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ チェックエラー: {e}")
-                    
-                # 待機
-                await asyncio.sleep(check_interval)
-            
-        except Exception as e:
-            logger.error(f"❌ 待機エラー: {e}")
+                        else:
+                            # 安定中の表示
+                            if stable_count % 2 == 0:  # 2秒ごとに表示
+                                print(f"   安定確認中... {current_length} 文字（{stable_count}/{required_stable}秒）")
+                    else:
+                        # 文字数が増えた
+                        stable_count = 0
+                        last_length = current_length
+
+                        # 進捗表示（100文字ごと）
+                        if current_length % 100 < 50 and current_length > 100:
+                            print(f"   生成中... {current_length} 文字")
+
+                # 1秒待機
+                await asyncio.sleep(1)
+
+            # タイムアウト
+            elapsed = int(asyncio.get_event_loop().time() - start_time)
+            print(f"⚠️  待機タイムアウト（{elapsed}秒）")
+
+            # タイムアウトでも50文字以上あれば部分的に成功
+            if max_length_seen > 50:
+                print(f"   ただし、{max_length_seen}文字のレスポンスを取得済み")
+                print(f"   最終的な文字数: {last_length}")
+                return True
+
             return False
-    
-    async def extract_latest_text_response(self, allow_partial: bool = True) -> Optional[str]:
+
+        except Exception as e:
+            print(f"❌ 待機エラー: {e}")
+            return False
+
+    async def extract_latest_text_response(self):
         """
-        最新のテキスト応答を抽出（強化版）
-        
-        Args:
-            allow_partial: 部分的な応答も許可するか
-            
+        最新のレスポンステキストを取得
+
         Returns:
-            Optional[str]: 抽出されたテキスト
+            str: レスポンステキスト（取得できない場合は空文字列）
         """
         try:
-            logger.info("="*60)
-            logger.info("★★★ Gemini応答抽出開始（強化版） ★★★")
-            logger.info("="*60)
-            
-            results = {}
-            
-            # ============================================================
-            # === 方法1: model-response-text クラス ===
-            # ============================================================
-            try:
-                message_divs = await self.page.query_selector_all('div.model-response-text')
-                if message_divs:
-                    last_message = message_divs[-1]
-                    text1 = await last_message.inner_text()
-                    if text1 and len(text1) > 100:
-                        results['method1'] = text1
-                        logger.info(f"✅ 方法1成功: {len(text1)}文字")
-            except Exception as e:
-                logger.warning(f"⚠️ 方法1失敗: {e}")
-            
-            # ============================================================
-            # === 方法2: markdown-container クラス ===
-            # ============================================================
-            try:
-                markdown_divs = await self.page.query_selector_all('div.markdown-container')
-                if markdown_divs:
-                    last_markdown = markdown_divs[-1]
-                    text2 = await last_markdown.inner_text()
-                    if text2 and len(text2) > 100:
-                        results['method2'] = text2
-                        logger.info(f"✅ 方法2成功: {len(text2)}文字")
-            except Exception as e:
-                logger.warning(f"⚠️ 方法2失敗: {e}")
-            
-            # ============================================================
-            # === 方法3: message-content クラス ===
-            # ============================================================
-            try:
-                content_divs = await self.page.query_selector_all('div.message-content')
-                if content_divs:
-                    # 最後のメッセージコンテンツ
-                    for div in reversed(content_divs):
-                        text3 = await div.inner_text()
-                        if text3 and len(text3) > 100 and 'model-response' not in text3.lower():
-                            results['method3'] = text3
-                            logger.info(f"✅ 方法3成功: {len(text3)}文字")
-                            break
-            except Exception as e:
-                logger.warning(f"⚠️ 方法3失敗: {e}")
-            
-            # ============================================================
-            # === 方法4: data-test-id 属性 ===
-            # ============================================================
-            try:
-                test_divs = await self.page.query_selector_all('[data-test-id*="conversation-turn"]')
-                if test_divs:
-                    last_turn = test_divs[-1]
-                    text4 = await last_turn.inner_text()
-                    if text4 and len(text4) > 100:
-                        results['method4'] = text4
-                        logger.info(f"✅ 方法4成功: {len(text4)}文字")
-            except Exception as e:
-                logger.warning(f"⚠️ 方法4失敗: {e}")
-            
-            # ============================================================
-            # === 結果選択（最長のものを選択） ===
-            # ============================================================
-            if not results:
-                logger.error("❌ 全方法失敗 - 応答が取得できませんでした")
-                
-                # デバッグ情報
+            print("📖 レスポンステキスト取得中...")
+
+            # 優先順位の高いセレクタから順に試行
+            selectors = [
+                ".model-response-text",  # 最も確実
+                ".markdown",  # マークダウンレンダラー
+                ".response-container",  # レスポンスコンテナ
+                "message-content",  # カスタム要素
+            ]
+
+            for selector in selectors:
                 try:
-                    page_content = await self.page.content()
-                    logger.info(f"📄 ページ長: {len(page_content)}文字")
-                except:
-                    pass
-                
-                return None
-            
-            # 最も長いテキストを選択
-            best_method = max(results.items(), key=lambda x: len(x[1]))
-            selected_text = best_method[1]
-            
-            logger.info(f"✅ 最適結果選択: {best_method[0]} ({len(selected_text)}文字)")
-            
-            # ============================================================
-            # === 品質チェック（緩和版） ===
-            # ============================================================
-            warnings = []
-            
-            # 長さチェック
-            if len(selected_text) < 500:
-                warnings.append(f'短い応答（{len(selected_text)}文字）')
-            
-            # コードブロックチェック（緩和）
-            if allow_partial:
-                # 部分的なコードブロックも許可
-                if '```' in selected_text:
-                    open_count = selected_text.count('```')
-                    if open_count % 2 != 0:
-                        warnings.append('コードブロック未完結（許可）')
-            else:
-                # 厳密なチェック
-                open_blocks = selected_text.count('```')
-                if open_blocks % 2 != 0:
-                    warnings.append('コードブロック未完結')
-            
-            # 警告表示
-            if warnings:
-                logger.warning("⚠️ 品質警告:")
-                for w in warnings:
-                    logger.warning(f"  - {w}")
-            
-            # 部分応答も許可する場合は、警告があっても返す
-            if allow_partial:
-                logger.info("✅ 部分応答を許可 - そのまま返却")
-                return selected_text
-            
-            # 厳密モードの場合、重大な問題があればNone
-            if len(selected_text) < 100:
-                logger.error("❌ 応答が短すぎる（100文字未満）")
-                return None
-            
-            logger.info("="*60)
-            logger.info(f"✅ 応答抽出完了: {len(selected_text)}文字")
-            logger.info("="*60)
-            
-            return selected_text
-        
+                    elements = await self.page.locator(selector).all()
+                    if elements:
+                        # 最後の要素（最新のレスポンス）を取得
+                        last_element = elements[-1]
+
+                        # 表示されているか確認
+                        is_visible = await last_element.is_visible()
+                        if is_visible:
+                            text = await last_element.text_content()
+                            if text and len(text.strip()) > 10:  # 10文字以上
+                                print(f"✅ レスポンス取得成功: {selector} ({len(text)} 文字)")
+                                return text.strip()
+                except Exception as e:
+                    # デバッグ用（オプション）
+                    # print(f"   {selector} で取得失敗: {e}")
+                    continue
+
+            print("⚠️  レスポンスが見つかりません")
+            return ""
+
         except Exception as e:
-            logger.error(f"❌ 応答抽出エラー: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return None
-    
-    async def send_prompt_and_wait(self, prompt: str, max_wait: int = 120) -> bool:
-        """プロンプト送信と待機 - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        return await self.ai_agent.send_prompt_and_wait(prompt, max_wait)
-    
-    # クッキー管理の委譲
-    async def save_cookies(self) -> None:
-        """クッキー保存 - セッションマネージャーに委譲"""
-        if not self.session_manager:
-            raise Exception("セッションマネージャーが初期化されていません")
-        await self.session_manager.save_cookies()
-    
-    async def load_cookies(self) -> bool:
-        """クッキー読み込み - セッションマネージャーに委譲"""
-        if not self.session_manager:
-            logger.warning("セッションマネージャーが初期化されていません")
-            return False
-        return await self.session_manager.load_cookies()
-    
-    # WordPress関連メソッドの委譲
-    async def initialize_wp_session(self, auth_module=None) -> bool:
-        """WordPressセッション初期化 - WPマネージャーに委譲"""
-        if not self.wp_manager:
-            raise Exception("WordPressマネージャーが初期化されていません")
-        return await self.wp_manager.initialize_wp_session(auth_module)
-    
-    async def save_wordpress_cookies(self, wp_url: str) -> bool:
-        """WordPressクッキー保存 - WPマネージャーに委譲"""
-        if not self.wp_manager:
-            raise Exception("WordPressマネージャーが初期化されていません")
-        return await self.wp_manager.save_wordpress_cookies(wp_url)
-    
-    async def load_wordpress_cookies(self, wp_url: str) -> bool:
-        """WordPressクッキー読み込み - WPマネージャーに委譲"""
-        if not self.wp_manager:
-            raise Exception("WordPressマネージャーが初期化されていません")
-        return await self.wp_manager.load_wordpress_cookies(wp_url)
-    
-    # クリーンアップの委譲
+            print(f"❌ レスポンス取得エラー: {e}")
+            return ""
+
     async def cleanup(self) -> None:
-        """リソースクリーンアップ - ライフサイクルマネージャーに委譲"""
-        # WordPressセッションを閉じる
-        if self.wp_manager:
-            await self.wp_manager.close_wp_session()
-        
-        # メインのブラウザリソースをクリーンアップ
-        if self.lifecycle_manager:
-            await self.lifecycle_manager.cleanup()
-    
-    # ユーティリティメソッド
-    async def save_text_to_file(self, text: str, filename: str) -> bool:
-        """テキストファイル保存 - ユーティリティとして維持"""
+        """リソースをクリーンアップ"""
         try:
-            save_path = self.download_folder / filename
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(text)
-            if save_path.exists():
-                file_size = save_path.stat().st_size
-                logger.info(f"✅ テキスト保存成功: {filename} ({file_size:,} bytes)")
+            print("🧹 ブラウザをクリーンアップ中...")
+
+            if self.cookie_manager:
+                try:
+                    await self.cookie_manager.save_cookies()
+                except Exception as e:
+                    print(f"⚠️  クッキー保存エラー: {e}")
+
+            if self.page:
+                await self.page.close()
+            if self.context:
+                await self.context.close()
+            if self.browser:
+                await self.browser.close()
+            if self.playwright:
+                await self.playwright.stop()
+
+            print("✅ クリーンアップ完了")
+        except Exception as e:
+            print(f"⚠️  クリーンアップエラー: {e}")
+
+    async def __aenter__(self):
+        await self.setup_browser()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.cleanup()
+
+    async def load_wordpress_cookies(self, wp_url: str) -> bool:
+        """
+        WordPressのクッキーを読み込み
+
+        Args:
+            wp_url: WordPress サイトURL
+
+        Returns:
+            bool: 読み込み成功時 True
+        """
+        try:
+            import json
+
+            cookies_file = Path("wordpress_cookies.json")
+            if not cookies_file.exists():
+                print("📝 WordPressクッキーファイルが見つかりません")
+                return False
+
+            with open(cookies_file, "r") as f:
+                cookies = json.load(f)
+
+            if not cookies:
+                print("📝 クッキーが空です")
+                return False
+
+            if self.context:
+                await self.context.add_cookies(cookies)
+                print(f"✅ WordPressクッキーを読み込みました: {len(cookies)}個")
                 return True
             else:
-                logger.error(f"❌ テキスト保存失敗: {filename}")
+                print("❌ コンテキストが初期化されていません")
                 return False
+
         except Exception as e:
-            ErrorHandler.log_error(e, "テキストファイル保存")
+            print(f"❌ WordPressクッキー読み込みエラー: {e}")
             return False
-    
-    # 後方互換性のためのメソッド
-    async def _is_browser_alive(self) -> bool:
-        """ブラウザ生存確認 - ライフサイクルマネージャーに委譲"""
-        if not self.lifecycle_manager:
-            return False
-        return await self.lifecycle_manager._is_browser_alive()
-    
-    async def handle_welcome_screens(self) -> None:
-        """ウェルカム画面処理 - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        await self.ai_agent.handle_welcome_screens()
-    
-    async def ensure_normal_chat_mode(self) -> None:
-        """通常チャットモード確認 - AIエージェントに委譲"""
-        if not self.ai_agent:
-            raise Exception("AIエージェントが初期化されていません")
-        await self.ai_agent.ensure_normal_chat_mode()
-    
-    # 非推奨メソッド（後方互換性のため）
-    async def _wait_for_generation_complete(self, max_wait: int = 120) -> bool:
-        """非推奨メソッド - 後方互換性のため維持"""
-        logger.warning("⚠️ 非推奨メソッド _wait_for_generation_complete が呼び出されました")
-        return await self.wait_for_text_generation(max_wait)
-    
-async def ensure_browser_ready(self) -> bool:
-    """
-    ブラウザの準備完了を確認（セッション管理強化版）
-        
-    Returns:
-        bool: 準備完了フラグ
-    """
-    try:
-        # ブラウザが起動しているか確認
-        if not self.browser:
-            logger.error("❌ ブラウザが起動していません")
-            return False
-            
-        # コンテキストが有効か確認
-        if not self.context:
-            logger.error("❌ ブラウザコンテキストがありません")
-            return False
-            
-        # ページが有効か確認
-        if not self.page:
-            logger.error("❌ ページがありません")
-            return False
-            
-        # ページが閉じられていないか確認
+
+    async def save_wordpress_cookies(self, wp_url: str) -> bool:
+        """
+        WordPressのクッキーを保存
+
+        Args:
+            wp_url: WordPress サイトURL
+
+        Returns:
+            bool: 保存成功時 True
+        """
         try:
-            is_closed = self.page.is_closed()
-            if is_closed:
-                logger.error("❌ ページが閉じられています - 再作成")
-                self.page = await self.context.new_page()
-                await self.page.goto('https://gemini.google.com/app', wait_until='networkidle')
-                await asyncio.sleep(3)
-                logger.info("✅ ページを再作成しました")
+            import json
+            from urllib.parse import urlparse
+
+            if not self.context:
+                print("❌ コンテキストが初期化されていません")
+                return False
+
+            # 現在のクッキーを取得
+            cookies = await self.context.cookies()
+
+            # WordPressドメインのクッキーのみフィルタ
+            wp_domain = urlparse(wp_url).netloc
+            wp_cookies = [c for c in cookies if wp_domain in c.get("domain", "")]
+
+            # 保存
+            cookies_file = Path("wordpress_cookies.json")
+            with open(cookies_file, "w") as f:
+                json.dump(wp_cookies, f, indent=2)
+
+            print(f"✅ WordPressクッキーを保存しました: {len(wp_cookies)}個")
+            return True
+
         except Exception as e:
-            logger.warning(f"⚠️ ページ状態確認エラー: {e}")
-            
-        # Geminiページにいるか確認
-        current_url = self.page.url
-        if 'gemini.google.com' not in current_url:
-            logger.warning(f"⚠️ Geminiページではありません: {current_url}")
-            logger.info("🔄 Geminiページに移動中...")
-            await self.page.goto('https://gemini.google.com/app', wait_until='networkidle')
-            await asyncio.sleep(3)
-            
-        logger.info("✅ ブラウザ準備完了")
-        return True
-        
-    except Exception as e:
-        logger.error(f"❌ ブラウザ準備確認エラー: {e}")
-        return False
-    
-async def send_prompt(self, prompt: str) -> bool:
-    """
-    プロンプト送信（セッション管理付き）
-        
-    Args:
-        prompt: 送信するプロンプト
-            
-    Returns:
-        bool: 送信成功フラグ
-    """
-    try:
-        # ブラウザ準備確認
-        if not await self.ensure_browser_ready():
-            logger.error("❌ ブラウザが準備できていません")
+            print(f"❌ WordPressクッキー保存エラー: {e}")
             return False
-            
-        logger.info("📤 プロンプト送信中...")
-            
-        # プロンプト入力欄を探す
-        input_selectors = [
-            'textarea[placeholder*="メッセージ"]',
-            'textarea[aria-label*="メッセージ"]',
-            'div[contenteditable="true"]',
-            'textarea.ql-editor',
-            'div.ql-editor'
-        ]
-            
-        input_box = None
-        for selector in input_selectors:
-            try:
-                input_box = await self.page.wait_for_selector(selector, timeout=5000)
-                if input_box:
-                    break
-            except:
-                continue
-            
-        if not input_box:
-            logger.error("❌ 入力欄が見つかりません")
-            return False
-            
-        # プロンプト入力
-        await input_box.click()
-        await asyncio.sleep(0.5)
-        await input_box.fill(prompt)
-        await asyncio.sleep(1)
-            
-        # 送信ボタンクリック
-        send_button = await self.page.query_selector('button[aria-label*="送信"]')
-        if send_button:
-            await send_button.click()
-            logger.info("✅ プロンプト送信完了")
-            return True
-        else:
-            # Enterキーで送信
-            await self.page.keyboard.press('Enter')
-            logger.info("✅ プロンプト送信完了（Enter）")
-            return True
-        
-    except Exception as e:
-        logger.error(f"❌ プロンプト送信エラー: {e}")
-        return False
-    
+
+
+EnhancedBrowserController = BrowserController

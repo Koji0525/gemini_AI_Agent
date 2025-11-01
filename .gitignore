@@ -1,8 +1,3 @@
-# サービスアカウント（機密情報）
-service_account.json
-*service_account*.json
-*.json.old
-
 # Python
 __pycache__/
 *.py[cod]
@@ -11,60 +6,120 @@ __pycache__/
 .Python
 env/
 venv/
+ENV/
+*.egg-info/
+dist/
+build/
 
-# IDEs
+# 環境変数・認証情報
+.env
+.env.local
+credentials.json
+configuration/service_account.json
+*.key
+*.pem
+
+# Google Sheets認証
+token.json
+token.pickle
+
+# ブラウザデータ
+cookies/
+*.pkl
+session_data/
+chrome_profile/
+browser_profile/
+
+# ログファイル
+*.log
+logs/
+agent_outputs/
+
+# テンポラリファイル
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+
+# 出力ファイル（オプション - 必要に応じてコメントアウト）
+# agent_outputs/
+# downloads/
+
+# IDE設定
 .vscode/
 .idea/
+*.sublime-*
 
-# Logs
+# テストファイル
+.pytest_cache/
+.coverage
+htmlcov/
+
+# スクリプト実行結果
+*.md.backup
+*_backup.*
+
+# 一時的なテストスクリプト（本番用スクリプトは含める）
+test_*.sh
+*_temp.py
+*_tmp.py
+
+# バックアップ
+_BACKUP/
+_WIP/
+_ARCHIVE/
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Gemini cookies (機密情報)
+gemini_cookies.json
+*_cookies.json
+*.pyc
+*.pyo
+
+# Phase 2開発時の一時ファイル
+run_pm_tasks_adaptive_v1.3_test.py
+_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
+_WIP/task_dependency_manager_v01.py
+
+# バックアップ
+_BACKUP/
+
+# ログファイル
 *.log
-error_logs/
+gemini_automation.log
 
-# OS
-.DS_Store
-Thumbs.db
+# クッキー
+*_cookies.json
 
-# === サービスアカウント（機密情報） ===
+# Google Cloud認証情報（絶対にコミットしない）
 service_account.json
-*service_account*.json
-*.json.old
-service_account_b64.txt
+**/service_account.json
+gemini_auto_generate/configuration/service_account.json
 
-# === Python ===
-__pycache__/
-*.py[cod]
-error_logs/
+# 認証情報（絶対にコミットしない）
+**/*_key.json
+**/*.pem
+**/credentials.json
+# 実行時生成ファイル
+docs/
 
-# === IDE ===
-.vscode/settings.json
+# 作業中ファイル
+_WIP/
+_BACKUP/
+_ARCHIVE/
 
-# === バックアップファイル ===
-*.backup
-*.bak
-*_backup.py
-backups/
-
-# === ログとキャッシュ ===
-logs/
-*.log
-error_logs/
-
-# === テンポラリファイル ===
-service_account_b64.txt
-.env
-
-# === Docker ===
-docker-compose.override.yml
-
-# === テストファイル（オプション） ===
-test_autonomous_*.py
-*_test.py
-autonomous_*_v2.py
-simple_test.sh
-wait_and_test.sh
-
-# サービスアカウント（機密情報）
-service_account.json
-service_account.json.old
-service_account_b64.txt
-*service_account*.json
+# POCファイル
+*_poc.py
+run_poc_*.py
+_BACKUP/
+_ARCHIVE/
+Claude/
+demos/

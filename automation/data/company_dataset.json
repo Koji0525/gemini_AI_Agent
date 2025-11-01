@@ -1,0 +1,149 @@
+{
+  "companies": [
+    {
+      "id": 1,
+      "name": "株式会社テクノロジーソリューションズ",
+      "industry": "ITサービス",
+      "established": "2015年3月",
+      "capital": "5000万円",
+      "employees": "45名",
+      "location": "東京都渋谷区",
+      "business_description": "AIを活用した業務効率化ソリューションの開発・提供",
+      "strengths": [
+        "独自のAIアルゴリズムを保有",
+        "大手企業との取引実績あり",
+        "高い技術力を持つ開発チーム"
+      ],
+      "revenue": "8億5000万円（2024年度予想）",
+      "profit": "1億2000万円（2024年度予想）",
+      "growth_rate": "25%",
+      "dd_status": {
+        "financial_analysis": "完了",
+        "legal_review": "完了",
+        "technical_due_diligence": "完了",
+        "commercial_due_diligence": "完了",
+        "hr_assessment": "完了"
+      },
+      "valuation": "12億円",
+      "asking_price": "10億円",
+      "deal_structure": "株式譲渡100%",
+      "timeline": "6-8ヶ月"
+    },
+    {
+      "id": 2,
+      "name": "メディカルケア株式会社",
+      "industry": "医療機器",
+      "established": "2012年7月",
+      "capital": "8000万円",
+      "employees": "32名",
+      "location": "大阪府大阪市",
+      "business_description": "在宅医療向けIoTデバイスの開発・販売",
+      "strengths": [
+        "特許取得済みの独自技術",
+        "医療機関との強固なパイプ",
+        "成長市場での先行者優位"
+      ],
+      "revenue": "6億2000万円（2024年度予想）",
+      "profit": "9000万円（2024年度予想）",
+      "growth_rate": "35%",
+      "dd_status": {
+        "financial_analysis": "完了",
+        "legal_review": "審査中",
+        "technical_due_diligence": "完了",
+        "commercial_due_diligence": "完了",
+        "hr_assessment": "審査中"
+      },
+      "valuation": "9億5000万円",
+      "asking_price": "8億5000万円",
+      "deal_structure": "株式譲渡80%",
+      "timeline": "4-6ヶ月"
+    },
+    {
+      "id": 3,
+      "name": "サステナブルエナジー合同会社",
+      "industry": "再生可能エネルギー",
+      "established": "2018年4月",
+      "capital": "3000万円",
+      "employees": "28名",
+      "location": "福岡県福岡市",
+      "business_description": "太陽光発電システムの設計・施工・メンテナンス",
+      "strengths": [
+        "地域密着型の営業網",
+        "官公庁との実績あり",
+        "安定した収益構造"
+      ],
+      "revenue": "5億8000万円（2024年度予想）",
+      "profit": "7500万円（2024年度予想）",
+      "growth_rate": "18%",
+      "dd_status": {
+        "financial_analysis": "完了",
+        "legal_review": "完了",
+        "technical_due_diligence": "審査中",
+        "commercial_due_diligence": "完了",
+        "hr_assessment": "完了"
+      },
+      "valuation": "7億2000万円",
+      "asking_price": "6億5000万円",
+      "deal_structure": "株式譲渡60%",
+      "timeline": "3-5ヶ月"
+    },
+    {
+      "id": 4,
+      "name": "フードイノベーション株式会社",
+      "industry": "食品テクノロジー",
+      "established": "2019年1月",
+      "capital": "4500万円",
+      "employees": "38名",
+      "location": "愛知県名古屋市",
+      "business_description": "植物性代替肉の研究開発と製造",
+      "strengths": [
+        "独自のタンパク質抽出技術",
+        "飲食店チェーンとの取引",
+        "海外展開のポテンシャル"
+      ],
+      "revenue": "4億5000万円（2024年度予想）",
+      "profit": "6000万円（2024年度予想）",
+      "growth_rate": "42%",
+      "dd_status": {
+        "financial_analysis": "審査中",
+        "legal_review": "完了",
+        "technical_due_diligence": "完了",
+        "commercial_due_diligence": "審査中",
+        "hr_assessment": "完了"
+      },
+      "valuation": "8億8000万円",
+      "asking_price": "7億9000万円",
+      "deal_structure": "株式譲渡70%",
+      "timeline": "5-7ヶ月"
+    },
+    {
+      "id": 5,
+      "name": "デジタルマーケティング株式会社",
+      "industry": "デジタルマーケティング",
+      "established": "2016年9月",
+      "capital": "6000万円",
+      "employees": "52名",
+      "location": "東京都港区",
+      "business_description": "SMA・コンテンツマーケティングの企画・運用",
+      "strengths": [
+        "大手クライアントのポートフォリオ",
+        "データ分析に基づく効果測定",
+        "若手クリエイターの育成体制"
+      ],
+      "revenue": "9億2000万円（2024年度予想）",
+      "profit": "1億5000万円（2024年度予想）",
+      "growth_rate": "28%",
+      "dd_status": {
+        "financial_analysis": "完了",
+        "legal_review": "完了",
+        "technical_due_diligence": "完了",
+        "commercial_due_diligence": "完了",
+        "hr_assessment": "完了"
+      },
+      "valuation": "15億円",
+      "asking_price": "13億5000万円",
+      "deal_structure": "株式譲渡100%",
+      "timeline": "6-9ヶ月"
+    }
+  ]
+}

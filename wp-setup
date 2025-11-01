@@ -1,0 +1,4 @@
+#!/bin/bash
+# WordPress完全自動セットアップ
+
+python3 tools/wp_plugin_manager.py --setup
