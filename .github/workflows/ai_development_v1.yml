@@ -1,0 +1,40 @@
+name: AI Development System v1
+
+on:
+  workflow_dispatch:
+    inputs:
+      development_goal:
+        description: '開発目標'
+        required: true
+        type: string
+      priority:
+        description: '優先度'
+        required: true
+        type: choice
+        options:
+        - low
+        - medium
+        - high
+        - critical
+        default: 'medium'
+
+jobs:
+  ai-development:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🛎️ リポジトリチェックアウト
+      uses: actions/checkout@v4
+    
+    - name: 🎯 目標設定
+      run: |
+        echo "開発目標: ${{ github.event.inputs.development_goal }}"
+        echo "優先度: ${{ github.event.inputs.priority }}"
+        echo "DEVELOPMENT_GOAL=${{ github.event.inputs.development_goal }}" >> $GITHUB_ENV
+        echo "PRIORITY=${{ github.event.inputs.priority }}" >> $GITHUB_ENV
+    
+    - name: 🚀 AI開発開始
+      run: |
+        cd uz-manda-portal
+        python3 scripts/continuous_developer.py \
+          --goal "$DEVELOPMENT_GOAL" \
+          --priority "$PRIORITY"
