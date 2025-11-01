@@ -6,55 +6,43 @@
 import os
 from pathlib import Path
 
+
 def create_missing_agents_structure():
     """不足しているエージェントのディレクトリ構造を作成"""
     print("📁 不足エージェントのディレクトリ構造作成計画")
     print("=" * 50)
-    
+
     missing_structure = {
         "agents/self_healing/core/": [
             "retry_manager.py",
-            "self_healing_orchestrator.py", 
+            "self_healing_orchestrator.py",
             "snapshot_manager.py",
-            "rollback_agent.py"
+            "rollback_agent.py",
         ],
-        "agents/self_healing/utils/": [
-            "auto_fix_patterns.py"
-        ],
-        "agents/decision_support/": [
-            "decision_support_system.py",
-            "ab_test_manager.py"
-        ],
-        "agents/knowledge_base/": [
-            "knowledge_base_manager.py", 
-            "similarity_search_engine.py",
-            "pattern_extractor.py"
-        ],
-        "agents/code_generation/": [
-            "auto_code_generator.py",
-            "code_quality_checker.py"
-        ],
-        "agents/feedback/": [
-            "intelligent_feedback_generator.py"  # 既存だが確認
-        ]
+        "agents/self_healing/utils/": ["auto_fix_patterns.py"],
+        "agents/decision_support/": ["decision_support_system.py", "ab_test_manager.py"],
+        "agents/knowledge_base/": ["knowledge_base_manager.py", "similarity_search_engine.py", "pattern_extractor.py"],
+        "agents/code_generation/": ["auto_code_generator.py", "code_quality_checker.py"],
+        "agents/feedback/": ["intelligent_feedback_generator.py"],  # 既存だが確認
     }
-    
+
     for directory, files in missing_structure.items():
         print(f"\n📂 {directory}")
         Path(directory).mkdir(parents=True, exist_ok=True)
-        
+
         for file in files:
             file_path = Path(directory) / file
             if file_path.exists():
                 print(f"  ✅ {file} (既存)")
             else:
                 print(f"  🔄 {file} (作成必要)")
-                
+
                 # 基本的なテンプレートを作成
                 if file == "retry_manager.py":
                     create_retry_manager_template(file_path)
                 elif file == "decision_support_system.py":
                     create_decision_support_template(file_path)
+
 
 def create_retry_manager_template(file_path):
     """RetryManagerのテンプレート作成"""
@@ -129,8 +117,9 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"期待通りの失敗: {e}")
 '''
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(template)
+
 
 def create_decision_support_template(file_path):
     """DecisionSupportSystemのテンプレート作成"""
@@ -254,19 +243,21 @@ if __name__ == "__main__":
     result = dss.analyze_situation(test_context)
     print("判断結果:", json.dumps(result, indent=2, ensure_ascii=False))
 '''
-    with open(file_path, 'w', encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(template)
+
 
 def main():
     print("=" * 80)
     print("🔧 不足エージェントファイル作成計画")
     print("=" * 80)
-    
+
     create_missing_agents_structure()
-    
+
     print(f"\n" + "=" * 80)
     print("📋 次のステップ: 各エージェントの詳細実装")
     print("=" * 80)
+
 
 if __name__ == "__main__":
     main()
