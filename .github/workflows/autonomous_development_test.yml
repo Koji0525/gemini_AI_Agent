@@ -1,0 +1,68 @@
+name: 🧪 24時間自律開発システム v1.0 (テスト版)
+
+on:
+  workflow_dispatch:
+    inputs:
+      development_goal:
+        description: '開発目標（例: テスト実行）'
+        required: true
+        type: string
+      test_duration:
+        description: 'テスト時間（分）'
+        required: false
+        default: '2'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '5'
+          - '10'
+
+jobs:
+  autonomous_development_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+        with:
+          submodules: false
+      
+      - name: 🐍 Python環境構築
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔑 環境変数設定
+        run: |
+          echo "SPREADSHEET_ID=${{ secrets.SPREADSHEET_ID }}" >> .env
+          echo "WP_URL=${{ secrets.WP_URL }}" >> .env
+          echo "WP_USER=${{ secrets.WP_USER }}" >> .env
+          echo "WP_PASS=${{ secrets.WP_PASS }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          echo "WP_API_URL=${{ secrets.WP_API_URL }}" >> .env
+      
+      - name: 📝 Google認証情報配置
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > service_account.json
+      
+      - name: 🧪 テスト実行（短時間）
+        run: |
+          python3 scripts/integrated_orchestrator_v01_hub.py \
+            --max-duration ${{ github.event.inputs.test_duration }}
+      
+      - name: 📋 実行サマリー出力
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🏁 テスト完了"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "⏰ 実行時刻: $(date)"
+          echo "⏱️ テスト時間: ${{ github.event.inputs.test_duration }}分"
