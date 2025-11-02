@@ -68,9 +68,9 @@ class Autonomous24HSystem:
     async def run_cycle(self):
         """1サイクル実行"""
         self.cycle_count += 1
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
         logger.info(f"🔄 サイクル {self.cycle_count} 開始")
-        logger.info(f"{'='*60}")
+        logger.info(f"{'=' * 60}")
 
         try:
             # 1. 人間の制御コマンドチェック
@@ -126,7 +126,7 @@ class Autonomous24HSystem:
             pipeline = SelfLearningPipeline(self.sheets)
             result = await pipeline.run_learning_cycle()
 
-            logger.info(f"✅ 学習完了:")
+            logger.info("✅ 学習完了:")
             logger.info(f"   - パターン学習: {result.get('patterns_learned', 0)}個")
             logger.info(f"   - ナレッジ更新: {result.get('knowledge_updated', 0)}件")
 
