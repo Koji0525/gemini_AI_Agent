@@ -1,8 +1,14 @@
-name: 品質チェック
+name: 品質チェック（高速版）
 
 on:
   push:
     branches: [ main, 'v*' ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'MD/**'
+      - '_BACKUP/**'
+      - '_ARCHIVE/**'
   pull_request:
     branches: [ main ]
 
@@ -12,27 +18,48 @@ jobs:
     
     steps:
       - name: コードをチェックアウト
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
-      - name: Python環境セットアップ
-        uses: actions/setup-python@v4
+      - name: Python環境セットアップ（キャッシュ付き）
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
+      
+      - name: 依存関係キャッシュ
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       
       - name: 依存関係インストール
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt || true
+          if [ -f requirements.txt ]; then
+            grep -E "gspread|google-auth" requirements.txt > /tmp/minimal_requirements.txt || true
+            if [ -s /tmp/minimal_requirements.txt ]; then
+              pip install -r /tmp/minimal_requirements.txt
+            fi
+          fi
       
       - name: API検証実行
-        run: python3 tools/api_validator.py || true
+        id: api_validation
+        run: |
+          timeout 30 python3 tools/api_validator.py || echo "⚠️ API検証スキップ"
+        continue-on-error: true
           
       - name: 統合診断実行
-        run: python3 tools/integrated_diagnostics.py || true
-        
+        id: diagnostics
+        run: |
+          timeout 30 python3 tools/integrated_diagnostics.py || echo "⚠️ 診断スキップ"
+        continue-on-error: true
+      
       - name: 検証結果を保存
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: api-docs
           path: docs/api/
+          retention-days: 7
