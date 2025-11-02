@@ -1,0 +1,224 @@
+name: 🤖 24時間自律開発システム v5.0（品質ゲート統合版）
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: '開発目標'
+        required: true
+      priority:
+        description: '優先度'
+        required: true
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install -r requirements.txt
+      
+      - name: 🔐 認証情報セットアップ
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🚨 NEW: 実行前品質ゲート
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🛡️ STEP 0: 設定ファイル事前検証
+        id: config_check
+        run: |
+          python3 << 'PRE_CHECK_EOF'
+          import sys
+          import configparser
+          import json
+          from pathlib import Path
+          
+          print("=" * 60)
+          print("🛡️ 品質ゲート: 設定ファイル事前検証")
+          print("=" * 60)
+          
+          errors = []
+          
+          # .envファイル検証
+          env_file = Path('.env')
+          if env_file.exists():
+              try:
+                  with open(env_file) as f:
+                      for line in f:
+                          if '=' in line and not line.strip().startswith('#'):
+                              key, value = line.strip().split('=', 1)
+                              if not value:
+                                  errors.append(f"❌ .env: {key}が空です")
+                  print("✅ .env検証OK")
+              except Exception as e:
+                  errors.append(f"❌ .envパースエラー: {e}")
+          else:
+              errors.append("❌ .envが存在しません")
+          
+          # service_account.json検証
+          sa_file = Path('configuration/service_account.json')
+          if sa_file.exists():
+              try:
+                  with open(sa_file) as f:
+                      sa_data = json.load(f)
+                      required_keys = ['type', 'project_id', 'private_key', 'client_email']
+                      for key in required_keys:
+                          if key not in sa_data:
+                              errors.append(f"❌ service_account.json: {key}が不足")
+                  print("✅ service_account.json検証OK")
+              except Exception as e:
+                  errors.append(f"❌ service_account.jsonパースエラー: {e}")
+          else:
+              errors.append("❌ service_account.jsonが存在しません")
+          
+          if errors:
+              print("\n🚨 設定エラー検出:")
+              for error in errors:
+                  print(f"  {error}")
+              sys.exit(1)
+          else:
+              print("\n✅ 全設定ファイル検証完了")
+          PRE_CHECK_EOF
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📝 目標登録
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📝 目標登録（手動トリガー時）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          goal = "${{ github.event.inputs.goal }}"
+          priority = "${{ github.event.inputs.priority }}"
+          
+          sheets_manager = GoogleSheetsManager()
+          goal_data = [[
+              f"GOAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+              goal,
+              priority,
+              "active",
+              "0%",
+              datetime.now().isoformat()
+          ]]
+          
+          sheets_manager.append_rows('pm_goals', goal_data)
+          print(f"✅ 目標登録: {goal}")
+          PYTHON_EOF
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🎹 NEW: インテリジェント・オーケストレーター実行
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🎹 インテリジェント・オーケストレーター実行
+        id: orchestrator
+        run: |
+          python3 scripts/intelligent_orchestrator_v01.py
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 🛡️ NEW: 実行後品質チェック
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🛡️ 実行後品質チェック
+        if: always()
+        run: |
+          python3 << 'POST_CHECK_EOF'
+          import sys
+          from pathlib import Path
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          print("=" * 60)
+          print("🛡️ 実行後品質チェック")
+          print("=" * 60)
+          
+          sheets_manager = GoogleSheetsManager()
+          
+          # 1. タスク実行結果の品質スコアチェック
+          tasks = sheets_manager.read_range('task_execution_log!A2:H100')
+          if tasks:
+              quality_scores = []
+              for row in tasks:
+                  if len(row) > 7:
+                      try:
+                          score = float(row[7])
+                          quality_scores.append(score)
+                      except:
+                          pass
+              
+              if quality_scores:
+                  avg_quality = sum(quality_scores) / len(quality_scores)
+                  print(f"📊 平均品質スコア: {avg_quality:.1f}/10")
+                  
+                  if avg_quality < 7.0:
+                      print("⚠️ 品質スコアが低下しています")
+                      # ナレッジベースに記録
+                      kb_data = [[
+                          "quality_degradation",
+                          f"平均品質スコア{avg_quality:.1f}",
+                          "品質チェック強化が必要",
+                          0.8,
+                          "system",
+                          datetime.now().isoformat()
+                      ]]
+                      sheets_manager.append_rows('knowledge_base', kb_data)
+          
+          # 2. エラー率チェック
+          errors = sheets_manager.read_range('error_log!A2:E100')
+          unresolved = sum(1 for row in errors if len(row) > 3 and row[3] != 'resolved')
+          
+          if len(errors) > 0:
+              error_rate = (unresolved / len(errors)) * 100
+              print(f"📊 未解決エラー率: {error_rate:.1f}%")
+              
+              if error_rate > 50:
+                  print("🚨 エラー率が高すぎます")
+          
+          print("✅ 品質チェック完了")
+          POST_CHECK_EOF
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 📊 実行結果サマリー
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 📊 実行結果サマリー
+        if: always()
+        run: |
+          python3 tools/system_monitor.py
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          rm -f configuration/service_account.json
+          rm -f .env
