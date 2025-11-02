@@ -124,7 +124,9 @@ class TaskCoordinator:
         # コンテンツタスク実行モジュール
         if HAS_CONTENT_EXECUTOR and ContentTaskExecutor:
             try:
-                self.content_executor = ContentTaskExecutor()
+                self.content_executor = ContentTaskExecutor(
+                    browser_controller=self.browser, sheets_manager=self.sheets_manager
+                )
                 logger.info("✅ ContentTaskExecutor 初期化完了")
             except Exception as e:
                 logger.warning(f"⚠️ ContentTaskExecutor 初期化失敗: {e}")

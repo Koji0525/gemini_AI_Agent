@@ -1,21 +1,33 @@
 [flake8]
-max-line-length = 120
-extend-ignore = 
-    E402,  # モジュールレベルインポートの位置
-    F401,  # 未使用インポート
-    F541,  # f-string missing placeholders
-    W503,  # 演算子前の改行
-    E203,  # コロンの前の空白
-    E501,  # 行が長すぎる
-per-file-ignores = 
-    __init__.py:F401
+# AI大規模開発向け最適設定 v06.1
+
+# 基本設定
+max-line-length = 100
+max-complexity = 15
+
+# 除外ディレクトリ
 exclude = 
     .git,
     __pycache__,
-    build,
-    dist,
-    .venv,
-    venv,
+    _WIP,
+    _BACKUP,
+    _ARCHIVE,
+    wordpress-core,
     node_modules,
-    .vscode,
-    .idea
+    .venv,
+    venv
+
+# 無視するエラー
+ignore = 
+    E203,
+    W503,
+
+# 既存コードへの猶予期間（新規ファイルのみチェック）
+per-file-ignores = 
+    agents/self_healing/*.py:C901
+    agents/self_healing/logging/*.py:C901
+    scripts/integrated_orchestrator_*.py:F841,C901
+    task_executor/task_coordinator*.py:C901
+    tools/file_version_manager*.py:F841,W293
+    tools/dependency_mapper.py:C901
+    tools/force_create_sheets.py:C901
