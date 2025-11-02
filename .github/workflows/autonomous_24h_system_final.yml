@@ -1,0 +1,54 @@
+name: 🤖 24時間自律開発システム（完成版）
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごと
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係
+        run: pip install -r requirements.txt
+      
+      - name: 🔐 認証情報
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+      
+      - name: 🚀 自律実行
+        run: python3 scripts/integrated_orchestrator_v05_final_fixed.py
+      
+      - name: 📊 結果確認
+        if: always()
+        run: python3 tools/check_goal_progress_v3.py
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          rm -f configuration/service_account.json
+          rm -f .env
