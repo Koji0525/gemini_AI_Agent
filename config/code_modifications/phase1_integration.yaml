@@ -1,0 +1,21 @@
+file: scripts/integrated_orchestrator_v14_production_ready.py
+output: scripts/integrated_orchestrator_v23_phase1_v2.py
+
+imports:
+  after: "from dotenv import load_dotenv"
+  add:
+    - "from agents.self_healing.logging.decision_support_system import DecisionSupportSystem"
+    - "from agents.self_healing.logging.knowledge_base_manager import KnowledgeBaseManager"
+    - "from core_agents.human_interaction_agent_v02_github_api import HumanInteractionAgent"
+
+modify_method:
+  - class: IntegratedOrchestrator
+    method: __init__
+    signature:
+      old: "def __init__(self):"
+      new: "def __init__(self, decision_support: DecisionSupportSystem = None, human_agent: HumanInteractionAgent = None):"
+    add_code: |
+      # Phase 1: 自己修復・人間介入機能
+      self.decision_support = decision_support
+      self.human_agent = human_agent
+      print("✅ Phase 1機能初期化完了")

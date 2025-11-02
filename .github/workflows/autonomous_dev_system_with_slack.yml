@@ -1,0 +1,191 @@
+name: 24時間自律開発システム（Slack通知付き）
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: '開発目標'
+        required: true
+      priority:
+        description: '優先度'
+        required: true
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install -r requirements.txt
+      
+      - name: 🔐 認証情報セットアップ
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+      
+      - name: 📝 目標登録（手動トリガー時）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          goal = "${{ github.event.inputs.goal }}"
+          priority = "${{ github.event.inputs.priority }}"
+          
+          sheets_manager = GoogleSheetsManager()
+          goal_data = [[
+              f"GOAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+              goal,
+              priority,
+              "active",
+              "0%",
+              datetime.now().isoformat()
+          ]]
+          
+          sheets_manager.append_rows('pm_goals', goal_data)
+          print(f"✅ 目標登録: {goal}")
+          PYTHON_EOF
+      
+      - name: 🎹 オーケストレーター実行
+        id: orchestrator
+        run: |
+          python3 scripts/integrated_orchestrator_v05_final.py
+      
+      - name: 📊 実行結果サマリー
+        id: summary
+        if: always()
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          
+          sys.path.insert(0, str(Path.cwd()))
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          sheets_manager = GoogleSheetsManager()
+          tasks_data = sheets_manager.read_range('pm_tasks!A2:D100')
+          
+          total = len(tasks_data)
+          completed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'completed')
+          failed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'failed')
+          
+          progress = (completed / total * 100) if total > 0 else 0
+          
+          print(f"total={total}")
+          print(f"completed={completed}")
+          print(f"failed={failed}")
+          print(f"progress={progress:.1f}")
+          
+          # GitHub Actions出力に設定
+          import os
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"total={total}\n")
+              f.write(f"completed={completed}\n")
+              f.write(f"failed={failed}\n")
+              f.write(f"progress={progress:.1f}\n")
+          PYTHON_EOF
+      
+      - name: 📧 Slack通知（成功時）
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "✅ 自律開発システム実行完了",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "✅ 24時間自律開発システム 実行成功"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*総タスク数:*\n${{ steps.summary.outputs.total }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*完了:*\n${{ steps.summary.outputs.completed }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*失敗:*\n${{ steps.summary.outputs.failed }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*進捗率:*\n${{ steps.summary.outputs.progress }}%"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: 📧 Slack通知（失敗時）
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "❌ 自律開発システム実行失敗",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ 24時間自律開発システム 実行失敗"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "システム実行中にエラーが発生しました。\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|ログを確認>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          rm -f configuration/service_account.json
+          rm -f .env

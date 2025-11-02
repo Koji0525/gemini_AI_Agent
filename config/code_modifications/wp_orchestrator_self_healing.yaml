@@ -1,0 +1,19 @@
+file: agents/wordpress/specialized/wp_orchestrator.py
+output: agents/wordpress/specialized/wp_orchestrator_v02_self_healing.py
+
+imports:
+  after: "from typing import"
+  add:
+    - "from agents.self_healing.logging.decision_support_system import DecisionSupportSystem"
+    - "from agents.self_healing.retry_manager import RetryManager"
+
+modify_method:
+  - class: WPOrchestrator
+    method: __init__
+    signature:
+      old: "def __init__(self, design_spec: Dict[str, Any], wp_credentials: Dict = None):"
+      new: "def __init__(self, design_spec: Dict[str, Any], wp_credentials: Dict = None, decision_support: DecisionSupportSystem = None):"
+    add_code: |
+      self.decision_support = decision_support
+      self.retry_manager = RetryManager()
+      print("✅ WP Orchestrator: 自己修復機能統合完了")

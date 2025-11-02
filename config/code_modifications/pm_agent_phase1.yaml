@@ -1,0 +1,16 @@
+file: core_agents/pm_agent_v03.py
+output: core_agents/pm_agent_v04_phase1.py
+
+imports:
+  after: "from dotenv import load_dotenv"
+  add:
+    - "from agents.self_healing.logging.decision_support_system import DecisionSupportSystem"
+
+modify_method:
+  - class: PmAgent
+    method: __init__
+    signature:
+      old: "def __init__(self, sheets):"
+      new: "def __init__(self, sheets, decision_support=None):"
+    add_code: |
+      self.decision_support = decision_support

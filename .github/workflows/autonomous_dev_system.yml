@@ -1,0 +1,163 @@
+name: 24時間自律開発システム
+
+on:
+  # 手動トリガー（目標入力）
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: '開発目標を入力してください'
+        required: true
+        default: 'M&Aポータルの検索機能実装'
+      priority:
+        description: '優先度'
+        required: true
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+        default: 'high'
+  
+  # 定期実行（6時間ごと）
+  schedule:
+    - cron: '0 */6 * * *'  # 0:00, 6:00, 12:00, 18:00 JST
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # 5時間
+    
+    steps:
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔐 認証情報セットアップ
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          # .env作成
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          # サービスアカウントファイル作成
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+          
+          echo "✅ 認証情報セットアップ完了"
+      
+      - name: 📝 目標登録（手動トリガー時のみ）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          # 目標登録
+          goal = "${{ github.event.inputs.goal }}"
+          priority = "${{ github.event.inputs.priority }}"
+          
+          sheets_manager = GoogleSheetsManager()
+          
+          goal_data = [[
+              f"GOAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+              goal,
+              priority,
+              "active",
+              "0%",
+              datetime.now().isoformat()
+          ]]
+          
+          sheets_manager.append_rows('pm_goals', goal_data)
+          
+          print(f"✅ 目標登録完了: {goal}")
+          PYTHON_EOF
+      
+      - name: 🎹 統合オーケストレーター実行
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎹 24時間自律開発システム 起動"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 scripts/integrated_orchestrator_v05_final.py
+      
+      - name: 📊 実行結果サマリー
+        if: always()
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          from tools.sheets_manager import GoogleSheetsManager
+          
+          sheets_manager = GoogleSheetsManager()
+          
+          # タスク状況集計
+          tasks_data = sheets_manager.read_range('pm_tasks!A2:D100')
+          
+          total = len(tasks_data)
+          pending = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'pending')
+          in_progress = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'in_progress')
+          completed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'completed')
+          failed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'failed')
+          
+          print("=" * 60)
+          print("📊 タスク実行サマリー")
+          print("=" * 60)
+          print(f"   総タスク数: {total}")
+          print(f"   保留中: {pending}")
+          print(f"   実行中: {in_progress}")
+          print(f"   完了: {completed}")
+          print(f"   失敗: {failed}")
+          print("=" * 60)
+          
+          if total > 0:
+              progress = (completed / total) * 100
+              print(f"   進捗率: {progress:.1f}%")
+          
+          print("=" * 60)
+          PYTHON_EOF
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          # 認証情報削除
+          rm -f configuration/service_account.json
+          rm -f .env
+          
+          echo "✅ クリーンアップ完了"
+      
+      - name: 📧 通知（失敗時）
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 自律開発システム実行失敗',
+              body: `自律開発システムの実行が失敗しました。\n\n**実行時刻:** ${new Date().toISOString()}\n**ワークフロー:** ${context.workflow}\n**実行番号:** ${context.runNumber}\n\n詳細はActionsログを確認してください。`,
+              labels: ['bot-alert', 'system-error']
+            })
+
