@@ -177,7 +177,6 @@ class GoogleSheetsManager:
         """
         try:
             # 🔍 デバッグログ: 入力データの確認
-            print(f"📥 append_rows 呼び出し:")
             print(f"   sheet_name={sheet_name}")
             print(f"   values型={type(values)}")
             if values:
@@ -193,14 +192,12 @@ class GoogleSheetsManager:
             # 🔧 自動型変換: 1次元配列を2次元配列に変換
             type(values[0]) if values else None
             if values and not isinstance(values[0], (list, tuple)):
-                print(f"🔄 型変換実行: 1次元 → 2次元")
                 values = [values]
                 print(f"   変換後={values}")
             else:
                 print(f"✅ 型変換不要（既に2次元配列）")
 
             body = {"values": values}
-            print(f"📦 API送信データ: {body}")
 
             result = (
                 self.service.spreadsheets()
@@ -215,7 +212,6 @@ class GoogleSheetsManager:
                 .execute()
             )
 
-            print(f"✅ 行追加成功")
             return result
 
         except Exception as e:

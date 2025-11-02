@@ -27,6 +27,7 @@ from agents.self_healing.utils.error_classifier import ErrorClassifier
 
 import importlib.util
 import logging
+from task_executor.task_coordinator_v05_self_healing import TaskCoordinator
 
 # ==============================================================================
 # 🆕 長期的解決策1: プロトコル定義（型安全なインターフェース）
@@ -287,6 +288,13 @@ class IntegratedOrchestrator:
         # Phase 1: 自己修復・人間介入機能
         self.decision_support = decision_support
         self.human_agent = human_agent
+
+        # TaskCoordinator統合（自己修復機能付き）
+        self.task_coordinator = TaskCoordinator(
+            task_executor=self.task_executor,
+            sheets_manager=self.sheets,
+            decision_support=self.decision_support,
+        )
         print("✅ Phase 1機能初期化完了")
 
     async def run_continuous_cycle(
