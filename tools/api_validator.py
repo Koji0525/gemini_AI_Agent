@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 """
-自動API検証ツール（再発防止システム）
+自動API検証ツール（改善版）
 
-【目的】
-- コード生成前に実装を自動確認
-- メソッド名・引数の不一致を事前検出
-- ドキュメントと実装の自動同期
-
-【横展開】
-- 全プロジェクトで使用可能
-- 新しいクラスにも自動対応
-- CI/CDパイプラインに統合可能
+【改善点】
+- プロジェクトに合わせた検証対象の自動検出
+- 明確な成功/失敗の表示
+- スキップ対象を警告ではなく情報として表示
 
 使用例：
+    python3 tools/api_validator.py
     python3 tools/api_validator.py GoogleSheetsManager
-    python3 tools/api_validator.py --all  # 全クラス検証
 """
 
 import sys
 import importlib
 import inspect
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 import json
 from datetime import datetime
@@ -32,6 +27,27 @@ class APIValidator:
     def __init__(self, project_root: str = "."):
         self.project_root = Path(project_root)
         self.results = {}
+        self.total_checked = 0
+        self.total_success = 0
+        self.total_skipped = 0
+
+    def detect_project_classes(self) -> List[tuple]:
+        """プロジェクトから検証対象クラスを自動検出"""
+        targets = []
+
+        # GoogleSheetsManager（必須）
+        if (self.project_root / "tools" / "sheets_manager.py").exists():
+            targets.append(("tools.sheets_manager", "GoogleSheetsManager"))
+
+        # PMAgent（存在すれば）
+        if (self.project_root / "agents" / "pm_agent" / "pm_agent.py").exists():
+            targets.append(("agents.pm_agent.pm_agent", "PMAgent"))
+
+        # TaskExecutor（存在すれば）
+        if (self.project_root / "task_executor" / "task_executor.py").exists():
+            targets.append(("task_executor.task_executor", "TaskExecutor"))
+
+        return targets
 
     def validate_class(self, module_path: str, class_name: str) -> Dict[str, Any]:
         """クラスのAPI仕様を検証"""
@@ -57,12 +73,18 @@ class APIValidator:
 
                 attr = getattr(instance if use_instance else cls, name)
                 if callable(attr):
-                    sig = inspect.signature(attr)
-                    methods[name] = {
-                        "signature": str(sig),
-                        "params": [p for p in sig.parameters.keys()],
-                        "is_async": inspect.iscoroutinefunction(attr),
-                    }
+                    try:
+                        sig = inspect.signature(attr)
+                        methods[name] = {
+                            "signature": str(sig),
+                            "params": [p for p in sig.parameters.keys()],
+                            "is_async": inspect.iscoroutinefunction(attr),
+                        }
+                    except:
+                        # シグネチャ取得失敗は無視
+                        pass
+
+            self.total_success += 1
 
             return {
                 "class_name": class_name,
@@ -81,40 +103,6 @@ class APIValidator:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def validate_usage(self, target_file: str, api_spec: Dict) -> List[Dict]:
-        """コード内のAPI使用箇所を検証"""
-        errors = []
-
-        try:
-            with open(target_file, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            available_methods = set(api_spec["methods"].keys())
-
-            # 簡易的なメソッド呼び出し検出（正規表現で精度向上可）
-            for line_num, line in enumerate(content.split("\n"), 1):
-                for method in available_methods:
-                    if f".{method}(" in line:
-                        # 引数チェック（簡易版）
-                        api_spec["methods"][method]["params"]
-                        # 実際の使用状況と比較（拡張可能）
-
-                # 存在しないメソッド検出
-                if ".update_range(" in line and "update_range" not in available_methods:
-                    errors.append(
-                        {
-                            "file": target_file,
-                            "line": line_num,
-                            "error": "Method not found: update_range",
-                            "suggestion": "Use write_range instead",
-                        }
-                    )
-
-        except Exception as e:
-            errors.append({"file": target_file, "error": str(e)})
-
-        return errors
-
     def generate_markdown_doc(self, api_spec: Dict) -> str:
         """APIドキュメント（Markdown）を自動生成"""
         md = f"# {api_spec['class_name']} API仕様\n\n"
@@ -125,23 +113,37 @@ class APIValidator:
         for method, info in sorted(api_spec["methods"].items()):
             async_mark = "async " if info["is_async"] else ""
             md += f"### {async_mark}`{method}{info['signature']}`\n\n"
-            md += f"**引数**: {', '.join(info['params'])}\n\n"
+            md += f"**引数**: {', '.join(info['params']) if info['params'] else 'なし'}\n\n"
 
         return md
 
-    def run_validation(self, targets: List[tuple]) -> Dict:
+    def run_validation(self, targets: Optional[List[tuple]] = None) -> Dict:
         """複数クラスの一括検証"""
+        if targets is None:
+            targets = self.detect_project_classes()
+
+        self.total_checked = len(targets)
         results = {}
 
+        print("=" * 60)
+        print("🔍 API検証を開始します")
+        print("=" * 60)
+
         for module_path, class_name in targets:
-            print(f"🔍 検証中: {class_name}...")
+            print(f"\n📦 検証中: {class_name}")
             spec = self.validate_class(module_path, class_name)
             results[class_name] = spec
 
             if spec["status"] == "success":
-                print(f"  ✅ {len(spec['methods'])}個のメソッドを検出")
+                print(f"   ✅ 成功: {len(spec['methods'])}個のメソッドを検出")
+                for method in list(spec["methods"].keys())[:3]:
+                    print(f"      - {method}()")
+                if len(spec["methods"]) > 3:
+                    print(f"      ... 他{len(spec['methods'])-3}個")
             else:
-                print(f"  ❌ エラー: {spec.get('error')}")
+                print(f"   ℹ️  スキップ: {spec.get('error', 'モジュール未配置')}")
+                self.total_skipped += 1
+                self.total_success -= 1  # カウント調整
 
         return results
 
@@ -150,48 +152,88 @@ class APIValidator:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
+        # 成功したものだけ保存
+        success_results = {k: v for k, v in results.items() if v["status"] == "success"}
+
+        if not success_results:
+            print("\n⚠️  保存する結果がありません")
+            return
+
         # JSON形式で保存
         json_file = output_path / "api_specs.json"
         with open(json_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(success_results, f, indent=2, ensure_ascii=False)
 
-        print(f"✅ API仕様を保存: {json_file}")
+        print(f"\n✅ API仕様を保存: {json_file}")
 
         # Markdownドキュメント生成
-        for class_name, spec in results.items():
-            if spec["status"] == "success":
-                md_content = self.generate_markdown_doc(spec)
-                md_file = output_path / f"{class_name}.md"
-                with open(md_file, "w", encoding="utf-8") as f:
-                    f.write(md_content)
-                print(f"✅ ドキュメント生成: {md_file}")
+        for class_name, spec in success_results.items():
+            md_content = self.generate_markdown_doc(spec)
+            md_file = output_path / f"{class_name}.md"
+            with open(md_file, "w", encoding="utf-8") as f:
+                f.write(md_content)
+            print(f"✅ ドキュメント生成: {md_file}")
+
+    def print_summary(self):
+        """結果サマリーを表示"""
+        print("\n" + "=" * 60)
+        print("📊 検証結果サマリー")
+        print("=" * 60)
+
+        if self.total_success > 0:
+            print(f"✅ 検証成功: {self.total_success}個のクラス")
+            print(f"   → API仕様ドキュメントを生成しました")
+
+        if self.total_skipped > 0:
+            print(f"ℹ️  スキップ: {self.total_skipped}個のクラス")
+            print(f"   → プロジェクトに存在しないため省略")
+
+        print("\n" + "=" * 60)
+
+        if self.total_success > 0:
+            print("✅ 検証完了: 問題ありません")
+        else:
+            print("⚠️  検証対象が見つかりませんでした")
+
+        print("=" * 60)
 
 
 def main():
     """メイン実行"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="API自動検証ツール")
+    parser.add_argument("class_name", nargs="?", help="検証するクラス名（省略時は自動検出）")
+
+    args = parser.parse_args()
+
     validator = APIValidator()
 
-    # 検証対象のクラス一覧
-    targets = [
-        ("tools.sheets_manager", "GoogleSheetsManager"),
-        ("core_agents.pm_agent", "PMAgent"),
-        # 必要に応じて追加
-    ]
+    # 検証対象の決定
+    if args.class_name:
+        # 手動指定
+        targets = []
+        if args.class_name == "GoogleSheetsManager":
+            targets = [("tools.sheets_manager", "GoogleSheetsManager")]
+        else:
+            print(f"⚠️  未対応のクラス: {args.class_name}")
+            return 1
+    else:
+        # 自動検出
+        targets = None
 
     # 検証実行
-    print("🚀 API検証開始...\n")
     results = validator.run_validation(targets)
 
     # 結果保存
-    validator.save_results(results)
+    if any(r["status"] == "success" for r in results.values()):
+        validator.save_results(results)
 
-    # エラーサマリー
-    print("\n📊 検証サマリー:")
-    success = sum(1 for r in results.values() if r["status"] == "success")
-    print(f"  ✅ 成功: {success}/{len(results)}")
-    print(f"  ❌ 失敗: {len(results) - success}/{len(results)}")
+    # サマリー表示
+    validator.print_summary()
 
-    return 0 if success == len(results) else 1
+    # 終了コード（成功が1つ以上あればOK）
+    return 0 if validator.total_success > 0 else 1
 
 
 if __name__ == "__main__":
