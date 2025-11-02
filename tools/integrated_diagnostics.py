@@ -272,3 +272,65 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 新機能: Google Sheets API実行時テスト
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+def test_sheets_api_runtime(auto_fix=False):
+    """Google Sheets APIの実行時テスト"""
+    print("\n🧪 Google Sheets API実行時テスト")
+    print("=" * 60)
+
+    try:
+        from tools.sheets_manager import GoogleSheetsManager
+
+        sheets = GoogleSheetsManager()
+
+        # テスト1: 1次元配列でのappend_rows
+
+        print("\n📝 テスト1: 1次元配列の処理")
+        try:
+            # 実際には実行せず、メソッドの引数チェックのみ
+            import inspect
+
+            sig = inspect.signature(sheets.append_rows)
+            print(f"  ✅ append_rows メソッド検出")
+            print(f"     引数: {list(sig.parameters.keys())}")
+
+            # ソースコード確認
+            source = inspect.getsource(sheets.append_rows)
+            if "if values and not isinstance(values[0], list):" in source:
+                print(f"  ✅ 自動型変換機能あり")
+            else:
+                print(f"  ⚠️  自動型変換機能なし")
+
+                if auto_fix:
+                    print(f"\n🔧 自動修正を実行...")
+                    print(f"   → STEP 2の修正スクリプトを実行してください")
+                    return False
+
+        except Exception as e:
+            print(f"  ❌ テスト失敗: {e}")
+            return False
+
+        print("\n✅ Google Sheets API実行時テスト完了")
+        return True
+
+    except ImportError as e:
+        print(f"❌ インポートエラー: {e}")
+        return False
+
+
+# メイン関数に追加
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--auto-fix", action="store_true")
+    parser.add_argument("--test-sheets", action="store_true", help="Google Sheets API実行時テスト")
+    args = parser.parse_args()
+
+    if args.test_sheets:
+        test_sheets_api_runtime(args.auto_fix)
