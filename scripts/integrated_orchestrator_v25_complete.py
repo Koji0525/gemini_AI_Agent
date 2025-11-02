@@ -292,11 +292,9 @@ class IntegratedOrchestrator:
         self.human_agent = human_agent
 
         # TaskCoordinator統合（自己修復機能付き）
-        self.task_coordinator = TaskCoordinator(
-            task_executor=self.task_executor,
-            sheets_manager=self.sheets,
-            decision_support=self.decision_support,
-        )
+        # TaskCoordinator統合（自己修復機能付き）
+        self.task_coordinator = TaskCoordinator(sheets_manager=self.sheets, browser=self.browser)
+        print("✅ TaskCoordinator v05統合完了")
         print("✅ Phase 1機能初期化完了")
 
     async def run_continuous_cycle(
