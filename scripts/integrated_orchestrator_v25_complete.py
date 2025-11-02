@@ -315,8 +315,10 @@ class IntegratedOrchestrator:
 
             pending_tasks = self._get_pending_tasks()
 
+            print(f"🔍 DEBUG: pending_tasks = {len(pending_tasks) if pending_tasks else 0}件")
             if not pending_tasks:
                 print("⏸️  保留中のタスクなし。")
+                print(f"🔍 DEBUG: single_cycle={single_cycle}, ここでbreak")
                 if single_cycle:
                     break
                 print("   1分後に再確認...")
@@ -330,8 +332,10 @@ class IntegratedOrchestrator:
 
             print(f"📋 発見: {len(pending_tasks)}件の保留タスク")
 
+            print(f"🔍 DEBUG: タスク実行ループ開始 - 対象{min(len(pending_tasks), 5)}件")
             for idx, task in enumerate(pending_tasks[:5], 1):
                 try:
+                    print(f"\n🔍 DEBUG: タスク{idx}の実行準備")
                     print(f"\n--- タスク {idx}/{min(len(pending_tasks), 5)} ---")
                     print(f"ID: {task.get('task_id', 'N/A')}")
                     print(f"内容: {task.get('description', 'N/A')}")
@@ -353,6 +357,12 @@ class IntegratedOrchestrator:
 
                 except Exception as e:
                     print(f"❌ タスク失敗: {e}")
+                    print(f"🔍 DEBUG: 例外タイプ: {type(e).__name__}")
+                    print(f"🔍 DEBUG: retry_manager={self.retry_manager is not None}")
+                    import traceback
+
+                    print(f"🔍 DEBUG: スタックトレース:")
+                    traceback.print_exc()
                     self.stats["failed_tasks"] += 1
 
             self._print_stats()
@@ -408,22 +418,58 @@ class IntegratedOrchestrator:
             return await self._execute_task(task)
 
     def _get_pending_tasks(self) -> List[Dict]:
+        """堅牢なpendingタスク取得（再発防止機能統合版）"""
         try:
-            all_data = self.sheets.read_range(f"{self.pm_tasks_sheet}!A:I")
+            # 【改善1】実データ範囲の自動検出
+            all_data = self.sheets.read_range(f"{self.pm_tasks_sheet}!A:Z")
+
             if not all_data or len(all_data) < 2:
+                print("⚠️ pm_tasksシートにデータがありません")
                 return []
 
             headers = all_data[0]
-            pending = []
+            print(f"📌 ヘッダー確認: {headers[:5]}...")
 
-            for row in all_data[1:]:
-                if len(row) > 4 and row[4].lower() == "pending":
-                    task = dict(zip(headers, row))
-                    pending.append(task)
+            # 【改善2】シート構造の自動検証
+            required_cols = ["task_id", "status", "description"]
+            missing = [col for col in required_cols if col not in headers]
+            if missing:
+                print(f"❌ 必須カラム不足: {missing}")
+                return []
 
-            return pending
+            status_idx = headers.index("status")
+
+            # 【改善3】空白行の自動スキップ + 【改善4】データ整合性チェック
+            pending_tasks = []
+            for i, row in enumerate(all_data[1:], start=2):
+                # 空行スキップ
+                if not row or len(row) == 0:
+                    continue
+
+                # statusカラムが存在するか確認
+                if len(row) <= status_idx:
+                    print(f"⚠️ 行{i}: データ不足（{len(row)}列 < {status_idx+1}列）")
+                    continue
+
+                # 大文字小文字・空白を無視して比較
+                status = str(row[status_idx]).strip().lower()
+
+                if status == "pending":
+                    # 辞書形式に変換
+                    task_dict = {}
+                    for j, header in enumerate(headers):
+                        task_dict[header] = row[j] if j < len(row) else ""
+
+                    pending_tasks.append(task_dict)
+
+            print(f"✅ {len(pending_tasks)}件のpendingタスクを検出")
+            return pending_tasks
+
         except Exception as e:
-            print(f"⚠️ タスク取得エラー: {e}")
+            print(f"❌ タスク取得エラー: {e}")
+            import traceback
+
+            traceback.print_exc()
             return []
 
     async def _execute_task(self, task: Dict) -> Dict:
@@ -443,9 +489,68 @@ class IntegratedOrchestrator:
             raise Exception("Task Executor未初期化")
 
     def _update_task_status(self, task: Dict, result: Dict):
-        task_id = task.get("task_id", "")
-        new_status = result.get("status", "unknown")
-        print(f"📝 ステータス更新: {task_id} → {new_status}")
+        """タスクステータスをpm_tasksシートに更新（堅牢版）"""
+        task_id = task.get("task_id")
+        status = result.get("status", "unknown")
+
+        print(f"📝 ステータス更新: {task_id} → {status}")
+
+        if not task_id:
+            print("⚠️ task_idが見つかりません")
+            return
+
+        try:
+            # pm_tasksシートから該当タスクを検索
+            all_data = self.sheets.read_range(f"{self.pm_tasks_sheet}!A:Z")
+
+            if not all_data or len(all_data) < 2:
+                print("⚠️ pm_tasksシートが空です")
+                return
+
+            headers = all_data[0]
+
+            # 必要なカラムのインデックスを取得
+            if "task_id" not in headers or "status" not in headers:
+                print(f"⚠️ 必須カラムが見つかりません: {headers}")
+                return
+
+            task_id_idx = headers.index("task_id")
+            status_idx = headers.index("status")
+
+            # 該当タスクの行を検索
+            for row_num, row in enumerate(all_data[1:], start=2):
+                if len(row) > task_id_idx and row[task_id_idx] == task_id:
+                    # ステータスを更新
+                    cell = f"{self.pm_tasks_sheet}!{chr(65 + status_idx)}{row_num}"
+                    self.sheets.write_range(cell, [[status]])
+                    print(f"✅ シート更新成功: {cell} = {status}")
+
+                    # task_execution_logにも記録
+                    from datetime import datetime
+
+                    log_entry = [
+                        task_id,
+                        task.get("description", "N/A"),
+                        status,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        result.get("message", ""),
+                        str(result.get("retried", False)),
+                    ]
+
+                    # 次の空行を取得
+                    log_data = self.sheets.read_range("task_execution_log!A:Z")
+                    next_row = len(log_data) + 1
+                    self.sheets.append_rows("task_execution_log", log_entry)
+                    print(f"✅ ログ記録成功: task_execution_log 行{next_row}")
+                    return
+
+            print(f"⚠️ task_id={task_id} がシートに見つかりません")
+
+        except Exception as e:
+            print(f"❌ シート更新エラー: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     def _check_stop_flag(self) -> bool:
         try:
