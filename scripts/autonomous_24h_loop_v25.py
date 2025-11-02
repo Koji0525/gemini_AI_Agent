@@ -60,6 +60,7 @@ class Autonomous24HSystem:
 
         # テストモード判定（初期化時に保存）
         self.test_mode = os.getenv("TEST_MODE", "false").lower() == "true"
+        logger.info(f"🔍 DEBUG: 待機判定 - test_mode={self.test_mode}")
         if self.test_mode:
             logger.info("⚡ テストモード有効")
         logger.info("✅ 全コンポーネント初期化完了")
@@ -87,6 +88,8 @@ class Autonomous24HSystem:
 
             # 2. タスク実行（IntegratedOrchestratorのrun_continuous_cycle）
             logger.info("🎯 タスク実行開始")
+            logger.info(f"🔍 DEBUG: self.test_mode = {self.test_mode}")
+            logger.info(f"🔍 DEBUG: cycle_count = {self.cycle_count}")
             await self.orchestrator.run_continuous_cycle(max_duration_minutes=60, single_cycle=True)
             logger.info("✅ タスク実行完了")
 
@@ -149,6 +152,7 @@ class Autonomous24HSystem:
                     break
 
                 # 次のサイクルまで待機
+                logger.info(f"🔍 DEBUG: 待機判定 - test_mode={self.test_mode}")
                 if self.test_mode:
                     logger.info("⚡ テストモード: 次サイクルへ即移行")
                     # テストモードでは待機せずに次サイクルへ
