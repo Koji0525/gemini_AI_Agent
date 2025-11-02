@@ -37,7 +37,7 @@ def create_retry_history_sheet():
         else:
             raise AttributeError("gspreadクライアントが見つかりません")
 
-        sheet_name = "retry_history"
+        sheet_name = "retry_log"
 
         print(f"\n'{sheet_name}' シート作成/更新中...")
 
@@ -79,7 +79,11 @@ def create_retry_history_sheet():
 
             # ヘッダー行をフォーマット
             sheet.format(
-                "A1:J1", {"textFormat": {"bold": True}, "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9}}
+                "A1:J1",
+                {
+                    "textFormat": {"bold": True},
+                    "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9},
+                },
             )
 
             print(f"✅ '{sheet_name}' シート作成完了")

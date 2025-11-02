@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🎹 Integrated Orchestrator v14.0 (本番対応版)
+🎹 Integrated Orchestrator v24.0 (Production) (本番対応版)
 Phase 2 Day 1完成 + 長期的メンテナンス性強化
 """
 import sys
@@ -160,8 +160,8 @@ class IntegratedOrchestrator:
         human_agent: HumanInteractionAgent = None,
     ):
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        print("🚀 Integrated Orchestrator v14.0 初期化")
-        print("   (Phase 2: 本番対応 + 長期メンテナンス性強化)")
+        print("🚀 Integrated Orchestrator v24.0 (Production) 初期化")
+        print("   (Phase 3: 本番運用 - DecisionSupport + HumanInteraction統合版)")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         # 🆕 初期化マネージャー使用
@@ -484,7 +484,7 @@ class IntegratedOrchestrator:
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Integrated Orchestrator v14.0")
+    parser = argparse.ArgumentParser(description="Integrated Orchestrator v24.0 (Production)")
     parser.add_argument("--max-duration", type=int, default=330)
     parser.add_argument("--test", action="store_true")
     parser.add_argument("--debug", action="store_true")

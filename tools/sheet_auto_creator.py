@@ -41,7 +41,7 @@ class SheetAutoCreator:
 
         # 必須シートの定義
         required_sheets = {
-            "pm_goals": [
+            "project_goal": [
                 [
                     "goal_id",
                     "description",

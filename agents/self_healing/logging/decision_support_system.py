@@ -86,7 +86,7 @@ class DecisionSupportSystem:
         # ナレッジベース検索（利用可能な場合）
         if self.search_engine:
             try:
-                similar_cases = self.search_engine.search_similar_cases(
+                similar_cases = self.search_engine.search_similar_knowledgees(
                     query=error_message, case_type="fix_recipe", limit=3
                 )
 

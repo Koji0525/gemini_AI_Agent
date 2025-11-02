@@ -20,15 +20,15 @@ class SheetMapping:
         # ============================================================
         # プロジェクト管理系
         # ============================================================
-        "pm_goals": "project_goal",  # 目標管理
+        # "project_goal": "project_goal",  # ⚠️ 廃止: project_goalに統合済み,  # 目標管理
         "pm_tasks": "pm_tasks",  # タスク管理
         "pm_task_queue": "pm_task_queue",  # タスクキュー
         # ============================================================
         # 実行ログ系
         # ============================================================
         "task_execution_log": "task_execution_log",  # タスク実行ログ
-        "execution_history": "history",  # 実行履歴
-        "retry_history": "retry_history",  # リトライ履歴
+        "execution_history": "execution_history",  # 実行履歴
+        # "retry_log": "retry_log",  # ⚠️ 廃止: retry_logに統合済み,  # リトライ履歴
         "retry_log": "retry_log",  # リトライログ
         # ============================================================
         # エラー管理系
@@ -50,7 +50,7 @@ class SheetMapping:
         # ============================================================
         "knowledge_base": "knowledge_base",  # ナレッジベース
         "learning_patterns": "learning_patterns",  # 学習パターン
-        "learned_patterns": "learned_patterns",  # 学習済みパターン
+        # "learning_patterns": "learning_patterns",  # ⚠️ 廃止: learning_patternsに統合済み,  # 学習済みパターン
         "success_recipes": "success_recipes",  # 成功レシピ
         # ============================================================
         # その他
@@ -100,7 +100,7 @@ def main():
 
     # テストケース
     test_cases = [
-        "pm_goals",
+        "project_goal",
         "control_flags",
         "error_log",
         "execution_history",

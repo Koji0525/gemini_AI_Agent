@@ -5,8 +5,7 @@
 
 import sys
 from pathlib import Path
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -17,7 +16,9 @@ try:
 except ImportError:
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("sheets_manager", project_root / "tools" / "sheets_manager.py")
+    spec = importlib.util.spec_from_file_location(
+        "sheets_manager", project_root / "tools" / "sheets_manager.py"
+    )
     sheets_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sheets_module)
     GoogleSheetsManager = sheets_module.GoogleSheetsManager
@@ -85,7 +86,9 @@ class ImpactMeasurement:
                         if len(row) > status_index and "success" in row[status_index].lower():
                             success_count += 1
 
-                metrics["current_success_rate"] = (success_count / total_tasks * 100) if total_tasks > 0 else 0
+                metrics["current_success_rate"] = (
+                    (success_count / total_tasks * 100) if total_tasks > 0 else 0
+                )
                 metrics["total_tasks_analyzed"] = total_tasks
 
             # データ量
@@ -94,7 +97,9 @@ class ImpactMeasurement:
 
             # パターン数
             patterns_data = self.sheets_manager.read_range("learning_patterns")
-            metrics["learned_patterns"] = len(patterns_data) - 1 if patterns_data else 1  # 既知のパターン
+            metrics["learning_patterns"] = (
+                len(patterns_data) - 1 if patterns_data else 1
+            )  # 既知のパターン
 
             print("✅ メトリクス収集完了")
 
@@ -111,7 +116,8 @@ class ImpactMeasurement:
 
         # 成功率改善
         success_improvement = (
-            current_metrics.get("current_success_rate", 0) - self.baseline_metrics["baseline_success_rate"]
+            current_metrics.get("current_success_rate", 0)
+            - self.baseline_metrics["baseline_success_rate"]
         )
         improvements["success_rate_improvement"] = max(success_improvement, 0)
 
@@ -123,14 +129,17 @@ class ImpactMeasurement:
         )
 
         # 問題解決時間の短縮
-        expected_resolution_time = self.baseline_metrics["baseline_resolution_time"] * 0.3  # 70%短縮
+        expected_resolution_time = (
+            self.baseline_metrics["baseline_resolution_time"] * 0.3
+        )  # 70%短縮
         improvements["resolution_time_improvement_minutes"] = (
             self.baseline_metrics["baseline_resolution_time"] - expected_resolution_time
         )
 
         # データ活用の価値
         data_volume_increase = (
-            current_metrics.get("current_data_volume", 0) - self.baseline_metrics["baseline_data_volume"]
+            current_metrics.get("current_data_volume", 0)
+            - self.baseline_metrics["baseline_data_volume"]
         )
         improvements["data_utilization_value"] = data_volume_increase * 0.1  # 簡易的な価値計算
 
@@ -150,7 +159,7 @@ class ImpactMeasurement:
         print(f"   • タスク成功率: {current_metrics.get('current_success_rate', 0):.1f}%")
         print(f"   • 分析タスク数: {current_metrics.get('total_tasks_analyzed', 0):,}件")
         print(f"   • データ蓄積量: {current_metrics.get('current_data_volume', 0):,}件")
-        print(f"   • 学習パターン数: {current_metrics.get('learned_patterns', 0)}件")
+        print(f"   • 学習パターン数: {current_metrics.get('learning_patterns', 0)}件")
 
         print(f"\n🎯 達成された改善:")
         print(f"   ✅ 成功率向上: +{improvements['success_rate_improvement']:.1f}%")
@@ -192,13 +201,16 @@ class ImpactMeasurement:
 
         # コスト削減
         hourly_rate = 50  # 時間単価
-        business_impact["daily_cost_savings"] = improvements["time_savings_hours_per_day"] * hourly_rate
+        business_impact["daily_cost_savings"] = (
+            improvements["time_savings_hours_per_day"] * hourly_rate
+        )
         business_impact["monthly_cost_savings"] = business_impact["daily_cost_savings"] * 22
         business_impact["yearly_cost_savings"] = business_impact["monthly_cost_savings"] * 12
 
         # 生産性向上
         business_impact["productivity_increase"] = (
-            improvements["success_rate_improvement"] / self.baseline_metrics["baseline_success_rate"]
+            improvements["success_rate_improvement"]
+            / self.baseline_metrics["baseline_success_rate"]
         ) * 100
 
         # 品質向上

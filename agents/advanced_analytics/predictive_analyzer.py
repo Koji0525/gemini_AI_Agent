@@ -5,9 +5,8 @@ Predictive Analyzer v1.0
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-from collections import defaultdict
+from typing import Dict, List, Any
+from datetime import datetime
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -99,7 +98,11 @@ class PredictiveAnalyzer:
         # アラートを生成
         alerts = self._generate_system_alerts(predictions)
 
-        return {"predictions": predictions, "alerts": alerts, "timestamp": datetime.now().isoformat()}
+        return {
+            "predictions": predictions,
+            "alerts": alerts,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     async def suggest_preventive_actions(self) -> List[Dict[str, Any]]:
         """予防的アクションを提案"""
@@ -169,7 +172,7 @@ class PredictiveAnalyzer:
 
         try:
             spreadsheet = self.sheets.gc.open_by_key(self.sheets.spreadsheet_id)
-            worksheet = spreadsheet.worksheet("learned_patterns")
+            worksheet = spreadsheet.worksheet("learning_patterns")
 
             # 成功パターンを保存
             if patterns.get("success_patterns"):
@@ -239,12 +242,16 @@ class PredictiveAnalyzer:
             log_agent = log.get("agent_role", "")
 
             # エージェントが同じ、またはタスク説明に共通キーワードがある
-            if log_agent == agent or any(word in log_desc for word in task_desc.split()[:3] if len(word) > 2):
+            if log_agent == agent or any(
+                word in log_desc for word in task_desc.split()[:3] if len(word) > 2
+            ):
                 similar.append(log)
 
         return similar
 
-    def _generate_risk_recommendations(self, task: Dict, similar_tasks: List[Dict], failure_rate: float) -> List[str]:
+    def _generate_risk_recommendations(
+        self, task: Dict, similar_tasks: List[Dict], failure_rate: float
+    ) -> List[str]:
         """リスクに基づく推奨事項を生成"""
         recommendations = []
 
@@ -257,9 +264,13 @@ class PredictiveAnalyzer:
             recommendations.append("⏱️ タイムアウト設定を通常より長めに設定")
 
         # タイムアウトエラーが多い場合
-        timeout_count = sum(1 for t in similar_tasks if "timeout" in t.get("output_summary", "").lower())
+        timeout_count = sum(
+            1 for t in similar_tasks if "timeout" in t.get("output_summary", "").lower()
+        )
         if timeout_count > 0:
-            recommendations.append(f"⏰ 過去{timeout_count}件のタイムアウト発生 → タイムアウト延長を推奨")
+            recommendations.append(
+                f"⏰ 過去{timeout_count}件のタイムアウト発生 → タイムアウト延長を推奨"
+            )
 
         if not recommendations:
             recommendations.append("✅ 低リスク: 通常通り実行可能")
@@ -280,7 +291,9 @@ class PredictiveAnalyzer:
         """APIタイムアウトリスクを予測"""
         recent_logs = logs[-50:] if len(logs) > 50 else logs
 
-        timeout_count = sum(1 for log in recent_logs if "timeout" in log.get("output_summary", "").lower())
+        timeout_count = sum(
+            1 for log in recent_logs if "timeout" in log.get("output_summary", "").lower()
+        )
 
         rate = timeout_count / len(recent_logs) if recent_logs else 0
 
@@ -308,9 +321,15 @@ class PredictiveAnalyzer:
         previous_errors = sum(1 for log in previous if log.get("status") == "failed")
 
         if recent_errors > previous_errors * 2:
-            return {"level": "高", "reason": f"エラー率が2倍以上に増加 ({previous_errors}→{recent_errors})"}
+            return {
+                "level": "高",
+                "reason": f"エラー率が2倍以上に増加 ({previous_errors}→{recent_errors})",
+            }
         elif recent_errors > previous_errors:
-            return {"level": "中", "reason": f"エラー率が増加傾向 ({previous_errors}→{recent_errors})"}
+            return {
+                "level": "中",
+                "reason": f"エラー率が増加傾向 ({previous_errors}→{recent_errors})",
+            }
         else:
             return {"level": "低", "reason": "エラー率は安定"}
 
@@ -361,7 +380,8 @@ async def main():
     # 設定読み込み
     config = ConfigLoader()
     sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE"),
     )
 
     predictor = PredictiveAnalyzer(sheets)

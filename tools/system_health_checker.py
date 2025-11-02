@@ -77,7 +77,7 @@ class SystemHealthChecker:
 
     def _check_spreadsheet_structure(self):
         """スプレッドシート構造チェック"""
-        required_sheets = ["pm_tasks", "pm_goals", "progress_dashboard"]
+        required_sheets = ["pm_tasks", "project_goal", "progress_dashboard"]
         optional_sheets = ["control_flags", "error_log", "execution_history"]
 
         for sheet_name in required_sheets:
