@@ -1,0 +1,234 @@
+name: 🔍 認証デバッグテスト
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug_auth:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 チェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          pip install -r requirements.txt
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 1: Secrets確認
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 1 - GitHub Secrets確認
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "�� STEP 1: GitHub Secrets確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # SPREADSHEET_ID
+          if [ -z "$SPREADSHEET_ID" ]; then
+            echo "❌ SPREADSHEET_ID: 未設定"
+            exit 1
+          else
+            echo "✅ SPREADSHEET_ID: ${SPREADSHEET_ID:0:15}... (長さ: ${#SPREADSHEET_ID})"
+          fi
+          
+          # GOOGLE_CREDENTIALS
+          if [ -z "$GOOGLE_CREDENTIALS" ]; then
+            echo "❌ GOOGLE_CREDENTIALS: 未設定"
+            exit 1
+          else
+            echo "✅ GOOGLE_CREDENTIALS: 設定済み (長さ: ${#GOOGLE_CREDENTIALS})"
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 2: .env作成確認
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 2 - .env作成確認
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 STEP 2: .env作成確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # .env作成
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          echo "✅ .env作成完了"
+          echo ""
+          echo "📄 .env内容:"
+          cat .env
+          echo ""
+          
+          # ファイル確認
+          if [ -f .env ]; then
+            echo "✅ .envファイル: 存在"
+            echo "   サイズ: $(wc -c < .env) bytes"
+          else
+            echo "❌ .envファイル: 存在しない"
+            exit 1
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 3: サービスアカウントファイル作成確認
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 3 - サービスアカウントファイル確認
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 STEP 3: サービスアカウントファイル確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+          
+          if [ -f configuration/service_account.json ]; then
+            echo "✅ service_account.json: 作成成功"
+            echo "   サイズ: $(wc -c < configuration/service_account.json) bytes"
+            
+            # JSON形式チェック
+            if python3 -m json.tool configuration/service_account.json > /dev/null 2>&1; then
+              echo "✅ JSON形式: 正常"
+            else
+              echo "❌ JSON形式: エラー"
+              exit 1
+            fi
+          else
+            echo "❌ service_account.json: 作成失敗"
+            exit 1
+          fi
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 4: sheets_manager.pyの初期化ロジック確認
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 4 - sheets_manager.py初期化ロジック確認
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 STEP 4: sheets_manager.py初期化ロジック確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          echo "📄 sheets_manager.py __init__部分:"
+          grep -A 20 "def __init__" tools/sheets_manager.py | head -25
+          
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 5: 環境変数読み込みテスト
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 5 - 環境変数読み込みテスト
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 STEP 5: 環境変数読み込みテスト"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 << 'TEST_EOF'
+          import os
+          from pathlib import Path
+          
+          print("\n【Python環境変数確認】")
+          print(f"  SPREADSHEET_ID (os.environ): {os.environ.get('SPREADSHEET_ID', '❌ 未設定')}")
+          print(f"  SPREADSHEET_ID (os.getenv): {os.getenv('SPREADSHEET_ID', '❌ 未設定')}")
+          
+          print("\n【.envファイル確認】")
+          env_file = Path('.env')
+          if env_file.exists():
+              print("  ✅ .envファイル存在")
+              with open(env_file) as f:
+                  content = f.read()
+                  print(f"  内容:\n{content}")
+          else:
+              print("  ❌ .envファイル不在")
+          
+          print("\n【python-dotenv読み込みテスト】")
+          try:
+              from dotenv import load_dotenv
+              load_dotenv()
+              print("  ✅ load_dotenv()成功")
+              print(f"  SPREADSHEET_ID (dotenv後): {os.getenv('SPREADSHEET_ID', '❌ 未設定')}")
+          except ImportError:
+              print("  ⚠️ python-dotenvがインストールされていません")
+          except Exception as e:
+              print(f"  ❌ エラー: {e}")
+          TEST_EOF
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # STEP 6: GoogleSheetsManager初期化テスト
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: 🔍 STEP 6 - GoogleSheetsManager初期化テスト
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 STEP 6: GoogleSheetsManager初期化テスト"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 << 'MANAGER_TEST_EOF'
+          import sys
+          from pathlib import Path
+          import os
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          print("\n【初期化前の環境確認】")
+          print(f"  SPREADSHEET_ID: {os.getenv('SPREADSHEET_ID', '❌ 未設定')}")
+          print(f"  .env存在: {Path('.env').exists()}")
+          print(f"  service_account.json存在: {Path('configuration/service_account.json').exists()}")
+          
+          print("\n【GoogleSheetsManager初期化試行】")
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              # 引数なしで初期化（.envから読み込み）
+              print("  試行1: 引数なし初期化")
+              sheets_manager = GoogleSheetsManager()
+              print("  ✅ 初期化成功")
+              
+          except ValueError as e:
+              print(f"  ❌ ValueError: {e}")
+              print("\n【原因調査】")
+              
+              # sheets_manager.pyのソース確認
+              import inspect
+              print("  GoogleSheetsManager.__init__のソース:")
+              try:
+                  from tools.sheets_manager import GoogleSheetsManager as GSM
+                  source = inspect.getsource(GSM.__init__)
+                  print(source[:500])
+              except:
+                  pass
+              
+          except Exception as e:
+              print(f"  ❌ その他のエラー: {e}")
+              import traceback
+              traceback.print_exc()
+          MANAGER_TEST_EOF
+          
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          rm -f configuration/service_account.json
+          rm -f .env
