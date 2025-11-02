@@ -135,6 +135,10 @@ class GoogleSheetsManager:
                 resolved_sheet = self._resolve_sheet_name(sheet_part)
                 range_str = f"{resolved_sheet}!{cell_part}"
 
+            # 🔧 自動型変換: 1次元配列を2次元配列に変換
+            if values and not isinstance(values[0], (list, tuple)):
+                values = [values]
+
             body = {"values": values}
 
             result = (
@@ -161,22 +165,42 @@ class GoogleSheetsManager:
         self, sheet_name: str, values: List[List[Any]], logical_sheet: bool = True
     ) -> Dict:
         """
-        行を追加
+        行を追加（デバッグ版）
 
         Args:
             sheet_name: シート名（論理名）
-            values: 追加するデータ
+            values: 追加するデータ（1次元または2次元配列）
             logical_sheet: Trueの場合、シート名を論理名として解決
 
         Returns:
             追加結果
         """
         try:
+            # 🔍 デバッグログ: 入力データの確認
+            print(f"📥 append_rows 呼び出し:")
+            print(f"   sheet_name={sheet_name}")
+            print(f"   values型={type(values)}")
+            if values:
+                print(f"   values長さ={len(values)}")
+                print(f"   values[0]型={type(values[0])}")
+                print(f"   values内容={values[:2] if len(values) > 2 else values}")
+
             # シート名解決
             if logical_sheet:
                 sheet_name = self._resolve_sheet_name(sheet_name)
+                print(f"   解決後シート名={sheet_name}")
+
+            # 🔧 自動型変換: 1次元配列を2次元配列に変換
+            type(values[0]) if values else None
+            if values and not isinstance(values[0], (list, tuple)):
+                print(f"🔄 型変換実行: 1次元 → 2次元")
+                values = [values]
+                print(f"   変換後={values}")
+            else:
+                print(f"✅ 型変換不要（既に2次元配列）")
 
             body = {"values": values}
+            print(f"📦 API送信データ: {body}")
 
             result = (
                 self.service.spreadsheets()
@@ -191,46 +215,9 @@ class GoogleSheetsManager:
                 .execute()
             )
 
-            logger.info(f"✅ 行追加成功: {sheet_name} ({len(values)}行)")
-
+            print(f"✅ 行追加成功")
             return result
 
-        except HttpError as e:
-            logger.error(f"❌ 行追加エラー: {e}")
+        except Exception as e:
+            print(f"❌ 行追加エラー: {e}")
             raise
-
-
-def main():
-    """テスト実行"""
-    print("=" * 60)
-    print("📊 SheetsManager マッピング対応版 テスト")
-    print("=" * 60)
-
-    try:
-        manager = GoogleSheetsManager()
-
-        # テスト1: 論理名でのシート読み取り
-        print("\n【テスト1: 論理名での読み取り】")
-        test_sheets = ["project_goal", "pm_tasks", "control_flags"]
-
-        for logical_name in test_sheets:
-            try:
-                data = manager.read_range(f"{logical_name}!A1:A1")
-                print(f"  ✅ {logical_name}: {len(data)}行")
-            except Exception as e:
-                print(f"  ❌ {logical_name}: {str(e)[:50]}")
-
-        print("\n✅ テスト完了")
-        return 0
-
-    except Exception as e:
-        print(f"\n❌ エラー: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return 1
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    exit(main())
