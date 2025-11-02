@@ -27,7 +27,9 @@ from agents.self_healing.utils.error_classifier import ErrorClassifier
 
 import importlib.util
 import logging
-from task_executor.task_coordinator_v05_self_healing import TaskCoordinator
+from task_executor.task_coordinator_v05_self_healing import (
+    TaskCoordinatorWithSelfHealing as TaskCoordinator,
+)
 
 # ==============================================================================
 # 🆕 長期的解決策1: プロトコル定義（型安全なインターフェース）
