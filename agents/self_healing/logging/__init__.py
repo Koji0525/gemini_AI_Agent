@@ -8,7 +8,7 @@ from .log_integrator import LogIntegrator, IntegratedLog
 from .pattern_extractor import PatternExtractor
 from .self_learning_pipeline import SelfLearningPipeline
 from .similarity_search_engine import SimilaritySearchEngine
-from .decision_support_system import DecisionSupportSystem, DecisionProposal
+from .decision_support_system import DecisionSupportSystem
 
 __all__ = [
     "KnowledgeBaseManager",
