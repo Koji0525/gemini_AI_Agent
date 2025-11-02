@@ -4,7 +4,7 @@ Week 5: retry_history用のSheetsアダプター（最終修正版）
 GoogleSheetsManagerの実際の構造に完全対応
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 import uuid
 import gspread
@@ -23,7 +23,7 @@ class SheetsAdapter:
             sheets_manager: GoogleSheetsManagerインスタンス
         """
         self.sheets_manager = sheets_manager
-        self.sheet_name = "retry_history"
+        self.sheet_name = "retry_log"
         self._sheet = None
 
     def _get_sheet(self):
@@ -265,7 +265,13 @@ class SheetsAdapter:
             import traceback
 
             traceback.print_exc()
-            return {"total_retries": 0, "success_count": 0, "failure_count": 0, "by_error_type": {}, "by_strategy": {}}
+            return {
+                "total_retries": 0,
+                "success_count": 0,
+                "failure_count": 0,
+                "by_error_type": {},
+                "by_strategy": {},
+            }
 
 
 class RetryHistoryManager:

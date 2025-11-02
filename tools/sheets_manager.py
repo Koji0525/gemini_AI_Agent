@@ -211,7 +211,7 @@ def main():
 
         # テスト1: 論理名でのシート読み取り
         print("\n【テスト1: 論理名での読み取り】")
-        test_sheets = ["pm_goals", "pm_tasks", "control_flags"]
+        test_sheets = ["project_goal", "pm_tasks", "control_flags"]
 
         for logical_name in test_sheets:
             try:

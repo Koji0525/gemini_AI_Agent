@@ -54,7 +54,7 @@ def create_sheets_via_api():
 
         # 必須シートの定義
         required_sheets = {
-            "pm_goals": [
+            "project_goal": [
                 "goal_id",
                 "description",
                 "priority",

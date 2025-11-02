@@ -91,7 +91,7 @@ def check_sheets_access() -> bool:
         print("  ✅ SheetsManager 初期化成功")
 
         # 論理名でのアクセステスト
-        test_sheets = ["pm_goals", "pm_tasks", "task_execution_log"]
+        test_sheets = ["project_goal", "pm_tasks", "task_execution_log"]
 
         all_accessible = True
         for sheet in test_sheets:

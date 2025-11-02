@@ -50,7 +50,7 @@ def delete_duplicate_sheets():
 
         # 削除対象シート
         duplicate_sheets = [
-            "pm_goals",
+            "project_goal",
             "control_flags",
             "error_log",
             "execution_history",

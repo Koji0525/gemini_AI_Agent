@@ -6,7 +6,10 @@ KnowledgeBaseManager: 統合ナレッジベース管理
 AIがAIを進化させる自己強化ループの中核。
 """
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
+import logging
+
+logger = logging.getLogger(__name__)
 import json
 from collections import defaultdict
 
@@ -73,16 +76,25 @@ class KnowledgeBaseManager:
             sheets_manager: GoogleSheetsManagerインスタンス
         """
         self.sheets_manager = sheets_manager
-        self.gc = sheets_manager.gc  # gspreadクライアント
+        # self.gc = sheets_manager.gc  # ⚠️ 削除: GoogleSheetsManagerは.gcを持たない
         self.spreadsheet_id = sheets_manager.spreadsheet_id
 
         print("✅ KnowledgeBaseManager初期化完了")
 
     def _get_sheet(self, sheet_name: str):
-        """シートを取得"""
+        """シートを取得（GoogleSheetsManagerの新インターフェース対応）"""
         try:
-            spreadsheet = self.gc.open_by_key(self.spreadsheet_id)
-            return spreadsheet.worksheet(sheet_name)
+            # GoogleSheetsManagerのget_dataメソッドを使用
+            self.sheets.get_data(sheet_name)
+            # シート自体が必要な場合は、clientを使用
+            if hasattr(self.sheets, "client") and self.sheets.client:
+                return self.sheets.client.open_by_key(self.sheets.spreadsheet_id).worksheet(
+                    sheet_name
+                )
+            return None
+        except Exception as e:
+            logger.warning(f"シート取得失敗: {sheet_name} - {e}")
+            return None
         except Exception as e:
             print(f"⚠️ シート取得エラー ({sheet_name}): {e}")
             return None
@@ -133,7 +145,10 @@ class KnowledgeBaseManager:
             # 成功タスクをグループ化
             success_groups = defaultdict(list)
             for record in records:
-                if record.get("status") == "completed" and float(record.get("quality_score", 0)) >= 8:
+                if (
+                    record.get("status") == "completed"
+                    and float(record.get("quality_score", 0)) >= 8
+                ):
                     task_type = record.get("execution_type", "unknown")
                     success_groups[task_type].append(record)
 
@@ -266,7 +281,9 @@ class KnowledgeBaseManager:
             print(f"❌ パターン保存エラー: {e}")
             return False
 
-    def search_similar_knowledge(self, query_context: Dict[str, Any], limit: int = 5) -> List[Dict[str, Any]]:
+    def search_similar_knowledge(
+        self, query_context: Dict[str, Any], limit: int = 5
+    ) -> List[Dict[str, Any]]:
         """
         類似のナレッジを検索
 
