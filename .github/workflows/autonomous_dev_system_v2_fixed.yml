@@ -1,0 +1,317 @@
+name: 🤖 24時間自律開発システム v2.1（修正版）
+
+on:
+  workflow_dispatch:
+    inputs:
+      goal:
+        description: '24時間自律型開発エージェントの開発'
+        required: true
+        default: 'テスト実行'
+      priority:
+        description: '優先度'
+        required: true
+        type: choice
+        options:
+          - high
+          - medium
+          - low
+        default: 'high'
+  
+  schedule:
+    - cron: '0 */6 * * *'
+
+# 🆕 権限追加
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  autonomous_development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    
+    steps:
+      - name: 📥 リポジトリチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: 🐍 Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 依存関係インストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🛡️ v07品質ゲート（実行前チェック）
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🛡️ v07スマート品質チェック開始"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 << 'VALIDATE_EOF'
+          import sys
+          from pathlib import Path
+          
+          print("\n📋 設定ファイル検証中...\n")
+          errors = []
+          
+          # requirements.txt検証
+          req_file = Path('requirements.txt')
+          if req_file.exists():
+              try:
+                  with open(req_file) as f:
+                      lines = f.readlines()
+                      for i, line in enumerate(lines, 1):
+                          line = line.strip()
+                          if line and not line.startswith('#'):
+                              if '==' not in line and '>=' not in line and '<=' not in line:
+                                  print(f"⚠️ 行{i}: バージョン指定なし ({line})")
+                  print("✅ requirements.txt: OK")
+              except Exception as e:
+                  errors.append(f"❌ requirements.txt読み込みエラー: {e}")
+          
+          # Python構文チェック
+          check_dirs = ['scripts', 'tools']
+          syntax_errors = []
+          
+          for dir_path in check_dirs:
+              dir_obj = Path(dir_path)
+              if dir_obj.exists():
+                  for py_file in list(dir_obj.glob('*.py'))[:5]:  # 最初の5ファイルのみ
+                      try:
+                          with open(py_file) as f:
+                              compile(f.read(), py_file, 'exec')
+                      except SyntaxError as e:
+                          syntax_errors.append(f"構文エラー: {py_file} (行{e.lineno})")
+          
+          if syntax_errors:
+              errors.extend(syntax_errors)
+          else:
+              print("✅ Python構文チェック: OK")
+          
+          if errors:
+              print("\n🚨 エラー検出:")
+              for error in errors:
+                  print(f"  {error}")
+              sys.exit(1)
+          
+          print("\n✅ 全設定ファイル検証完了")
+          VALIDATE_EOF
+      
+      # 🆕 認証情報の詳細チェック
+      - name: 🔐 認証情報セットアップ
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: |
+          echo "🔐 認証情報チェック"
+          
+          # SPREADSHEET_IDチェック
+          if [ -z "$SPREADSHEET_ID" ]; then
+            echo "❌ エラー: SPREADSHEET_IDが設定されていません"
+            echo ""
+            echo "📝 設定方法:"
+            echo "1. https://github.com/Koji0525/gemini_AI_Agent/settings/secrets/actions"
+            echo "2. [New repository secret]をクリック"
+            echo "3. Name: SPREADSHEET_ID"
+            echo "4. Secret: (スプレッドシートID)"
+            echo ""
+            exit 1
+          fi
+          
+          # GOOGLE_CREDENTIALSチェック
+          if [ -z "$GOOGLE_CREDENTIALS" ]; then
+            echo "❌ エラー: GOOGLE_CREDENTIALSが設定されていません"
+            exit 1
+          fi
+          
+          # .env作成
+          cat > .env << EOF
+          SPREADSHEET_ID=${SPREADSHEET_ID}
+          GOOGLE_SERVICE_ACCOUNT_FILE=configuration/service_account.json
+          EOF
+          
+          # サービスアカウントファイル作成
+          mkdir -p configuration
+          echo "${GOOGLE_CREDENTIALS}" > configuration/service_account.json
+          
+          echo "✅ SPREADSHEET_ID: ${SPREADSHEET_ID:0:10}..."
+          echo "✅ 認証情報セットアップ完了"
+      
+      - name: 📝 目標登録（手動トリガー時のみ）
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              goal = "${{ github.event.inputs.goal }}"
+              priority = "${{ github.event.inputs.priority }}"
+              
+              sheets_manager = GoogleSheetsManager()
+              goal_data = [[
+                  f"GOAL_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                  goal,
+                  priority,
+                  "active",
+                  "0%",
+                  datetime.now().isoformat()
+              ]]
+              
+              sheets_manager.append_rows('pm_goals', goal_data)
+              print(f"✅ 目標登録完了: {goal}")
+              
+          except Exception as e:
+              print(f"❌ 目標登録エラー: {e}")
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          PYTHON_EOF
+      
+      - name: 🎹 統合オーケストレーター実行
+        id: orchestrator
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎹 24時間自律開発システム 起動"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 scripts/integrated_orchestrator_v05_final.py || true
+      
+      - name: 🛡️ v07品質ゲート（実行後チェック）
+        if: always()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🛡️ 実行後品質チェック"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          python3 << 'POST_CHECK_EOF'
+          import sys
+          from pathlib import Path
+          from datetime import datetime
+          
+          sys.path.insert(0, str(Path.cwd()))
+          
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              sheets_manager = GoogleSheetsManager()
+              
+              print("\n📊 システム品質レポート")
+              print("=" * 60)
+              
+              # タスク品質スコア
+              try:
+                  tasks = sheets_manager.read_range('task_execution_log!A2:H100')
+                  if tasks:
+                      quality_scores = []
+                      for row in tasks:
+                          if len(row) > 7:
+                              try:
+                                  score = float(row[7])
+                                  quality_scores.append(score)
+                              except:
+                                  pass
+                      
+                      if quality_scores:
+                          avg_quality = sum(quality_scores) / len(quality_scores)
+                          print(f"\n【タスク品質】")
+                          print(f"  平均: {avg_quality:.1f}/10")
+              except Exception as e:
+                  print(f"  ⚠️ 品質スコア取得エラー: {e}")
+              
+              # リトライ成功率
+              try:
+                  retry_logs = sheets_manager.read_range('retry_log!A2:I100')
+                  if retry_logs:
+                      total = len(retry_logs)
+                      success = sum(1 for r in retry_logs if len(r) > 7 and str(r[7]).lower() == 'true')
+                      
+                      print(f"\n【自己修復機能】")
+                      print(f"  総リトライ数: {total}")
+                      print(f"  成功率: {success/total*100:.1f}%" if total > 0 else "  成功率: N/A")
+              except Exception as e:
+                  print(f"  ⚠️ リトライログ取得エラー: {e}")
+              
+              # ナレッジベース
+              try:
+                  kb_data = sheets_manager.read_range('knowledge_base!A2:A100')
+                  print(f"\n【学習状況】")
+                  print(f"  ナレッジベース: {len(kb_data)}件")
+              except Exception as e:
+                  print(f"  ⚠️ ナレッジベース取得エラー: {e}")
+              
+              print("\n" + "=" * 60)
+              
+          except Exception as e:
+              print(f"⚠️ 品質チェックスキップ: {e}")
+          POST_CHECK_EOF
+      
+      - name: 📊 実行結果サマリー
+        if: always()
+        run: |
+          python3 << 'PYTHON_EOF'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, str(Path.cwd()))
+          
+          try:
+              from tools.sheets_manager import GoogleSheetsManager
+              
+              sheets_manager = GoogleSheetsManager()
+              tasks_data = sheets_manager.read_range('pm_tasks!A2:D100')
+              
+              total = len(tasks_data)
+              completed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'completed')
+              failed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'failed')
+              pending = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'pending')
+              
+              print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              print("📊 24時間自律開発システム v2.1 実行サマリー")
+              print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              print(f"   総タスク数: {total}")
+              print(f"   ✅ 完了: {completed}")
+              print(f"   ❌ 失敗: {failed}")
+              print(f"   ⏳ 保留中: {pending}")
+              
+              if total > 0:
+                  progress = (completed / total) * 100
+                  print(f"\n   📈 進捗率: {progress:.1f}%")
+              
+              print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+              
+          except Exception as e:
+              print(f"⚠️ サマリー取得エラー: {e}")
+          PYTHON_EOF
+      
+      - name: 🧹 クリーンアップ
+        if: always()
+        run: |
+          rm -f configuration/service_account.json
+          rm -f .env
+          echo "✅ クリーンアップ完了"
+      
+      - name: 📧 通知（失敗時）
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            try {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🚨 自律開発システムv2.1 実行失敗',
+                body: `自律開発システムv2.1の実行が失敗しました。\n\n**実行時刻:** ${new Date().toISOString()}\n**ワークフロー:** ${context.workflow}\n**実行番号:** ${context.runNumber}\n\n詳細はActionsログを確認してください。`,
+                labels: ['bot-alert', 'system-error']
+              });
+            } catch (error) {
+              console.log('Issue作成をスキップ（権限不足の可能性）');
+            }
