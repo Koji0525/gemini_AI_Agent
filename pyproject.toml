@@ -1,0 +1,27 @@
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎨 Black フォーマッター設定 v6.0
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+# 除外ディレクトリ
+exclude = '''
+/(
+    \.git
+  | __pycache__
+  | _WIP
+  | _ARCHIVE
+  | _BACKUP
+  | node_modules
+  | wordpress-core
+  | \.venv
+  | venv
+)/
+'''
+
+# 拡張性: 将来の設定用
+# skip-string-normalization = false
+# skip-magic-trailing-comma = false
