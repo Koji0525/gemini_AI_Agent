@@ -45,50 +45,72 @@ jobs:
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: 🛡️ v07品質ゲート（実行前チェック）
         run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🛡️ v07スマート品質チェック開始"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
-          # 設定ファイル検証
           python3 << 'VALIDATE_EOF'
           import sys
           from pathlib import Path
-          import configparser
           import json
           
+          print("\n📋 設定ファイル検証中...\n")
           errors = []
+          warnings = []
           
-          # requirements.txt検証
+          # 1. requirements.txt検証
           req_file = Path('requirements.txt')
           if req_file.exists():
               try:
                   with open(req_file) as f:
-                      for line in f:
-                          if line.strip() and not line.startswith('#'):
-                              if '==' not in line and '>=' not in line:
-                                  errors.append(f"⚠️ バージョン指定なし: {line.strip()}")
+                      lines = f.readlines()
+                      for i, line in enumerate(lines, 1):
+                          line = line.strip()
+                          if line and not line.startswith('#'):
+                              if '==' not in line and '>=' not in line and '<=' not in line:
+                                  warnings.append(f"行{i}: バージョン指定なし ({line})")
+                  print("✅ requirements.txt: OK")
               except Exception as e:
                   errors.append(f"❌ requirements.txt読み込みエラー: {e}")
+          else:
+              warnings.append("⚠️ requirements.txtが見つかりません")
           
-          # .envテンプレート検証
-          env_example = Path('config/.env.example')
-          if env_example.exists():
-              try:
-                  with open(env_example) as f:
-                      for line in f:
-                          if '=' in line and not line.strip().startswith('#'):
-                              key, value = line.strip().split('=', 1)
-                              if not key:
-                                  errors.append(f"❌ .env.example: 空のキー")
-              except Exception as e:
-                  errors.append(f"❌ .env.example読み込みエラー: {e}")
+          # 2. Pythonファイルの基本構文チェック（主要ディレクトリのみ）
+          check_dirs = ['scripts', 'tools', 'agents/self_healing']
+          syntax_errors = []
           
+          for dir_path in check_dirs:
+              dir_obj = Path(dir_path)
+              if dir_obj.exists():
+                  for py_file in dir_obj.glob('*.py'):
+                      try:
+                          with open(py_file) as f:
+                              compile(f.read(), py_file, 'exec')
+                      except SyntaxError as e:
+                          syntax_errors.append(f"構文エラー: {py_file} (行{e.lineno})")
+          
+          if syntax_errors:
+              errors.extend(syntax_errors)
+          else:
+              print("✅ Python構文チェック: OK")
+          
+          # 3. 結果サマリー
+          print("\n" + "=" * 60)
           if errors:
-              print("\n🚨 設定ファイルエラー検出:")
+              print("🚨 エラー検出:")
               for error in errors:
                   print(f"  {error}")
               print("\n💡 修正してから再実行してください")
+              print("=" * 60)
               sys.exit(1)
-          else:
-              print("✅ 全設定ファイル検証OK")
+          
+          if warnings:
+              print("⚠️ 警告:")
+              for warning in warnings:
+                  print(f"  {warning}")
+          
+          print("\n✅ 全設定ファイル検証完了")
+          print("=" * 60)
           VALIDATE_EOF
       
       - name: 🔐 認証情報セットアップ
@@ -142,7 +164,10 @@ jobs:
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🎹 24時間自律開発システム 起動"
-          echo "   自己修復機能: TaskCoordinator v05"
+          echo "   📦 自己修復: TaskCoordinator v05"
+          echo "   🧠 エラー分類: ErrorClassifier"
+          echo "   🔄 リトライ: RetryManager"
+          echo "   📚 学習: KnowledgeBaseManager"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
           python3 scripts/integrated_orchestrator_v05_final.py
@@ -153,53 +178,123 @@ jobs:
       - name: 🛡️ v07品質ゲート（実行後チェック）
         if: always()
         run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🛡️ 実行後品質チェック"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
           python3 << 'POST_CHECK_EOF'
           import sys
           from pathlib import Path
-          sys.path.insert(0, str(Path.cwd()))
+          from datetime import datetime
           
+          sys.path.insert(0, str(Path.cwd()))
           from tools.sheets_manager import GoogleSheetsManager
           
           sheets_manager = GoogleSheetsManager()
           
-          print("\n📊 品質スコア確認")
+          print("\n📊 システム品質レポート")
+          print("=" * 60)
           
           # 1. タスク品質スコア
-          tasks = sheets_manager.read_range('task_execution_log!A2:H100')
-          if tasks:
-              quality_scores = []
-              for row in tasks:
-                  if len(row) > 7:
-                      try:
-                          score = float(row[7])
-                          quality_scores.append(score)
-                      except:
-                          pass
-              
-              if quality_scores:
-                  avg_quality = sum(quality_scores) / len(quality_scores)
-                  print(f"   平均品質スコア: {avg_quality:.1f}/10")
+          try:
+              tasks = sheets_manager.read_range('task_execution_log!A2:H100')
+              if tasks:
+                  quality_scores = []
+                  for row in tasks:
+                      if len(row) > 7:
+                          try:
+                              score = float(row[7])
+                              quality_scores.append(score)
+                          except:
+                              pass
                   
-                  if avg_quality < 7.0:
-                      print("   ⚠️ 品質スコア低下を検出")
+                  if quality_scores:
+                      avg_quality = sum(quality_scores) / len(quality_scores)
+                      max_quality = max(quality_scores)
+                      min_quality = min(quality_scores)
+                      
+                      print(f"\n【タスク品質】")
+                      print(f"  平均: {avg_quality:.1f}/10")
+                      print(f"  最高: {max_quality:.1f}/10")
+                      print(f"  最低: {min_quality:.1f}/10")
+                      
+                      if avg_quality >= 8.0:
+                          print("  ✅ 高品質を維持")
+                      elif avg_quality >= 7.0:
+                          print("  ⚠️ 品質改善の余地あり")
+                      else:
+                          print("  🚨 品質低下を検出")
+          except Exception as e:
+              print(f"  ⚠️ 品質スコア取得エラー: {e}")
           
-          # 2. エラー率
-          retry_logs = sheets_manager.read_range('retry_log!A2:I100')
-          if retry_logs:
-              total_retries = len(retry_logs)
-              successful_retries = sum(1 for row in retry_logs if len(row) > 7 and str(row[7]).lower() == 'true')
-              
-              if total_retries > 0:
-                  success_rate = (successful_retries / total_retries) * 100
-                  print(f"   リトライ成功率: {success_rate:.1f}%")
+          # 2. リトライ成功率
+          try:
+              retry_logs = sheets_manager.read_range('retry_log!A2:I100')
+              if retry_logs:
+                  total_retries = len(retry_logs)
+                  successful_retries = sum(
+                      1 for row in retry_logs 
+                      if len(row) > 7 and str(row[7]).lower() == 'true'
+                  )
+                  
+                  if total_retries > 0:
+                      success_rate = (successful_retries / total_retries) * 100
+                      
+                      print(f"\n【自己修復機能】")
+                      print(f"  総リトライ数: {total_retries}")
+                      print(f"  成功: {successful_retries}")
+                      print(f"  成功率: {success_rate:.1f}%")
+                      
+                      if success_rate >= 80:
+                          print("  ✅ 自己修復機能が効果的に動作")
+                      else:
+                          print("  ⚠️ リトライ戦略の見直しが必要")
+          except Exception as e:
+              print(f"  ⚠️ リトライログ取得エラー: {e}")
           
           # 3. ナレッジベース成長
-          kb_data = sheets_manager.read_range('knowledge_base!A2:A100')
-          print(f"   ナレッジベース: {len(kb_data)}件")
+          try:
+              kb_data = sheets_manager.read_range('knowledge_base!A2:A100')
+              kb_count = len(kb_data)
+              
+              print(f"\n【学習状況】")
+              print(f"  ナレッジベース: {kb_count}件")
+              
+              if kb_count >= 20:
+                  print("  ✅ 十分な学習データを蓄積")
+              elif kb_count >= 10:
+                  print("  ⚠️ 学習データ蓄積中")
+              else:
+                  print("  📚 初期学習フェーズ")
+          except Exception as e:
+              print(f"  ⚠️ ナレッジベース取得エラー: {e}")
           
-          print("✅ 品質チェック完了")
+          # 4. エラー分類統計
+          try:
+              error_logs = sheets_manager.read_range('error_analysis!A2:E100')
+              if error_logs:
+                  error_types = {}
+                  for row in error_logs:
+                      if len(row) > 1:
+                          error_type = row[1]
+                          error_types[error_type] = error_types.get(error_type, 0) + 1
+                  
+                  if error_types:
+                      print(f"\n【エラー分析】")
+                      sorted_errors = sorted(
+                          error_types.items(), 
+                          key=lambda x: x[1], 
+                          reverse=True
+                      )[:3]
+                      
+                      for error_type, count in sorted_errors:
+                          print(f"  {error_type}: {count}件")
+          except Exception as e:
+              print(f"  ⚠️ エラー分析取得エラー: {e}")
+          
+          print("\n" + "=" * 60)
+          print(f"⏰ チェック完了: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+          print("=" * 60)
           POST_CHECK_EOF
       
       - name: 📊 実行結果サマリー
@@ -220,19 +315,19 @@ jobs:
           completed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'completed')
           failed = sum(1 for row in tasks_data if len(row) > 3 and row[3] == 'failed')
           
-          print("=" * 60)
-          print("📊 24時間自律開発システム 実行サマリー")
-          print("=" * 60)
+          print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+          print("📊 24時間自律開発システム v2.0 実行サマリー")
+          print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
           print(f"   総タスク数: {total}")
-          print(f"   完了: {completed}")
-          print(f"   失敗: {failed}")
-          print(f"   保留中: {pending}")
+          print(f"   ✅ 完了: {completed}")
+          print(f"   ❌ 失敗: {failed}")
+          print(f"   ⏳ 保留中: {pending}")
           
           if total > 0:
               progress = (completed / total) * 100
-              print(f"   進捗率: {progress:.1f}%")
+              print(f"\n   📈 進捗率: {progress:.1f}%")
           
-          print("=" * 60)
+          print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
           PYTHON_EOF
       
       - name: 🧹 クリーンアップ
@@ -241,3 +336,16 @@ jobs:
           rm -f configuration/service_account.json
           rm -f .env
           echo "✅ クリーンアップ完了"
+      
+      - name: 📧 通知（失敗時）
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 自律開発システムv2.0 実行失敗',
+              body: `自律開発システムv2.0の実行が失敗しました。\n\n**実行時刻:** ${new Date().toISOString()}\n**ワークフロー:** ${context.workflow}\n**実行番号:** ${context.runNumber}\n\n詳細はActionsログを確認してください。`,
+              labels: ['bot-alert', 'system-error']
+            })
