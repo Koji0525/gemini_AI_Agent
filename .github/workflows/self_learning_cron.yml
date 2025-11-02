@@ -1,0 +1,50 @@
+name: Self Learning Pipeline
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごと
+  workflow_dispatch:
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run Self Learning Pipeline
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          python3 << 'PYEOF'
+from agents.self_healing.logging.self_learning_pipeline import SelfLearningPipeline
+from tools.sheets_manager_v02_mapped import SheetsManager
+import asyncio
+
+async def main():
+    sheets = SheetsManager()
+    pipeline = SelfLearningPipeline(sheets)
+    
+    # ログからパターンを学習
+    await pipeline.run_learning_cycle()
+    print("✅ 学習サイクル完了")
+
+asyncio.run(main())
+PYEOF
+      
+      - name: Commit knowledge updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || git commit -m "🤖 ナレッジベース自動更新"
+          git push

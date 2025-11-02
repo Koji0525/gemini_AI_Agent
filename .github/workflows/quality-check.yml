@@ -1,0 +1,38 @@
+name: 品質チェック
+
+on:
+  push:
+    branches: [ main, 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-validation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: コードをチェックアウト
+        uses: actions/checkout@v3
+      
+      - name: Python環境セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: 依存関係インストール
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt || true
+      
+      - name: API検証実行
+        run: python3 tools/api_validator.py || true
+          
+      - name: 統合診断実行
+        run: python3 tools/integrated_diagnostics.py || true
+        
+      - name: 検証結果を保存
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-docs
+          path: docs/api/

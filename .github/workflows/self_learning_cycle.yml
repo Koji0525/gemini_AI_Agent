@@ -1,0 +1,59 @@
+name: 🤖 Self Learning Cycle
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 6時間ごと
+  workflow_dispatch:
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      
+      - name: Run Self Learning Pipeline
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          python3 << 'PYEOF'
+import asyncio
+import sys
+sys.path.insert(0, '.')
+
+from agents.self_healing.logging.self_learning_pipeline import SelfLearningPipeline
+from tools.sheets_manager_v02_mapped import SheetsManager
+
+async def main():
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("🤖 自動学習サイクル開始")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    
+    sheets = SheetsManager()
+    pipeline = SelfLearningPipeline(sheets)
+    
+    # ログからパターンを学習
+    result = await pipeline.run_learning_cycle()
+    
+    print(f"\n✅ 学習完了: {result['patterns_learned']}個のパターンを学習")
+    print(f"📊 ナレッジベース更新: {result['knowledge_updated']}件")
+
+asyncio.run(main())
+PYEOF
+      
+      - name: Commit knowledge updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || \
+            git commit -m "🤖 自動学習: ナレッジベース更新 $(date '+%Y-%m-%d %H:%M')"
+          git push

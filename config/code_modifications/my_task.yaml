@@ -1,0 +1,17 @@
+file: path/to/target.py
+output: path/to/output.py
+
+imports:
+  after: "from dotenv import load_dotenv"
+  add:
+    - "from some.module import SomeClass"
+
+modify_method:
+  - class: MyClass
+    method: __init__
+    signature:
+      old: "def __init__(self):"
+      new: "def __init__(self, param: Type = None):"
+    add_code: |
+      self.param = param
+      print("初期化完了")

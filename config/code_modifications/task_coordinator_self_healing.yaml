@@ -1,0 +1,19 @@
+file: task_executor/task_coordinator.py
+output: task_executor/task_coordinator_v02_self_healing.py
+
+imports:
+  after: "from typing import"
+  add:
+    - "from agents.self_healing.logging.decision_support_system import DecisionSupportSystem"
+    - "from agents.self_healing.retry_manager import RetryManager"
+
+modify_method:
+  - class: TaskCoordinator
+    method: __init__
+    signature:
+      old: "def __init__(self, task_executor: TaskExecutor, sheets_manager: GoogleSheetsManager, browser_controller=None):"
+      new: "def __init__(self, task_executor: TaskExecutor, sheets_manager: GoogleSheetsManager, browser_controller=None, decision_support: DecisionSupportSystem = None):"
+    add_code: |
+      self.decision_support = decision_support or DecisionSupportSystem(sheets_manager)
+      self.retry_manager = RetryManager()
+      print("✅ TaskCoordinator: 自己修復機能統合完了")

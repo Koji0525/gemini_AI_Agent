@@ -184,7 +184,7 @@ jobs:
           echo "🎹 24時間自律開発システム 起動"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
-          python3 scripts/integrated_orchestrator_v24_production.py || true
+          python3 scripts/integrated_orchestrator_v05_final.py || true
       
       - name: 🛡️ v07品質ゲート（実行後チェック）
         if: always()
