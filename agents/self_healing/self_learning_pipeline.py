@@ -7,9 +7,9 @@ SelfLearningPipeline: AIがAIを進化させる自己学習パイプライン
 from datetime import datetime
 from typing import Dict, Any, List
 from .knowledge_base_manager import KnowledgeBaseManager
-from .log_integrator import LogIntegrator
-from .pattern_extractor import PatternExtractor
-from .context_logger import ContextLogger
+from .logging.log_integrator import LogIntegrator
+from .logging.pattern_extractor import PatternExtractor
+from .logging.context_logger import ContextLogger
 
 
 class SelfLearningPipeline:
