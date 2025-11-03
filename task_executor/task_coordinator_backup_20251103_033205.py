@@ -14,7 +14,6 @@ InterfaceValidatorを統合して、メソッド名の不一致を自動解決�
 """
 
 import logging
-import time
 from typing import Dict
 
 # 設定とユーティリティ
@@ -216,9 +215,6 @@ class TaskCoordinator:
         Returns:
             Dict: 実行結果
         """
-
-        # タスク実行時間の計測開始
-        time.time()
         task_id = task.get("task_id", "UNKNOWN")
         self.stats["total_executed"] += 1
 
