@@ -17,6 +17,7 @@ from typing import List, Dict, Optional, Protocol, runtime_checkable
 from dotenv import load_dotenv
 from agents.self_healing.logging.decision_support_system import DecisionSupportSystem
 from core_agents.human_interaction_agent_v02_github_api import HumanInteractionAgent
+from core_agents.quality_feedback_loop import QualityFeedbackLoop
 
 load_dotenv(override=True)
 
@@ -297,6 +298,15 @@ class IntegratedOrchestrator:
         # TaskCoordinator統合（自己修復機能付き）
         self.task_coordinator = TaskCoordinator(sheets_manager=self.sheets, browser=self.browser)
         print("✅ TaskCoordinator v05統合完了")
+
+        # 🆕 Quality Feedback Loop初期化
+        self.quality_feedback = self.init_manager.safe_init(
+            "QualityFeedbackLoop",
+            lambda: QualityFeedbackLoop(
+                sheets_manager=self.sheets, task_executor=self.task_executor
+            ),
+            required=False,  # オプショナル機能
+        )
         print("✅ Phase 1機能初期化完了")
 
     async def run_continuous_cycle(
@@ -355,6 +365,21 @@ class IntegratedOrchestrator:
                     else:
                         result = await self._execute_task(task)
 
+                    # 🆕 品質フィードバックループ（Loop 2）
+                    if result and self.quality_feedback:
+                        try:
+                            feedback_result = await self.quality_feedback.process_task_result(
+                                task, result
+                            )
+                            action = feedback_result.get("action", "unknown")
+                            score = feedback_result.get("score", 0)
+                            print(f"   📊 品質評価: {action} (スコア: {score}点)")
+
+                            # 再実行が必要な場合の統計
+                            if action in ["retry_with_improvement", "retry_with_alternative"]:
+                                print(f"   🔄 品質改善のため再実行タスクを登録しました")
+                        except Exception as qe:
+                            print(f"   ⚠️  品質評価エラー（続行）: {qe}")
                     self._update_task_status(task, result)
 
                     self.stats["total_tasks"] += 1

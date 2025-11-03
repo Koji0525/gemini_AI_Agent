@@ -46,7 +46,7 @@ class QualityFeedbackLoop:
         # Gemini API設定
         config = load_config()
         genai.configure(api_key=config["gemini_api_key"])
-        self.model = genai.GenerativeModel("gemini-1.5-flash")
+        self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
 
         # 統計情報
         self.stats = {
@@ -124,19 +124,21 @@ class QualityFeedbackLoop:
         """タスクを完了状態に更新"""
         try:
             # task_execution_logに完了を記録
-            await self.sheets.append_row(
+            self.sheets.append_rows(
                 "task_execution_log",
                 [
-                    datetime.now().isoformat(),
-                    task.get("task_id"),
-                    task.get("task_name"),
-                    "completed",
-                    result.get("output", ""),
-                    result.get("quality_score", 0),
-                    result.get("elapsed_time", 0),
-                    0,  # retry_count
-                    None,  # error_type
-                    False,  # fix_applied
+                    [
+                        datetime.now().isoformat(),
+                        task.get("task_id"),
+                        task.get("task_name"),
+                        "completed",
+                        result.get("output", ""),
+                        result.get("quality_score", 0),
+                        result.get("elapsed_time", 0),
+                        0,  # retry_count
+                        None,  # error_type
+                        False,  # fix_applied
+                    ]
                 ],
             )
 
@@ -149,21 +151,20 @@ class QualityFeedbackLoop:
         """改善提案をナレッジベースに記録"""
         try:
             note = f"品質改善の余地あり: {task.get('task_name')} (スコア: {result.get('quality_score')})"
-
-            await self.sheets.append_row(
+            self.sheets.append_rows(
                 "knowledge_base",
                 [
-                    datetime.now().isoformat(),
-                    "improvement_note",
-                    task.get("task_name"),
-                    note,
-                    result.get("quality_score"),
-                    "pending_improvement",
+                    [
+                        datetime.now().isoformat(),
+                        "improvement_note",
+                        task.get("task_name"),
+                        note,
+                        result.get("quality_score"),
+                        "pending_improvement",
+                    ]
                 ],
             )
-
             logger.info(f"📝 改善メモ記録: {task.get('task_name')}")
-
         except Exception as e:
             logger.error(f"❌ 改善メモエラー: {str(e)}")
 
@@ -246,15 +247,17 @@ class QualityFeedbackLoop:
             }
 
             # tasks シートに登録
-            await self.sheets.append_row(
-                "tasks",
+            self.sheets.append_rows(
+                "pm_tasks",
                 [
-                    datetime.now().isoformat(),
-                    retry_task["task_name"],
-                    retry_task["description"],
-                    "pending",
-                    retry_task["priority"],
-                    retry_task["retry_count"],
+                    [
+                        datetime.now().isoformat(),
+                        retry_task["task_name"],
+                        retry_task["description"],
+                        "pending",
+                        retry_task["priority"],
+                        retry_task["retry_count"],
+                    ],
                 ],
             )
 
