@@ -371,3 +371,75 @@ class KnowledgeBaseManager:
         except Exception as e:
             print(f"⚠️ 統計情報取得エラー: {e}")
             return {}
+
+    async def search_relevant_knowledge(self, task_type=None, keywords=None):
+        """
+        タスクタイプとキーワードから類似ナレッジを検索
+
+        Args:
+            task_type: タスクの種類（例: "design", "wordpress", "review"）
+            keywords: 検索キーワードのリスト
+
+        Returns:
+            dict: 最も関連性の高いナレッジ（スコア順）
+        """
+        if keywords is None:
+            keywords = []
+
+        try:
+            # knowledge_baseから全データを取得
+            all_knowledge = await self.sheets.read_range("knowledge_base", "A2:F1500")
+
+            matches = []
+            for row in all_knowledge:
+                if not row or len(row) < 3:
+                    continue
+
+                # 列の取得
+                kb_id = row[0] if len(row) > 0 else ""
+                kb_timestamp = row[1] if len(row) > 1 else ""
+                kb_type = row[2] if len(row) > 2 else ""
+                row[3] if len(row) > 3 else ""
+                kb_pattern = row[4] if len(row) > 4 else ""
+                kb_context = row[5] if len(row) > 5 else ""
+
+                # スコア計算
+                score = 0
+
+                # タスクタイプの一致（重み: 10点）
+                if task_type and task_type.lower() in kb_type.lower():
+                    score += 10
+
+                # キーワードの一致（各5点）
+                for keyword in keywords:
+                    if keyword and keyword.lower() in kb_context.lower():
+                        score += 5
+                    if keyword and keyword.lower() in kb_pattern.lower():
+                        score += 3
+
+                if score > 0:
+                    matches.append(
+                        {
+                            "knowledge_id": kb_id,
+                            "timestamp": kb_timestamp,
+                            "knowledge_type": kb_type,
+                            "pattern_name": kb_pattern,
+                            "context": kb_context,
+                            "score": score,
+                        }
+                    )
+
+            # スコア順にソート
+            matches.sort(key=lambda x: x["score"], reverse=True)
+
+            # 最も関連性の高いものを返す
+            if matches:
+                print(f"📚 ナレッジ検索: {len(matches)}件ヒット、最高スコア: {matches[0]['score']}")
+                return matches[0]
+            else:
+                print("📚 ナレッジ検索: 該当なし")
+                return None
+
+        except Exception as e:
+            print(f"⚠️  ナレッジ検索エラー: {e}")
+            return None
