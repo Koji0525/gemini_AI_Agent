@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-TaskExecutor v01 - タスク実行のオーケストレーター
+TaskExecutor v02 - タスク実行のオーケストレーター
 
-P0-1: タスク実行時間の計測機能追加
+P0-1: タスク実行時間の計測機能 + TaskCoordinator v06 統合
 - elapsed_time: タスク実行時間（秒）
 - retry_count: リトライ回数
 - error_type: エラー分類
@@ -13,7 +13,7 @@ Google Sheets → Gemini → 結果保存 → Sheets更新
 """
 import asyncio
 import sys
-import time  # ← 追加
+import time
 from pathlib import Path
 from typing import Dict
 from datetime import datetime
@@ -26,16 +26,30 @@ from browser_control.rate_limiter import RateLimiter
 from browser_control.error_recovery import ErrorRecovery
 from tools.sheets_manager import GoogleSheetsManager
 
+# ✅ TaskCoordinator v06 をインポート
+from task_executor.task_coordinator_v06_self_healing import TaskCoordinatorWithSelfHealing
+
 
 class TaskExecutor:
     """
-    タスク実行を統括するクラス
+    タスク実行を統括するクラス（v02）
     """
 
-    def __init__(self, sheets_manager: GoogleSheetsManager, output_dir: str = "agent_outputs"):
+    def __init__(
+        self,
+        sheets_manager: GoogleSheetsManager,
+        output_dir: str = "agent_outputs",
+        task_coordinator: TaskCoordinatorWithSelfHealing = None,  # ✅ 追加
+    ):
         self.sheets_manager = sheets_manager
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # ✅ TaskCoordinator v06 を初期化または受け取る
+        if task_coordinator is None:
+            self.task_coordinator = TaskCoordinatorWithSelfHealing(sheets_manager)
+        else:
+            self.task_coordinator = task_coordinator
 
         # レート制限
         self.rate_limiter = RateLimiter(max_requests_per_hour=50, min_interval_seconds=30)
@@ -60,7 +74,7 @@ class TaskExecutor:
 
         # ✅ P0-1: 実行時間計測開始
         task_start = time.time()
-        retry_count = task.get("retry_count", 0)  # リトライ回数を引き継ぐ
+        retry_count = task.get("retry_count", 0)
 
         print(f"\n🎯 タスク: {title}")
         print(f"   ID: {task_id}")
@@ -68,7 +82,7 @@ class TaskExecutor:
 
         try:
             # ステータスを「実行中」に更新
-            self.sheets_manager.update_task_status(task_id=task_id, status="in_progress")
+            self.task_coordinator.update_task_status(task_id=task_id, status="in_progress")
 
             # プロンプト送信
             print("\n📤 プロンプト送信中...")
@@ -94,8 +108,8 @@ class TaskExecutor:
             output_file = self.save_result(task_id, title, response)
             print(f"💾 保存: {output_file}")
 
-            # 成功ステータスに更新（✅ 計測データを追加）
-            self.sheets_manager.update_task_status(
+            # ✅ 成功ステータスに更新（TaskCoordinator経由）
+            self.task_coordinator.update_task_status(
                 task_id=task_id,
                 status="completed",
                 result={
@@ -120,8 +134,8 @@ class TaskExecutor:
 
             print(f"❌ タスク失敗: {e}")
 
-            # 失敗ステータスに更新（✅ 計測データを追加）
-            self.sheets_manager.update_task_status(
+            # ✅ 失敗ステータスに更新（TaskCoordinator経由）
+            self.task_coordinator.update_task_status(
                 task_id=task_id,
                 status="failed",
                 error_message=str(e),
@@ -165,19 +179,16 @@ async def main():
     """
     メイン実行関数
     """
-    print("\n🚀 TaskExecutor v01 起動")
+    print("\n🚀 TaskExecutor v02 起動")
 
     # SheetsManager初期化
     sheets_manager = GoogleSheetsManager(
         service_account_file="configuration/service_account.json",
-        spreadsheet_id="YOUR_SPREADSHEET_ID",  # 環境変数または設定ファイルから読み込む
+        spreadsheet_id="YOUR_SPREADSHEET_ID",
     )
 
     # TaskExecutor初期化
     executor = TaskExecutor(sheets_manager=sheets_manager, output_dir="agent_outputs")
-
-    # すべての未実行タスクを実行
-    await executor.execute_all_pending_tasks()
 
     print("\n✅ すべての処理が完了しました")
 
