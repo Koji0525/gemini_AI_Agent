@@ -3,8 +3,7 @@
 """
 
 import os
-import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,3 +48,35 @@ def get_config(key: str = None, default: Any = None) -> Any:
     if key is None:
         return config_loader.get_all()
     return config_loader.get(key, default)
+
+
+def load_config():
+    """設定を読み込む（統一インターフェース）"""
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv()
+
+    return {
+        "spreadsheet_id": os.getenv("SPREADSHEET_ID"),
+        "gemini_api_key": os.getenv("GEMINI_API_KEY"),
+        "wp_url": os.getenv("WP_URL"),
+        "wp_user": os.getenv("WP_USER"),
+        "wp_pass": os.getenv("WP_PASS"),
+    }
+
+
+def load_config():
+    """設定を読み込む（統一インターフェース）"""
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv()
+
+    return {
+        "spreadsheet_id": os.getenv("SPREADSHEET_ID"),
+        "gemini_api_key": os.getenv("GEMINI_API_KEY"),
+        "wp_url": os.getenv("WP_URL"),
+        "wp_user": os.getenv("WP_USER"),
+        "wp_pass": os.getenv("WP_PASS"),
+    }
