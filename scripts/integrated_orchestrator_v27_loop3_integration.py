@@ -11,6 +11,7 @@ sys.path.insert(0, ".")
 import os
 import asyncio
 import time
+from agents.self_healing.self_learning_pipeline import SelfLearningPipeline
 from datetime import datetime
 from typing import List, Dict, Optional, Protocol, runtime_checkable
 
@@ -307,6 +308,21 @@ class IntegratedOrchestrator:
             ),
             required=False,  # オプショナル機能
         )
+
+        # Loop 3: Self-Learning Pipeline初期化
+        self.self_learning = self.init_manager.safe_init(
+            "SelfLearningPipeline",
+            lambda: SelfLearningPipeline(sheets_manager=self.sheets),
+            required=False,
+        )
+
+        self.last_learning_time = time.time()
+        self.error_count = 0
+        self.consecutive_errors = 0
+
+        if self.self_learning:
+            print("✅ Loop 3 (Self-Learning Pipeline) 初期化完了")
+
         print("✅ Phase 1機能初期化完了")
 
     async def run_continuous_cycle(
@@ -449,6 +465,8 @@ class IntegratedOrchestrator:
                     print(f"  🔍 エラー分類: {error_type}")
                 return {"status": "error", "error": str(retry_result.final_error)}
         except Exception as e:
+            self.error_count += 1
+            self.consecutive_errors += 1
             print(f"  ⚠️ リトライ処理エラー: {e}")
             return await self._execute_task(task)
 

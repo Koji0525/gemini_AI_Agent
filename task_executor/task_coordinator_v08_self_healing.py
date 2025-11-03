@@ -63,7 +63,7 @@ class TaskCoordinatorWithSelfHealing:
         try:
             from agents.self_healing.error_classifier import ErrorClassifier
             from agents.self_healing.retry_manager import RetryManager
-            from agents.decision_support.decision_support_system import (
+            from agents.self_healing.logging.decision_support_system import (
                 DecisionSupportSystem,
             )
 
