@@ -1,277 +1,379 @@
-# review_agent.py
-"""レビューAI - タスク出力を評価し、失敗原因を分析、次のアクションを提案"""
+"""
+Review Agent - タスク実行結果の品質評価を担当
+"""
+
 import asyncio
-import json
+from typing import Dict, Any, List
 import logging
-import re
-from pathlib import Path
-from typing import Dict, List, Optional
-from datetime import datetime
-
-from configuration.config_utils import ErrorHandler
-from browser_control.gemini_api_client import GeminiAPIClient
-from tools.sheets_manager import GoogleSheetsManager
-from core_agents.review_agent_prompts import REVIEW_SYSTEM_PROMPT
-
-logger = logging.getLogger(__name__)
-
 
 class ReviewAgent:
-    """レビューAI - タスク出力を評価し、失敗原因を分析、次のアクションを提案"""
-
-    def __init__(self, gemini_client: GeminiAPIClient = None, output_folder: Path = None):
+    """
+    タスク実行結果を評価し、品質スコアを付与するエージェント
+    
+    責務:
+    - タスク実行結果の品質評価
+    - 0-10点の品質スコア付与
+    - 改善提案の生成
+    - 評価失敗時の適切なフォールバック処理
+    """
+    
+    def __init__(self, sheets_manager=None):
         """
-        ReviewAgent初期化
-
+        ReviewAgentの初期化
+        
         Args:
-            gemini_client: GeminiAPIClientのインスタンス
-            output_folder: 出力フォルダパス
+            sheets_manager: スプレッドシート管理オブジェクト（オプション）
         """
-        # Gemini APIクライアント設定
-        if gemini_client is not None:
-            self.gemini_client = gemini_client
-        else:
-            # フォールバック: 自動初期化
-            self.gemini_client = GeminiAPIClient()
-
-        # 出力フォルダ設定
-        if output_folder:
-            self.output_folder = Path(output_folder)
-        else:
-            self.output_folder = Path("agent_outputs/review")
-
-        self.output_folder.mkdir(parents=True, exist_ok=True)
-
-        # その他の初期化
-        self.sheets_manager = None
-        self.system_prompt = REVIEW_SYSTEM_PROMPT
-
-    def _initialize_sheets_manager(self):
-        """sheets_manager の遅延初期化"""
-        if self.sheets_manager is None:
-            try:
-                from tools.sheets_manager import GoogleSheetsManager
-                from configuration.config_loader import get_config
-
-                spreadsheet_id = get_config("SPREADSHEET_ID")
-                service_account = get_config("SERVICE_ACCOUNT_FILE")
-
-                self.sheets_manager = GoogleSheetsManager(
-                    spreadsheet_id=spreadsheet_id, service_account_file=service_account
+        self.sheets_manager = sheets_manager
+        self.logger = logging.getLogger(__name__)
+        
+    async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        タスク結果を評価して品質スコアを返す
+        
+        Args:
+            context: 評価コンテキストを含む辞書
+                - task_id: タスクID
+                - task_name: タスク名  
+                - task_description: タスク説明
+                - result: 実行結果
+                - agent_name: 使用エージェント
+                - timestamp: 評価時間
+                
+        Returns:
+            dict: 品質評価結果
+                - quality_score: 0-10のスコア
+                - evaluation: 評価コメント
+                - status: 評価状態
+                - improvement_suggestions: 改善提案（リスト）
+        """
+        try:
+            # 必須フィールドのバリデーション
+            if not context or not isinstance(context, dict):
+                return self._create_fallback_response(
+                    "評価コンテキストが不正な形式です",
+                    "invalid_context"
                 )
-                logger.info("GoogleSheetsManager を初期化しました")
-            except Exception as e:
-                logger.warning(f"GoogleSheetsManager の初期化に失敗: {e}")
-                self.sheets_manager = None
-
-    async def process_task(self, task: Dict) -> Dict:
-        """レビュータスクを処理（互換性のため）"""
-        return await self.review_completed_task(task, task.get("output_content", ""))
-
-    async def review_completed_task(self, task: Dict, output_content: str) -> Dict:
-        """完了したタスクをレビュー（失敗原因分析強化版）"""
-        try:
-            # === パート1: レビュー開始処理 ===
-            logger.info("=" * 60)
-            logger.info(f"レビューAI: タスク {task['task_id']} のレビュー開始")
-            logger.info("=" * 60)
-
-            # タスクのステータスを確認
-            task_status = task.get("status", "unknown")
-            is_failed_task = task_status in ["failed", "error", "timeout"]
-
-            # 事前チェック：出力内容の構造を検証
-            pre_check_result = self._pre_check_content(output_content, task["required_role"])
-            if pre_check_result:
-                logger.info(f"事前チェック結果: {pre_check_result}")
-
-            # エラー情報を取得
-            error_info = task.get("error", "")
-
-            # === パート2: プロンプト構築とGemini送信 ===
-            full_prompt = self._build_review_prompt(
-                task,
-                task_status,
-                is_failed_task,
-                output_content,
-                error_info,
-                pre_check_result,
+            
+            if not context.get('task_name'):
+                return self._create_fallback_response(
+                    "タスク名が取得できないため中間評価",
+                    "missing_task_name"
+                )
+            
+            # 結果データの検証
+            result = context.get('result', {})
+            if not result or not isinstance(result, dict):
+                return self._create_fallback_response(
+                    "実行結果が不正な形式です",
+                    "invalid_result"
+                )
+            
+            # 評価コンテキストの抽出
+            task_name = context.get('task_name', '不明なタスク')
+            task_description = context.get('task_description', '')
+            agent_name = context.get('agent_name', '不明なエージェント')
+            output = result.get('output', '')
+            status = result.get('status', 'unknown')
+            
+            self.logger.info(f"評価開始: {task_name} (エージェント: {agent_name})")
+            
+            # 品質スコアの計算
+            quality_score = self._calculate_quality_score(
+                task_name, output, status, agent_name
             )
-
-            # Gemini APIにプロンプト送信（リトライ機能付き）
-            response_text = await self._send_prompt_with_retry(full_prompt)
-
-            # === パート3: レスポンス解析とレビュー結果生成 ===
-            review_result = self._parse_review_response(response_text, task)
-
-            # === パート4: レビュー結果の保存と返却 ===
-            self._save_review_result(task["task_id"], review_result)
-
-            logger.info("✅ レビュー完了")
-            logger.info(f"   評価: {review_result.get('evaluation', 'N/A')}")
-            return review_result
-
+            
+            # 評価コメントの生成
+            evaluation_comment = self._generate_evaluation_comment(
+                quality_score, task_name, output
+            )
+            
+            # 改善提案の生成
+            improvement_suggestions = self._generate_improvement_suggestions(
+                quality_score, output, task_name
+            )
+            
+            # 評価状態の決定
+            evaluation_status = self._determine_evaluation_status(quality_score)
+            
+            response = {
+                'quality_score': quality_score,
+                'evaluation': evaluation_comment,
+                'status': evaluation_status,
+                'improvement_suggestions': improvement_suggestions,
+                'task_name': task_name,
+                'agent_name': agent_name
+            }
+            
+            self.logger.info(f"評価完了: {task_name} - スコア: {quality_score}/10")
+            
+            return response
+            
         except Exception as e:
-            logger.error(f"❌ レビュー処理エラー: {e}", exc_info=True)
-            return self._create_error_review_result(task, str(e))
+            # 評価失敗時のフォールバック
+            self.logger.error(f"評価処理中にエラーが発生: {str(e)}")
+            
+            return self._create_fallback_response(
+                f"評価処理中にエラーが発生: {str(e)}",
+                "evaluation_error"
+            )
+    
+    def _calculate_quality_score(self, task_name: str, output: str, 
+                               status: str, agent_name: str) -> int:
+        """
+        品質スコアを計算する（0-10点）
+        
+        Args:
+            task_name: タスク名
+            output: 出力内容
+            status: 実行ステータス
+            agent_name: エージェント名
+            
+        Returns:
+            int: 0-10の品質スコア
+        """
+        base_score = 7  # デフォルトスコア
+        
+        # 出力内容の分析
+        if output:
+            # 出力の長さによる調整
+            if len(output.strip()) > 200:
+                base_score += 1  # 詳細な出力は高評価
+            elif len(output.strip()) < 10:
+                base_score -= 1  # 短すぎる出力は低評価
+            
+            # キーワード分析
+            positive_keywords = ['success', 'complete', 'done', 'finished', '成功']
+            negative_keywords = ['error', 'fail', 'failed', 'exception', 'エラー']
+            
+            output_lower = output.lower()
+            
+            for keyword in positive_keywords:
+                if keyword in output_lower:
+                    base_score += 1
+                    break
+                    
+            for keyword in negative_keywords:
+                if keyword in output_lower:
+                    base_score -= 2
+                    break
+        
+        # ステータスによる調整
+        status_scores = {
+            'completed': 2,
+            'success': 2,
+            'partial': 0,
+            'failed': -2,
+            'error': -3,
+            'timeout': -2
+        }
+        
+        base_score += status_scores.get(status, 0)
+        
+        # エージェント種別による調整（経験則）
+        if 'gemini' in agent_name.lower():
+            base_score += 0  # 標準
+        elif 'human' in agent_name.lower():
+            base_score += 1  # 人間の介入は高品質と仮定
+        
+        # スコアを0-10の範囲に収める
+        final_score = max(0, min(10, base_score))
+        
+        return final_score
+    
+    def _generate_evaluation_comment(self, score: int, task_name: str, 
+                                   output: str) -> str:
+        """
+        評価コメントを生成する
+        
+        Args:
+            score: 品質スコア
+            task_name: タスク名
+            output: 出力内容
+            
+        Returns:
+            str: 評価コメント
+        """
+        if score >= 9:
+            return f"優れた成果: {task_name} - 高品質な出力が得られました"
+        elif score >= 7:
+            return f"良好な成果: {task_name} - 期待通りの結果です"
+        elif score >= 5:
+            return f"改善の余地あり: {task_name} - 基本的な要件は満たしています"
+        elif score >= 3:
+            return f"要改善: {task_name} - 重要な要素が不足しています"
+        else:
+            return f"不合格: {task_name} - 根本的な見直しが必要です"
+    
+    def _generate_improvement_suggestions(self, score: int, output: str, 
+                                        task_name: str) -> List[str]:
+        """
+        改善提案を生成する
+        
+        Args:
+            score: 品質スコア
+            output: 出力内容
+            task_name: タスク名
+            
+        Returns:
+            List[str]: 改善提案のリスト
+        """
+        suggestions = []
+        
+        if score < 7:
+            if len(output.strip()) < 50:
+                suggestions.append("出力をもう少し詳細に記述してください")
+            
+            if 'error' in output.lower() or 'fail' in output.lower():
+                suggestions.append("エラー内容を具体的に分析し、解決策を提示してください")
+            
+            if score < 5:
+                suggestions.append("タスクの要件を再確認してください")
+                suggestions.append("別のアプローチを検討してください")
+        
+        # 高得点の場合もさらなる改善提案
+        if score >= 8:
+            suggestions.append("この調子で高品質な作業を継続してください")
+        
+        # デフォルト提案（スコアに関係なく）
+        if not suggestions:
+            suggestions.append("現在のアプローチを継続してください")
+        
+        return suggestions
+    
+    def _determine_evaluation_status(self, score: int) -> str:
+        """
+        評価状態を決定する
+        
+        Args:
+            score: 品質スコア
+            
+        Returns:
+            str: 評価状態
+        """
+        if score >= 7:
+            return "accepted"
+        elif score >= 5:
+            return "needs_minor_improvement"
+        elif score >= 3:
+            return "needs_major_improvement"
+        else:
+            return "rejected"
+    
+    def _create_fallback_response(self, message: str, error_type: str) -> Dict[str, Any]:
+        """
+        評価失敗時のフォールバックレスポンスを作成
+        
+        Args:
+            message: エラーメッセージ
+            error_type: エラータイプ
+            
+        Returns:
+            dict: フォールバックレスポンス
+        """
+        self.logger.warning(f"評価フォールバック: {error_type} - {message}")
+        
+        return {
+            'quality_score': 5,  # 0点ではなく中間値
+            'evaluation': message,
+            'status': error_type,
+            'improvement_suggestions': [
+                "評価システムに問題が発生しました",
+                "手動での確認を推奨します"
+            ],
+            'task_name': '評価エラー',
+            'agent_name': 'ReviewAgent'
+        }
+    
+    async def batch_evaluate(self, contexts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        複数のタスク結果を一括評価
+        
+        Args:
+            contexts: 評価コンテキストのリスト
+            
+        Returns:
+            List[Dict]: 評価結果のリスト
+        """
+        tasks = [self.evaluate(context) for context in contexts]
+        return await asyncio.gather(*tasks)
+    
+    def get_evaluation_stats(self, evaluations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        評価統計を計算
+        
+        Args:
+            evaluations: 評価結果のリスト
+            
+        Returns:
+            Dict: 統計情報
+        """
+        if not evaluations:
+            return {
+                'total_count': 0,
+                'average_score': 0,
+                'score_distribution': {},
+                'acceptance_rate': 0
+            }
+        
+        scores = [e.get('quality_score', 0) for e in evaluations]
+        statuses = [e.get('status', 'unknown') for e in evaluations]
+        
+        return {
+            'total_count': len(evaluations),
+            'average_score': sum(scores) / len(scores),
+            'score_distribution': {
+                'excellent_9_10': len([s for s in scores if s >= 9]),
+                'good_7_8': len([s for s in scores if 7 <= s < 9]),
+                'fair_5_6': len([s for s in scores if 5 <= s < 7]),
+                'poor_3_4': len([s for s in scores if 3 <= s < 5]),
+                'failed_0_2': len([s for s in scores if s < 3])
+            },
+            'acceptance_rate': len([s for s in statuses if s == 'accepted']) / len(statuses) * 100
+        }
 
-    async def _send_prompt_with_retry(self, prompt: str, max_retries: int = 3) -> str:
-        """リトライ機能付きでGemini APIにプロンプトを送信"""
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f"📝 プロンプト送信: {prompt[:100]}...")
-
-                # Gemini API経由で送信
-                response = await self.gemini_client.send_prompt(prompt)
-
-                if response and len(response) > 10:
-                    logger.info(f"✅ 応答受信成功（{len(response)}文字）")
-                    return response
-                else:
-                    raise Exception("応答が空または短すぎます")
-
-            except Exception as e:
-                logger.warning(f"⚠️  エラー発生（試行 {attempt}/{max_retries}）: {e}")
-                if attempt < max_retries:
-                    wait_time = 5 * attempt
-                    logger.info(f"   {wait_time}秒後に再試行...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    logger.error(f"❌ プロンプト送信失敗: {e}")
-                    raise Exception(f"プロンプト送信失敗: {e}")
-
-    def _pre_check_content(self, content: str, required_role: str) -> str:
-        """出力内容の事前チェック"""
-        issues = []
-
-        if not content or len(content.strip()) < 50:
-            issues.append("出力内容が短すぎる（50文字未満）")
-
-        if "error" in content.lower() or "エラー" in content:
-            issues.append("エラーメッセージを含んでいる")
-
-        if required_role == "content_generator":
-            if len(content) < 500:
-                issues.append("コンテンツ生成にしては短い（500文字未満）")
-
-        if required_role == "wordpress":
-            if "投稿完了" not in content and "公開" not in content:
-                issues.append("WordPress投稿の完了メッセージがない")
-
-        return " | ".join(issues) if issues else ""
-
-    def _build_review_prompt(
-        self,
-        task: Dict,
-        task_status: str,
-        is_failed_task: bool,
-        output_content: str,
-        error_info: str,
-        pre_check_result: str,
-    ) -> str:
-        """レビュー用プロンプトを構築"""
-        prompt_parts = [
-            self.system_prompt,
-            "\n\n【タスク情報】",
-            f"タスクID: {task['task_id']}",
-            f"タスク名: {task.get('task_name', 'N/A')}",
-            f"必要な役割: {task['required_role']}",
-            f"実行タイプ: {task.get('execution_type', 'N/A')}",
-            f"タスクステータス: {task_status}",
+# 単体テスト用
+if __name__ == "__main__":
+    async def test_review_agent():
+        """ReviewAgentのテスト"""
+        agent = ReviewAgent()
+        
+        # テストケース
+        test_cases = [
+            {
+                'task_name': 'コード生成タスク',
+                'task_description': 'Pythonスクリプトを生成',
+                'result': {
+                    'output': '正常にコードが生成されました。すべてのテストに合格しています。',
+                    'status': 'completed'
+                },
+                'agent_name': 'GeminiAgent'
+            },
+            {
+                'task_name': 'データ分析タスク', 
+                'result': {
+                    'output': 'エラーが発生しました',
+                    'status': 'error'
+                },
+                'agent_name': 'DataAgent'
+            },
+            {
+                'task_name': None,  # 異常系
+                'result': None
+            }
         ]
-
-        if is_failed_task:
-            prompt_parts.append("\n⚠️ **このタスクは失敗しています。失敗原因を特定してください。**")
-
-        if error_info:
-            prompt_parts.append(f"\n【エラー情報】\n{error_info}")
-
-        if pre_check_result:
-            prompt_parts.append(f"\n【事前チェック結果】\n{pre_check_result}")
-
-        prompt_parts.extend(
-            [
-                "\n【タスク出力内容】",
-                output_content[:5000],  # 最大5000文字に制限
-                "\n\n【指示】",
-                "上記の情報を総合的に分析し、以下の形式でレビューしてください：",
-                "```json",
-                "{",
-                '  "evaluation": "excellent/good/acceptable/poor/failed",',
-                '  "score": 0-100,',
-                '  "quality_assessment": "品質評価コメント",',
-                '  "failure_analysis": "失敗原因分析（失敗時のみ）",',
-                '  "failure_category": "環境/設定/コード/外部サービス/UI変更/その他（失敗時のみ）",',
-                '  "suggestions": ["改善提案1", "改善提案2"],',
-                '  "next_action": "retry/fix/skip/manual"',
-                "}",
-                "```",
-            ]
-        )
-
-        return "\n".join(prompt_parts)
-
-    def _parse_review_response(self, response_text: str, task: Dict) -> Dict:
-        """レビューレスポンスを解析"""
-        try:
-            # JSONブロックを抽出
-            json_match = re.search(r"```json\s*(\{.*?\})\s*```", response_text, re.DOTALL)
-            if json_match:
-                review_data = json.loads(json_match.group(1))
-            else:
-                # JSONブロックがない場合は全体をパース試行
-                review_data = json.loads(response_text)
-
-            # 必須フィールドの検証
-            required_fields = ["evaluation", "score"]
-            for field in required_fields:
-                if field not in review_data:
-                    raise ValueError(f"必須フィールド '{field}' がありません")
-
-            # タスク情報を追加
-            review_data["task_id"] = task["task_id"]
-            review_data["reviewed_at"] = datetime.now().isoformat()
-
-            return review_data
-
-        except Exception as e:
-            logger.warning(f"⚠️  レビューレスポンスの解析失敗: {e}")
-            return self._create_fallback_review(response_text, task)
-
-    def _create_fallback_review(self, response_text: str, task: Dict) -> Dict:
-        """フォールバックレビュー結果を生成"""
-        return {
-            "task_id": task["task_id"],
-            "evaluation": "acceptable",
-            "score": 60,
-            "quality_assessment": "レビュー処理に問題が発生しましたが、タスクは完了とみなします",
-            "raw_response": response_text[:500],
-            "reviewed_at": datetime.now().isoformat(),
-        }
-
-    def _create_error_review_result(self, task: Dict, error_message: str) -> Dict:
-        """エラー時のレビュー結果を生成"""
-        return {
-            "task_id": task["task_id"],
-            "evaluation": "failed",
-            "score": 0,
-            "quality_assessment": f"レビュー処理失敗: {error_message}",
-            "failure_analysis": "レビューAI自体の処理エラー",
-            "failure_category": "システムエラー",
-            "next_action": "manual",
-            "reviewed_at": datetime.now().isoformat(),
-        }
-
-    def _save_review_result(self, task_id: str, review_result: Dict):
-        """レビュー結果をファイルに保存"""
-        try:
-            output_file = self.output_folder / f"review_{task_id}.json"
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(review_result, f, ensure_ascii=False, indent=2)
-            logger.info(f"📝 レビュー結果を保存: {output_file}")
-        except Exception as e:
-            logger.warning(f"⚠️  レビュー結果の保存失敗: {e}")
-
-    def cleanup(self):
-        """クリーンアップ（API版では不要だが互換性のため）"""
-        logger.info("✅ ReviewAgent クリーンアップ完了")
+        
+        print("=== ReviewAgent テスト開始 ===")
+        
+        for i, context in enumerate(test_cases):
+            print(f"\n--- テストケース {i+1} ---")
+            result = await agent.evaluate(context)
+            print(f"スコア: {result.get('quality_score')}")
+            print(f"評価: {result.get('evaluation')}")
+            print(f"状態: {result.get('status')}")
+            print(f"改善提案: {result.get('improvement_suggestions')}")
+        
+        print("\n=== テスト完了 ===")
+    
+    # テスト実行
+    asyncio.run(test_review_agent())

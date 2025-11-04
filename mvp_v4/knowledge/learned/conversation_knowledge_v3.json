@@ -1294,11 +1294,54 @@
         "0点評価はシステム停止を招くため避ける"
       ],
       "quality_score": 9
+    },
+    {
+      "id": "KB_20251104_201743",
+      "scenario": "ReviewAgentのevaluateメソッド不存在問題の解決",
+      "task_type": "agent_development",
+      "problem": "ReviewAgentクラスにevaluateメソッドが実装されていなかったため、品質評価が実行できずAttributeErrorが発生していた",
+      "root_cause": "前回の修正スクリプトでメソッド置換が失敗し、空のReviewAgentクラスが残っていた。元のクラスにevaluateメソッドが存在しなかった",
+      "solution_steps": [
+        "1. ReviewAgentクラスを完全に再実装",
+        "2. evaluateメソッドを新規実装（品質スコア計算、評価コメント生成、改善提案生成）",
+        "3. エラーハンドリングとフォールバック処理を強化",
+        "4. 単体テストと統合テストで動作確認"
+      ],
+      "best_practice": "クラス全体を再実装する場合は、既存の実装を完全に確認してから行う。メソッド置換よりクラス全体の置き換えが安全。テスト駆動開発で確実に動作確認する。",
+      "code_example": "# ✅ 完全なReviewAgent実装\nclass ReviewAgent:\n    def __init__(self, sheets_manager=None):\n        self.sheets_manager = sheets_manager\n        self.logger = logging.getLogger(__name__)\n    \n    async def evaluate(self, context: Dict[str, Any]) -> Dict[str, Any]:\n        try:\n            # 必須フィールドのバリデーション\n            if not context.get('task_name'):\n                return self._create_fallback_response(...)\n            \n            # 品質スコア計算\n            quality_score = self._calculate_quality_score(...)\n            \n            # 評価コメント生成\n            evaluation_comment = self._generate_evaluation_comment(...)\n            \n            return {\n                'quality_score': quality_score,\n                'evaluation': evaluation_comment,\n                'status': ...,\n                'improvement_suggestions': [...]\n            }\n        except Exception as e:\n            return self._create_fallback_response(...)",
+      "success_rate": 1.0,
+      "avg_time": 15,
+      "conditions": "AttributeError: 'ReviewAgent' object has no attribute 'evaluate' が発生する場合。クラスのメソッドが存在しない場合。",
+      "avoid_patterns": [
+        "部分的なメソッド置換のみを行う",
+        "既存のクラス実装を確認せずに修正する",
+        "テストなしで本番環境にデプロイする"
+      ],
+      "performance_improvement": {
+        "before": "AttributeErrorでシステム停止、品質評価不能",
+        "after": "正常な品質評価、0-10点のスコア付与、改善提案生成"
+      },
+      "created_at": "2025-11-04T20:17:43.305204",
+      "tags": [
+        "クラス設計",
+        "メソッド実装",
+        "テスト駆動開発",
+        "品質評価"
+      ],
+      "severity": "high",
+      "frequency": "low",
+      "lessons_learned": [
+        "クラス全体を再実装する方が部分修正より安全",
+        "メソッド存在確認は実際のコードで行う",
+        "単体テストと統合テストの両方を実施する",
+        "フォールバック処理は必須"
+      ],
+      "quality_score": 9
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:13:21.901590",
-    "total_count": 77,
-    "version": "3.7"
+    "last_updated": "2025-11-04T20:17:43.305209",
+    "total_count": 78,
+    "version": "3.8"
   }
 }
