@@ -333,6 +333,123 @@
         "Claudeのコンテキストには添付ファイルがあるが、Codespaces側のファイルシステムには存在しない"
       ],
       "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_061018",
+      "task_type": "general",
+      "scenario": "ModuleNotFoundError",
+      "best_practice": "個別インストール",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T06:10:18.593313",
+      "avoid_patterns": [
+        "パッケージ分離"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_085935",
+      "task_type": "general",
+      "scenario": "GoogleSheetsManagerのメソッド名が不明でAttributeErrorが発生",
+      "best_practice": "実際のファイルから利用可能なメソッドを確認してから実装する",
+      "code_example": "# GoogleSheetsManagerの実際のメソッドを確認\ngrep -n \"^\\s*async def\\|^\\s*def\" tools/sheets_manager.py | head -20\n\n# 実際に使えるメソッド:\n# - read_range(range_str, logical_sheet=True)\n# - write_range(range_str, values, logical_sheet=True)\n# - append_rows(logical_sheet, values)",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T08:59:35.357726",
+      "avoid_patterns": [
+        "ドキュメントではなく実装を確認せずに、存在しないメソッド名（read_sheet, get_sheet_data）を使用してしまった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085935",
+      "task_type": "general",
+      "scenario": "GoogleSheetsManagerのread_rangeは2次元配列を返すが、辞書のリストとして扱いたかった",
+      "best_practice": "1行目をヘッダーとして、2行目以降を辞書のリストに変換する汎用関数を実装",
+      "code_example": "def rows_to_dicts(rows):\n    \"\"\"2次元リストを辞書のリストに変換\"\"\"\n    if not rows or len(rows) < 2:\n        return []\n    \n    headers = rows[0]\n    result = []\n    \n    for row in rows[1:]:\n        # 行の長さがヘッダーより短い場合は空文字で埋める\n        padded_row = row + [''] * (len(headers) - len(row))\n        row_dict = {headers[i]: padded_row[i] for i in range(len(headers))}\n        result.append(row_dict)\n    \n    return result\n\n# 使用例\nraw_data = sheets.read_range('task_execution_log!A:N')\nlogs = rows_to_dicts(raw_data)\n# これでlogsはDict[str, Any]のリストになる",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T08:59:35.482482",
+      "avoid_patterns": [
+        "read_rangeの戻り値形式（List[List[Any]]）を理解していなかった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085935",
+      "task_type": "general",
+      "scenario": "ヒアドキュメントでファイル作成時に「No such file or directory」エラー",
+      "best_practice": "ファイル作成前に必ずディレクトリを作成する習慣を確立",
+      "code_example": "# ❌ 悪い例\ncat > _WIP/new_file.py << 'EOF'\n# _WIPが存在しない場合エラー\n\n# ✅ 良い例\nmkdir -p _WIP\ncat > _WIP/new_file.py << 'EOF'\n# 必ず成功する",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T08:59:35.616783",
+      "avoid_patterns": [
+        "存在しないディレクトリへのファイル作成を試みた（mkdir -pでの事前作成が不足）"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085935",
+      "task_type": "general",
+      "scenario": "ModuleNotFoundError: No module named 'agents.self_healing.auto_recovery_manager'",
+      "best_practice": "プロジェクト全体で絶対パスによるインポートを統一し、__init__.pyで明示的にエクスポート",
+      "code_example": "# STEP 1: 実際のファイル配置を確認\nfind . -name \"auto_recovery_manager.py\" | grep -v __pycache__\n\n# STEP 2: 適切なディレクトリに配置\nmkdir -p agents/self_healing\ncp _WIP/auto_recovery_manager.py agents/self_healing/\n\n# STEP 3: __init__.pyを作成\ncat > agents/self_healing/__init__.py << 'INIT_EOF'\nfrom .auto_recovery_manager import AutoRecoveryManager, RecoveryLevel\n__all__ = ['AutoRecoveryManager', 'RecoveryLevel']\nINIT_EOF\n\n# STEP 4: 絶対パスでインポート\n# ✅ 正しい\nfrom agents.self_healing import AutoRecoveryManager, RecoveryLevel\n\n# ❌ 避けるべき\nfrom .auto_recovery_manager import AutoRecoveryManager",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T08:59:35.760404",
+      "avoid_patterns": [
+        "モジュールの実際の配置場所を確認せずに相対パスでインポートしようとした"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085935",
+      "task_type": "general",
+      "scenario": "エラー発生時の自動復旧機能を実装したい",
+      "best_practice": "エラーを4段階（IMMEDIATE, FIXABLE, KNOWLEDGE, HUMAN）に分類し、自動復旧戦略を適用する",
+      "code_example": "from enum import Enum\n\nclass RecoveryLevel(Enum):\n    IMMEDIATE = \"immediate\"   # 即座に復旧可能（再試行）\n    FIXABLE = \"fixable\"       # 設定変更で復旧可能\n    KNOWLEDGE = \"knowledge\"   # ナレッジベース活用\n    HUMAN = \"human\"           # 人間の介入が必要\n\nclass AutoRecoveryManager:\n    def __init__(self, sheets_manager):\n        self.sheets = sheets_manager\n        self.stats = {\n            'total_errors': 0,\n            'immediate_recoveries': 0,\n            'fixable_recoveries': 0,\n            'knowledge_recoveries': 0,\n            'human_escalations': 0\n        }\n    \n    async def handle_error(self, task_id, error, context):\n        \"\"\"エラーを分析して復旧を試みる\"\"\"\n        error_str = str(error).lower()\n        error_type = type(error).__name__\n        \n        # エラー分類\n        recovery_level = self._classify_error(error_str, error_type)\n        \n        # 復旧戦略を決定\n        if recovery_level == RecoveryLevel.IMMEDIATE:\n            return {'action': 'retry', 'max_retries': 3}\n        elif recovery_level == RecoveryLevel.FIXABLE:\n            return {'action': 'apply_fix', 'fix_strategy': {...}}\n        elif recovery_level == RecoveryLevel.KNOWLEDGE:\n            return {'action': 'apply_knowledge', 'knowledge': {...}}\n        else:\n            return {'action': 'human_required', 'escalation_id': '...'}\n    \n    def _classify_error(self, error_str, error_type):\n        \"\"\"エラーを分類\"\"\"\n        # Timeout/Network系 → IMMEDIATE\n        if any(kw in error_str for kw in ['timeout', 'network', 'rate limit']):\n            return RecoveryLevel.IMMEDIATE\n        \n        # 認証/設定系 → FIXABLE\n        if any(kw in error_str for kw in ['auth', '401', '403', 'config']):\n            return RecoveryLevel.FIXABLE\n        \n        # 既知パターン → KNOWLEDGE\n        if any(kw in error_str for kw in ['invalid', 'format', 'deprecated']):\n            return RecoveryLevel.KNOWLEDGE\n        \n        # その他 → HUMAN\n        return RecoveryLevel.HUMAN",
+      "success_rate": 0.95,
+      "created_at": "2025-11-04T08:59:35.892281",
+      "avoid_patterns": [
+        "エラーを手動で分析・修正していたため、人間の介入コストが高かった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085936",
+      "task_type": "general",
+      "scenario": "TaskExecutorに自動復旧機能を統合したい",
+      "best_practice": "エラー発生時にAutoRecoveryManagerを呼び出し、復旧を試みてから結果を記録する",
+      "code_example": "class TaskExecutorWithRecovery:\n    def __init__(self, sheets_manager, **agents):\n        self.sheets = sheets_manager\n        self.recovery_manager = AutoRecoveryManager(sheets_manager)\n        self.stats = {\n            'total_tasks': 0,\n            'successful_tasks': 0,\n            'recovered_tasks': 0,\n            'failed_tasks': 0\n        }\n    \n    async def execute_task(self, task):\n        \"\"\"タスク実行（自動復旧付き）\"\"\"\n        task_start = time.time()\n        self.stats['total_tasks'] += 1\n        \n        # 初回実行\n        result = await self._execute_single_attempt(task)\n        \n        # 成功した場合\n        if result['status'] == 'success':\n            self.stats['successful_tasks'] += 1\n            await self._log_execution(task, result, time.time() - task_start)\n            return result\n        \n        # エラーが発生 → AutoRecoveryManagerに委譲\n        recovery_result = await self._attempt_recovery(task, result, task_start)\n        \n        if recovery_result['status'] == 'success':\n            self.stats['recovered_tasks'] += 1\n        else:\n            self.stats['failed_tasks'] += 1\n        \n        return recovery_result\n    \n    async def _attempt_recovery(self, task, error_result, task_start_time):\n        \"\"\"AutoRecoveryManagerで復旧を試みる\"\"\"\n        recovery_result = await self.recovery_manager.handle_error(\n            task_id=task.get('task_id'),\n            error=Exception(error_result.get('error')),\n            context={'task_name': task.get('task_name')}\n        )\n        \n        # 復旧レベルに応じた処理\n        if recovery_result['recovery_level'] == RecoveryLevel.IMMEDIATE:\n            return await self._retry_with_backoff(task, max_retries=3)\n        elif recovery_result['recovery_level'] == RecoveryLevel.FIXABLE:\n            modified_task = self._apply_fix_strategy(task, recovery_result['fix_strategy'])\n            return await self._execute_single_attempt(modified_task)\n        # ... 他のレベルも同様",
+      "success_rate": 0.95,
+      "created_at": "2025-11-04T08:59:36.058610",
+      "avoid_patterns": [
+        "既存のTaskExecutorはエラー発生時に即座に失敗として記録していた"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085936",
+      "task_type": "general",
+      "scenario": "タスク実行ログに詳細情報（実行時間、再試行回数、エラータイプ）が不足",
+      "best_practice": "実行時間、再試行回数、エラータイプ、復旧適用フラグを自動記録する",
+      "code_example": "async def _log_execution(\n    self,\n    task: Dict[str, Any],\n    result: Dict[str, Any],\n    elapsed_time: float,\n    retry_count: int = 0,\n    recovery_applied: bool = False\n):\n    \"\"\"実行結果をログに記録\"\"\"\n    log_entry = [\n        datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # timestamp\n        task.get('task_id', 'unknown'),                 # task_id\n        task.get('task_name', 'Unknown'),               # task_name\n        task.get('agent', 'unknown'),                   # agent\n        result.get('status', 'unknown'),                # status\n        result.get('output', result.get('error', '')),  # result\n        '',                                              # quality_score\n        '',                                              # reviewer_notes\n        round(elapsed_time, 2),                         # ★ elapsed_time\n        retry_count,                                    # ★ retry_count\n        result.get('error_type', ''),                   # ★ error_type\n        'Yes' if recovery_applied else 'No'            # ★ fix_applied\n    ]\n    \n    self.sheets.append_rows('task_execution_log', [log_entry])",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T08:59:36.184679",
+      "avoid_patterns": [
+        "ログ記録時に最低限の情報（status, result）しか保存していなかった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_085936",
+      "task_type": "general",
+      "scenario": "ネットワークエラーやタイムアウトを即座に再試行すると、同じエラーが連続発生する",
+      "best_practice": "指数バックオフ（1秒→2秒→4秒）で待機時間を増やしながら再試行",
+      "code_example": "async def _retry_with_backoff(\n    self, \n    task: Dict[str, Any], \n    max_retries: int = 3\n) -> Dict[str, Any]:\n    \"\"\"指数バックオフで再試行\"\"\"\n    for retry in range(1, max_retries + 1):\n        wait_time = 2 ** (retry - 1)  # 1秒, 2秒, 4秒\n        print(f\"🔄 再試行 {retry}/{max_retries} ({wait_time}秒待機後)...\")\n        \n        await asyncio.sleep(wait_time)\n        \n        result = await self._execute_single_attempt(task)\n        \n        if result['status'] == 'success':\n            result['retry_count'] = retry\n            return result\n    \n    # 全ての再試行が失敗\n    return {\n        'status': 'error',\n        'error': 'Max retries exceeded',\n        'error_type': 'RetryExhausted',\n        'retry_count': max_retries\n    }",
+      "success_rate": 0.95,
+      "created_at": "2025-11-04T08:59:36.324434",
+      "avoid_patterns": [
+        "固定間隔での再試行では、一時的な問題が解消される時間が不足"
+      ],
+      "quality_score": 10.0
     }
   ]
 }
