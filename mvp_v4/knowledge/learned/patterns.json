@@ -1,0 +1,47 @@
+[
+  {
+    "task_type": "wordpress_post",
+    "success_rate": 1.0,
+    "avg_execution_time": 0.53,
+    "avg_retry_count": 0.0,
+    "knowledge_effectiveness": 1.0,
+    "sample_count": 1,
+    "learned_at": "2025-11-03T23:00:46.534377"
+  },
+  {
+    "task_type": "wordpress_media",
+    "success_rate": 1.0,
+    "avg_execution_time": 0.52,
+    "avg_retry_count": 0.0,
+    "knowledge_effectiveness": 1.0,
+    "sample_count": 1,
+    "learned_at": "2025-11-03T23:00:46.534442"
+  },
+  {
+    "task_type": "design_wireframe",
+    "success_rate": 1.0,
+    "avg_execution_time": 1.02,
+    "avg_retry_count": 1.0,
+    "knowledge_effectiveness": 1.0,
+    "sample_count": 1,
+    "learned_at": "2025-11-03T23:00:46.534505"
+  },
+  {
+    "task_type": "design_color",
+    "success_rate": 1.0,
+    "avg_execution_time": 0.52,
+    "avg_retry_count": 0.0,
+    "knowledge_effectiveness": 1.0,
+    "sample_count": 1,
+    "learned_at": "2025-11-03T23:00:46.534586"
+  },
+  {
+    "task_type": "wordpress_seo",
+    "success_rate": 1.0,
+    "avg_execution_time": 0.52,
+    "avg_retry_count": 0.0,
+    "knowledge_effectiveness": 1.0,
+    "sample_count": 1,
+    "learned_at": "2025-11-03T23:00:46.534653"
+  }
+]
