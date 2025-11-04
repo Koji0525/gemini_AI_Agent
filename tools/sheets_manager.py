@@ -120,6 +120,29 @@ class GoogleSheetsManager:
         """
         範囲に書き込み
 
+    def update_cell(self, sheet_name: str, cell_range: str, value=None, **kwargs):
+        """指定したセルを更新する
+        
+        Args:
+            sheet_name: シート名
+            cell_range: セル範囲 (例: 'A1')
+            value: 設定する値
+            **kwargs: 互換性のための追加引数
+        """
+        # cell_addressが指定された場合はcell_rangeとして使用
+        if 'cell_address' in kwargs:
+            cell_range = kwargs['cell_address']
+        
+        try:
+            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(sheet_name)
+            sheet.update(cell_range, [[value]])
+            self.logger.info(f"📊 セル更新完了: {sheet_name}!{cell_range} = {value}")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            return False
+
+
         Args:
             range_str: 範囲文字列
             values: 書き込むデータ（2次元リスト）
@@ -218,12 +241,35 @@ class GoogleSheetsManager:
             print(f"❌ 行追加エラー: {e}")
             raise
 
-    def update_cell(self, sheet_name: str, cell_range: str, value):
-        """指定したセルを更新する"""
+    
+    
+    def update_cell(self, sheet_name: str, cell_range: str, value=None, **kwargs):
+        """指定したセルを更新する（柔軟な引数対応）
+        
+        Args:
+            sheet_name: シート名
+            cell_range: セル範囲 (例: 'A1')
+            value: 設定する値
+            **kwargs: 互換性のための追加引数 (cell_addressなど)
+        """
+        # cell_addressが指定された場合はcell_rangeとして使用
+        if 'cell_address' in kwargs:
+            cell_range = kwargs['cell_address']
+        
         try:
             sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(sheet_name)
             sheet.update(cell_range, [[value]])
             self.logger.info(f"📊 セル更新完了: {sheet_name}!{cell_range} = {value}")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            return False
+!{cell_range} = {value}")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            return False
+!{cell_range} = {value}")
             return True
         except Exception as e:
             self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
