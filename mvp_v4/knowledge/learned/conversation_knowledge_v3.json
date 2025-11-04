@@ -1428,11 +1428,59 @@
         "TypeErrorは引数関連の問題を示すことが多い"
       ],
       "quality_score": 9
+    },
+    {
+      "id": "KB_20251104_203914",
+      "scenario": "24時間自律型開発システムの連携設計と既存エージェント活用",
+      "task_type": "system_architecture",
+      "problem": "既存のエージェントが個別に機能しているが、24時間連続した自律開発を実現するための統合と連携が不足している",
+      "root_cause": "エージェント間の連携インターフェースが標準化されていない、継続的実行のためのループ制御が不足、リアルタイムの品質フィードバックと自動修復の連携が不十分",
+      "solution_steps": [
+        "1. 既存エージェントの棚卸と機能確認（ReviewAgent, TaskExecutor, QualityFeedbackLoopなど）",
+        "2. AutonomousDevelopmentOrchestratorの作成による統合制御",
+        "3. 24時間連続実行のためのタスク処理ループ実装",
+        "4. 品質評価と自動修復のリアルタイム連携強化",
+        "5. 既存エージェントの拡張（連続実行モード、健全性チェック）",
+        "6. ナレッジ蓄積と学習の自動化統合"
+      ],
+      "best_practice": "新規開発より既存資産の連携強化を優先。インターフェースを標準化し、疎結合な設計を維持。各エージェントは単一責任を持ち、オーケストレーターが連携を制御。",
+      "code_example": "# 既存エージェントを連携した24時間自律システム\nclass AutonomousDevelopmentOrchestrator:\n    def __init__(self):\n        self.components = {}  # 既存エージェントを格納\n    \n    async def initialize_components(self):\n        # 既存エージェントを初期化して連携\n        self.components['sheets_manager'] = GoogleSheetsManager()\n        self.components['review_agent'] = ReviewAgent() \n        self.components['task_executor'] = TaskExecutor(...)\n        self.components['feedback_loop'] = QualityFeedbackLoop(...)\n    \n    async def run_development_cycle(self):\n        # 1. タスク取得 → 2. 実行 → 3. 品質評価 → 4. フィードバック\n        tasks = await self._get_pending_tasks()\n        for task in tasks:\n            result = await self.components['task_executor'].execute_single_task(task)\n            quality_result = await self.components['review_agent'].evaluate(...)\n            await self.components['feedback_loop'].process_task_result(...)\n    \n    async def start_24h_operation(self):\n        while self.is_running:\n            await self.run_development_cycle()\n            await asyncio.sleep(300)  # 5分間隔",
+      "success_rate": 0.95,
+      "avg_time": 0,
+      "conditions": "既存のエージェント資産を活用して24時間自律開発を実現したい場合。開発効率を劇的に向上させたい場合。",
+      "avoid_patterns": [
+        "既存資産を無視して新規開発ばかり行う",
+        "エージェント間を密結合に設計する",
+        "継続的実行のためのリソース管理を考慮しない",
+        "エラーハンドリングと回復機制を軽視する"
+      ],
+      "performance_improvement": {
+        "before": "個別エージェント、手動連携、断続的実行、開発効率限定的",
+        "after": "統合システム、自動連携、24時間連続実行、開発効率10倍"
+      },
+      "created_at": "2025-11-04T20:39:14.854519",
+      "tags": [
+        "システム統合",
+        "エージェント連携",
+        "24時間運転",
+        "既存資活用",
+        "自律開発"
+      ],
+      "severity": "critical",
+      "frequency": "continuous",
+      "lessons_learned": [
+        "既存資産の棚卸と連携可能性の評価が第一歩",
+        "オーケストレーター層を設けて責務を分離",
+        "各エージェントは独立して機能できるように設計",
+        "継続的実行にはリソース管理と健全性チェックが必須",
+        "フィードバックループの閉じ込みが自律性の鍵"
+      ],
+      "quality_score": 10
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:32:23.534230",
-    "total_count": 80,
-    "version": "4.1"
+    "last_updated": "2025-11-04T20:39:14.854524",
+    "total_count": 81,
+    "version": "4.2"
   }
 }
