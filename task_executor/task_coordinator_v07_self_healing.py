@@ -49,6 +49,9 @@ class TaskCoordinatorWithSelfHealing:
         self._init_self_healing()
 
         logger.info("✅ TaskCoordinator v07 初期化完了")
+        # ✅ P2-1: トランザクション用バックアップ
+        self.task_state_backup = {}
+        self.deadlock_threshold = 300
 
     def _init_optional_agents(self):
         """オプションエージェント初期化"""
@@ -92,7 +95,7 @@ class TaskCoordinatorWithSelfHealing:
 
     async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """
-        タスク実行（自己修復対応）
+        タスク実行（自己修復対応 + 堅牢ステータス更新）
 
         Args:
             task: タスク情報
@@ -100,10 +103,18 @@ class TaskCoordinatorWithSelfHealing:
         Returns:
             実行結果
         """
+        import time
+
         task_id = task.get("task_id", "unknown")
         execution_type = task.get("execution_type", "content")
 
         logger.info(f"🎯 タスク実行開始: {task_id} (タイプ: {execution_type})")
+
+        # ✅ P2-1: タスク開始時にステータス更新
+        task_start = time.time()
+        await self.update_task_status_robust(
+            task_id=task_id, status="in_progress", elapsed_time=0, retry_count=0
+        )
 
         max_retries = 3
         retry_count = 0
@@ -117,7 +128,17 @@ class TaskCoordinatorWithSelfHealing:
                 else:
                     result = await self._execute_content_task(task)
 
-                logger.info(f"✅ タスク成功: {task_id}")
+                # ✅ P2-1: 成功時のステータス更新
+                elapsed = time.time() - task_start
+                await self.update_task_status_robust(
+                    task_id=task_id,
+                    status="completed",
+                    result=result,
+                    elapsed_time=elapsed,
+                    retry_count=retry_count,
+                )
+
+                logger.info(f"✅ タスク成功: {task_id} (実行時間: {elapsed:.2f}秒)")
 
                 if self.self_healing_available:
                     await self._record_success(task, result)
@@ -142,6 +163,17 @@ class TaskCoordinatorWithSelfHealing:
                 else:
                     await asyncio.sleep(2**retry_count)
 
+        # ✅ P2-1: 最終失敗時のステータス更新
+        elapsed = time.time() - task_start
+        await self.update_task_status_robust(
+            task_id=task_id,
+            status="failed",
+            error_message=str(last_error),
+            elapsed_time=elapsed,
+            retry_count=retry_count,
+            error_type=type(last_error).__name__ if last_error else "Unknown",
+        )
+
         logger.error(f"❌ タスク最終失敗: {task_id}")
 
         if self.self_healing_available:
@@ -153,11 +185,6 @@ class TaskCoordinatorWithSelfHealing:
             "error": str(last_error),
             "retry_count": retry_count,
         }
-
-    async def _execute_wordpress_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """WordPress関連タスク実行"""
-        if self.wp_orchestrator is None:
-            raise RuntimeError("WordPressOrchestrator が利用できません")
         return await self.wp_orchestrator.execute_task(task)
 
     async def _execute_content_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,3 +305,154 @@ class TaskCoordinatorWithSelfHealing:
             logger.info("✅ クリーンアップ完了")
         except Exception as e:
             logger.warning(f"⚠️ クリーンアップエラー: {e}")
+
+    # ========================================
+    # ✅ P2-1: トランザクション処理
+    # ========================================
+
+    def _backup_task_state(self, task_id: str):
+        """タスクの現在の状態をバックアップ"""
+        try:
+            data = self.sheets_manager.read_range("pm_tasks!A:Z")
+            if not data:
+                return None
+
+            for i, row in enumerate(data):
+                if len(row) > 0 and row[0] == task_id:
+                    backup = {"row_index": i + 1, "data": row.copy(), "timestamp": datetime.now()}
+                    self.task_state_backup[task_id] = backup
+                    logger.debug(f"💾 バックアップ保存: {task_id} (行{i+1})")
+                    return backup
+
+            return None
+        except Exception as e:
+            logger.error(f"❌ バックアップ失敗: {e}")
+            return None
+
+    def _rollback_task_state(self, task_id: str) -> bool:
+        """タスクの状態をロールバック"""
+        try:
+            if task_id not in self.task_state_backup:
+                return False
+
+            backup = self.task_state_backup[task_id]
+            row_index = backup["row_index"]
+            range_str = f"pm_tasks!A{row_index}:Z{row_index}"
+            self.sheets_manager.write_range(range_str, [backup["data"]])
+
+            logger.info(f"🔄 ロールバック成功: {task_id}")
+            del self.task_state_backup[task_id]
+            return True
+        except Exception as e:
+            logger.error(f"❌ ロールバック失敗: {e}")
+            return False
+
+    async def _exponential_backoff(self, retry_count: int):
+        """指数バックオフによる待機"""
+        wait_time = min(2**retry_count, 16)
+        logger.info(f"⏳ リトライ待機: {wait_time}秒")
+        await asyncio.sleep(wait_time)
+
+    def _check_deadlock(self, task_id: str) -> bool:
+        """デッドロック検知"""
+        try:
+            data = self.sheets_manager.read_range("pm_tasks!A:Z")
+            if not data:
+                return False
+
+            for row in data:
+                if len(row) > 0 and row[0] == task_id:
+                    status = row[3] if len(row) > 3 else ""
+                    timestamp_str = row[5] if len(row) > 5 else ""
+
+                    if status == "in_progress" and timestamp_str:
+                        try:
+                            timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                            elapsed = (datetime.now() - timestamp).total_seconds()
+
+                            if elapsed > self.deadlock_threshold:
+                                logger.warning(f"🚨 デッドロック検知: {task_id} ({elapsed:.0f}秒)")
+                                return True
+                        except ValueError:
+                            pass
+            return False
+        except Exception as e:
+            logger.error(f"❌ デッドロック検知エラー: {e}")
+            return False
+
+    async def update_task_status_robust(
+        self,
+        task_id: str,
+        status: str,
+        result: dict = None,
+        error_message: str = None,
+        elapsed_time: float = None,
+        retry_count: int = 0,
+        error_type: str = None,
+        max_retries: int = 3,
+    ) -> bool:
+        """堅牢なステータス更新（トランザクション＋リトライ）"""
+        logger.info(f"🔍 堅牢ステータス更新: {task_id} → {status}")
+
+        if self._check_deadlock(task_id):
+            logger.error(f"❌ デッドロック検知: {task_id}")
+            return False
+
+        backup = self._backup_task_state(task_id)
+
+        attempt = 0
+        while attempt < max_retries:
+            try:
+                # pm_tasksのステータス更新
+                data = self.sheets_manager.read_range("pm_tasks!A:Z")
+                if data:
+                    for i, row in enumerate(data):
+                        if len(row) > 0 and row[0] == task_id:
+                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+                            # ステータス更新
+                            cell = f"pm_tasks!D{i+1}"
+                            self.sheets_manager.write_range(cell, [[status]])
+
+                            # タイムスタンプ更新
+                            cell_time = f"pm_tasks!F{i+1}"
+                            self.sheets_manager.write_range(cell_time, [[timestamp]])
+                            break
+
+                # task_execution_logに記録
+                log_data = [
+                    task_id,
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    status,
+                    result.get("summary", "") if result else "",
+                    error_message or "",
+                    "",  # output_file
+                    "",  # length
+                    result.get("quality_score", "") if result else "",
+                    "",  # I列
+                    "",  # J列
+                    elapsed_time if elapsed_time else "",
+                    retry_count,
+                    error_type or "",
+                    "",
+                ]
+                self.sheets_manager.append_rows("task_execution_log", [log_data])
+
+                logger.info(f"✅ ステータス更新成功: {task_id}")
+
+                if task_id in self.task_state_backup:
+                    del self.task_state_backup[task_id]
+                return True
+
+            except Exception as e:
+                attempt += 1
+                logger.warning(f"⚠️ 更新失敗 (試行{attempt}/{max_retries}): {e}")
+
+                if attempt < max_retries:
+                    await self._exponential_backoff(attempt)
+                else:
+                    if backup:
+                        self._rollback_task_state(task_id)
+                    return False
+
+        return False
