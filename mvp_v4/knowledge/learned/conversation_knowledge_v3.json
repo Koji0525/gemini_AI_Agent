@@ -1,0 +1,286 @@
+{
+  "knowledge_base": [
+    {
+      "id": "CONV_20251104_011812",
+      "task_type": "general",
+      "scenario": "ModuleNotFoundError",
+      "best_practice": "個別インストール",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:18:12.936541",
+      "avoid_patterns": [
+        "パッケージ分離"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_011946",
+      "task_type": "troubleshooting",
+      "scenario": "ChromaDBのインデックス構築時にメモリ不足エラー",
+      "best_practice": "バッチサイズを1000件ごとに分割してインデックス構築",
+      "code_example": "for i in range(0, len(docs), 1000):\nbatch = docs[i:i+1000]\nindex.add_documents(batch)",
+      "success_rate": 0.95,
+      "avoid_patterns": [
+        "ドキュメント数が1万件を超えるとRAM 2GBでは不足"
+      ],
+      "error_fixes": {},
+      "created_at": "2025-11-04T01:19:46.840558",
+      "quality_score": 9.0
+    },
+    {
+      "id": "CONV_20251104_012439",
+      "scenario": "メモリ不足エラー",
+      "best_practice": "バッチ処理で分割",
+      "code_example": "",
+      "success_rate": 0.95,
+      "quality_score": 7
+    },
+    {
+      "id": "CONV_20251104_013319",
+      "task_type": "general",
+      "scenario": "Docker内でGPUが認識されない",
+      "best_practice": "apt install nvidia-docker2実行",
+      "code_example": "",
+      "success_rate": 0.95,
+      "created_at": "2025-11-04T01:33:19.673122",
+      "avoid_patterns": [
+        "nvidia-docker2未インストール"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013319",
+      "task_type": "general",
+      "scenario": "メモリリークでプロセス強制終了",
+      "best_practice": "del不要な変数でメモリ解放",
+      "code_example": "",
+      "success_rate": 0.9,
+      "created_at": "2025-11-04T01:33:19.675049",
+      "avoid_patterns": [
+        "for loopで変数をdelしていない"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013329",
+      "task_type": "general",
+      "scenario": "ModuleNotFoundError",
+      "best_practice": "個別インストール",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:33:29.571168",
+      "avoid_patterns": [
+        "パッケージ分離"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013337",
+      "task_type": "general",
+      "scenario": "（今日のトラブル）",
+      "best_practice": "（解決策）",
+      "code_example": "",
+      "success_rate": 0.0,
+      "created_at": "2025-11-04T01:33:37.353632",
+      "avoid_patterns": [
+        "（理由）"
+      ],
+      "quality_score": 6.0
+    },
+    {
+      "id": "CONV_20251104_013437",
+      "task_type": "general",
+      "scenario": "ModuleNotFoundError",
+      "best_practice": "個別インストール",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:34:37.767207",
+      "avoid_patterns": [
+        "パッケージ分離"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013707",
+      "task_type": "general",
+      "scenario": "heredocでPythonスクリプト作成時に途中終了するエラー",
+      "best_practice": "heredocを避けて、別ファイル(create_extractor.py)を作成してからpython3で実行する方法に変更",
+      "code_example": "# 解決方法の例\ncat > create_extractor.py << 'ENDOFFILE'\n# スクリプト内容\nENDOFFILE\n\npython3 create_extractor.py",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:37:07.776183",
+      "avoid_patterns": [
+        "heredoc内の複雑なエスケープ（バックスラッシュ3つなど）でbashがパース失敗し、スクリプトが途中で終了"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_013720",
+      "task_type": "general",
+      "scenario": "同じコマンドでも別ターミナルでは成功する",
+      "best_practice": "新しいターミナルを開いて再実行",
+      "code_example": "",
+      "success_rate": 0.95,
+      "created_at": "2025-11-04T01:37:20.343793",
+      "avoid_patterns": [
+        "元のターミナルで文字エンコーディングやセッション状態が破損"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013720",
+      "task_type": "general",
+      "scenario": "開発中のトラブルシューティングを記録する仕組みが必要",
+      "best_practice": "conversation_to_knowledge_v3.pyで会話を構造化ナレッジに変換し、ChromaDBで検索可能にする",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:37:20.344723",
+      "avoid_patterns": [
+        "同じエラーを何度も調査して時間を浪費"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013720",
+      "task_type": "general",
+      "scenario": "テスト実行を繰り返してナレッジが重複蓄積",
+      "best_practice": "scenario + best_practiceをキーにしてOrderedDictで重複削除",
+      "code_example": "unique_kb = OrderedDict()\nfor kb in data['knowledge_base']:\n    key = f\"{kb.get('scenario')}|{kb.get('best_practice')}\"\n    if key not in unique_kb:\n        unique_kb[key] = kb",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:37:20.345392",
+      "avoid_patterns": [
+        "重複チェック機能が不完全"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_013824",
+      "task_type": "general",
+      "scenario": "（問題を1行で）",
+      "best_practice": "（どう解決したか）",
+      "code_example": "# コード例（あれば）\n実際に動いたコマンド",
+      "success_rate": 0.0,
+      "created_at": "2025-11-04T01:38:24.871009",
+      "avoid_patterns": [
+        "（なぜ起きたか）"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013848",
+      "task_type": "general",
+      "scenario": "heredocでPythonスクリプト作成時にbashパースエラーで途中終了",
+      "best_practice": "heredocを避けて別ファイルを作成してから実行する方式に変更",
+      "code_example": "# 解決方法\ncat > create_extractor.py << 'ENDOFFILE'\nimport os\n# Pythonコード\nENDOFFILE\n\npython3 create_extractor.py",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:38:48.757357",
+      "avoid_patterns": [
+        "heredoc内の複雑なエスケープシーケンス（\\\\）とpython -cの組み合わせでbashが文字列終端を誤認識"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_013856",
+      "task_type": "general",
+      "scenario": "（エラー内容）",
+      "best_practice": "（解決策）",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:38:56.724747",
+      "avoid_patterns": [
+        "（原因）"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_013905",
+      "task_type": "general",
+      "scenario": "...",
+      "best_practice": "...",
+      "code_example": "",
+      "success_rate": 0.0,
+      "created_at": "2025-11-04T01:39:05.880346",
+      "avoid_patterns": [
+        "..."
+      ],
+      "quality_score": 6.0
+    },
+    {
+      "id": "CONV_20251104_013905",
+      "task_type": "general",
+      "scenario": "...",
+      "best_practice": "...",
+      "code_example": "",
+      "success_rate": 0.0,
+      "created_at": "2025-11-04T01:39:05.881433",
+      "avoid_patterns": [
+        "..."
+      ],
+      "quality_score": 6.0
+    },
+    {
+      "id": "CONV_20251104_013905",
+      "task_type": "general",
+      "scenario": "...",
+      "best_practice": "...",
+      "code_example": "",
+      "success_rate": 0.0,
+      "created_at": "2025-11-04T01:39:05.882120",
+      "avoid_patterns": [
+        "..."
+      ],
+      "quality_score": 6.0
+    },
+    {
+      "id": "CONV_20251104_014646",
+      "task_type": "general",
+      "scenario": "heredocでbashパースエラーが発生",
+      "best_practice": "heredoc使用を避け、別ファイルを作成してpython3で実行",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:46:46.469186",
+      "avoid_patterns": [
+        "複雑なエスケープシーケンスでbashが文字列終端を誤認識"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_014658",
+      "task_type": "general",
+      "scenario": "会話ナレッジシステムの使い方が不明確",
+      "best_practice": "Claudeに「今の会話をナレッジ登録用に整形してください」と依頼し、出力をコピペして実行",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:46:58.653703",
+      "avoid_patterns": [
+        "テンプレートの（）部分を実際の内容に置き換える必要があることが分かりにくい"
+      ],
+      "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_015444",
+      "task_type": "general",
+      "scenario": "（今解決したエラー）",
+      "best_practice": "（どう解決したか）",
+      "code_example": "# 解決に使ったコマンド",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T01:54:44.882926",
+      "avoid_patterns": [
+        "（なぜ起きたか）"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_032616",
+      "task_type": "general",
+      "scenario": "Dockerビルドでメモリ不足エラー",
+      "best_practice": "Docker Desktopの設定でメモリを4GBに増やす",
+      "code_example": "",
+      "success_rate": 0.9,
+      "created_at": "2025-11-04T03:26:16.098989",
+      "avoid_patterns": [
+        "デフォルトメモリ設定が2GBで不足"
+      ],
+      "quality_score": 8.0
+    }
+  ]
+}
