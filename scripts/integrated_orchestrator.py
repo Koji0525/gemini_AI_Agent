@@ -17,7 +17,7 @@ from typing import List, Dict, Optional, Protocol, runtime_checkable
 
 from dotenv import load_dotenv
 from agents.self_healing.logging.decision_support_system import DecisionSupportSystem
-from core_agents.human_interaction_agent_v02_github_api import HumanInteractionAgent
+from core_agents.human_interaction_agent_v03_github_api import HumanInteractionAgent
 from core_agents.quality_feedback_loop import QualityFeedbackLoop
 
 load_dotenv(override=True)
