@@ -281,6 +281,58 @@
         "デフォルトメモリ設定が2GBで不足"
       ],
       "quality_score": 8.0
+    },
+    {
+      "id": "CONV_20251104_033318",
+      "task_type": "general",
+      "scenario": "成功率追跡機能の実装完了",
+      "best_practice": "KnowledgeTrackerクラスで使用ログを記録し、5回以上の実行後に実績ベースの成功率に自動更新",
+      "code_example": "tracker = KnowledgeTracker()\ntracker.record_usage(\"CONV_ID\", success=True)\ntracker.update_success_rate(\"CONV_ID\")  # 5回以上で自動更新",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T03:33:18.550899",
+      "avoid_patterns": [
+        "初期のナレッジは推定値のため、実際の成功率を追跡する必要があった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_033318",
+      "task_type": "general",
+      "scenario": "ナレッジをGitで管理して チーム共有を実現",
+      "best_practice": "git add/commit/pushでナレッジをGitHub管理し、チーム全員がgit pullで最新ナレッジを取得",
+      "code_example": "git add mvp_v4/knowledge/learned/conversation_knowledge_v3.json\ngit commit -m \"Add knowledge\"\ngit push origin main",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T03:33:18.552227",
+      "avoid_patterns": [
+        "JSONファイルがローカルのみに存在し、チームメンバーが参照できなかった"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_033318",
+      "task_type": "general",
+      "scenario": "ChromaDBによる完全ローカル検索が動作確認済み",
+      "best_practice": "HuggingFace埋め込みモデルでベクトル化し、ChromaDBでコサイン類似度検索を実行（API不要、$0コスト）",
+      "code_example": "rag = FrugalRAGEngine()\nrag.load_knowledge(['conversation_knowledge_v3.json'])\nresults = rag.search(\"heredoc\", top_k=1)",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T03:33:18.553153",
+      "avoid_patterns": [
+        "ナレッジが増えても高速検索する仕組みが必要"
+      ],
+      "quality_score": 10.0
+    },
+    {
+      "id": "CONV_20251104_033548",
+      "task_type": "general",
+      "scenario": "添付ファイルのパスが/mnt/user-data/uploadsで見つからない",
+      "best_practice": "添付ファイルの内容はClaudeが確認し、重要ポイントをナレッジとして抽出・登録する方式を採用",
+      "code_example": "",
+      "success_rate": 1.0,
+      "created_at": "2025-11-04T03:35:48.601761",
+      "avoid_patterns": [
+        "Claudeのコンテキストには添付ファイルがあるが、Codespaces側のファイルシステムには存在しない"
+      ],
+      "quality_score": 8.0
     }
   ]
 }
