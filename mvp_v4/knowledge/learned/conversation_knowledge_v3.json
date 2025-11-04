@@ -1476,11 +1476,58 @@
         "フィードバックループの閉じ込みが自律性の鍵"
       ],
       "quality_score": 10
+    },
+    {
+      "id": "KB_20251104_204621",
+      "scenario": "TaskExecutor初期化エラーの解決と24時間自律システムの完全起動",
+      "task_type": "system_integration",
+      "problem": "TaskExecutor.__init__() got an unexpected keyword argument 'review_agent' エラーにより、24時間自律開発システムが起動できない",
+      "root_cause": "TaskExecutorの__init__メソッドがreview_agent引数を受け取るように設計されていなかった。オーケストレーターはreview_agentを渡そうとしているが、TaskExecutorはそれを期待していない",
+      "solution_steps": [
+        "1. TaskExecutorの__init__メソッドを確認して引数シグネチャを特定",
+        "2. __init__メソッドにreview_agent引数を追加（デフォルト値Noneで互換性維持）",
+        "3. review_agentをインスタンス変数として保存",
+        "4. オーケストレーターの初期化コードが正しいことを確認",
+        "5. 構文チェックと初期化テストで修正を検証",
+        "6. システム起動テストで完全な動作を確認"
+      ],
+      "best_practice": "既存クラスを拡張する時は後方互換性を維持する。必須でない引数にはデフォルト値を設定する。変更前には呼び出し元のコードを確認する。",
+      "code_example": "# ✅ 修正前（エラー発生）\nclass TaskExecutor:\n    def __init__(self, sheets_manager):\n        self.sheets_manager = sheets_manager\n\n# ✅ 修正後（正常動作）\nclass TaskExecutor:\n    def __init__(self, sheets_manager, review_agent=None):\n        self.sheets_manager = sheets_manager\n        self.review_agent = review_agent  # オプション引数\n\n# ✅ 互換性維持: 従来の呼び出しも可能\ntask_executor1 = TaskExecutor(sheets_manager)  # 従来方式\ntask_executor2 = TaskExecutor(sheets_manager, review_agent)  # 新しい方式\n\n# ✅ オーケストレーターでの使用\nself.components['task_executor'] = TaskExecutor(\n    sheets_manager=self.components['sheets_manager'],\n    review_agent=self.components['review_agent']\n)",
+      "success_rate": 1.0,
+      "avg_time": 10,
+      "conditions": "TypeError: __init__() got an unexpected keyword argument が発生する場合。クラスの引数シグネチャが変更された場合。",
+      "avoid_patterns": [
+        "既存の引数シグネチャを破壊する変更を行う",
+        "必須引数を突然追加する",
+        "呼び出し元のコードを確認せずに変更する",
+        "互換性テストをスキップする"
+      ],
+      "performance_improvement": {
+        "before": "システム起動失敗、24時間自律開発不能",
+        "after": "システム正常起動、24時間自律開発実現"
+      },
+      "created_at": "2025-11-04T20:46:21.374030",
+      "tags": [
+        "初期化エラー",
+        "引数シグネチャ",
+        "後方互換性",
+        "システム統合"
+      ],
+      "severity": "high",
+      "frequency": "medium",
+      "lessons_learned": [
+        "クラス拡張時は後方互換性を最優先する",
+        "新しい引数はオプション（デフォルト値付き）で追加する",
+        "変更前にはすべての呼び出し元を確認する",
+        "互換性テストを必ず実施する",
+        "エラーメッセージから具体的な修正箇所を特定する"
+      ],
+      "quality_score": 9
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:39:14.854524",
-    "total_count": 81,
-    "version": "4.2"
+    "last_updated": "2025-11-04T20:46:21.374036",
+    "total_count": 82,
+    "version": "4.3"
   }
 }
