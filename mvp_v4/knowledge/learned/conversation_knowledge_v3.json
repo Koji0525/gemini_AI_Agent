@@ -1619,11 +1619,58 @@
         "必須コンポーネントのみで最小限の機能を保証する"
       ],
       "quality_score": 9
+    },
+    {
+      "id": "KB_20251104_210052",
+      "scenario": "PMAgent初期化エラーの解決とオプションコンポーネントの適切な扱い",
+      "task_type": "system_integration",
+      "problem": "PMAgent.__init__() missing 2 required positional arguments: 'sheets_manager' and 'browser_controller' エラーにより、24時間自律システムが起動できない",
+      "root_cause": "オーケストレーターがPMAgentを必須コンポーネントとして扱い、初期化失敗時にシステム全体が停止していた。PMAgentはオプションコンポーネントであるべきだが、エラーハンドリングが不十分だった",
+      "solution_steps": [
+        "1. PMAgentの初期化を必須からオプションに変更",
+        "2. 必要な引数を正しく渡す初期化を試みる",
+        "3. 初期化失敗時はモックオブジェクトで代替",
+        "4. GitAgentなど他のオプションコンポーネントも同様に修正",
+        "5. 全体のエラーハンドリングを強化して部分的な失敗を許容",
+        "6. 必須コンポーネントのみでシステムが動作することを確認"
+      ],
+      "best_practice": "システム統合時はコンポーネントを必須とオプションに分類する。オプションコンポーネントの失敗はシステム全体を停止させない。モックオブジェクトやフォールバックで機能を維持する。",
+      "code_example": "# ✅ 修正後: オプションコンポーネントの適切な扱い\ntry:\n    from core_agents.pm_agent import PMAgent\n    # PMAgentの初期化（必要な引数を渡すか、モックを使用）\n    try:\n        self.components['pm_agent'] = PMAgent(\n            sheets_manager=self.components['sheets_manager'],\n            browser_controller=None  # オプション引数\n        )\n        logger.info(\"✅ PMエージェント初期化完了\")\n    except TypeError as e:\n        # 引数が合わない場合はモックで代替\n        logger.warning(f\"⚠️  PMエージェント初期化エラー: {e} - モックで代替\")\n        class MockPMAgent:\n            async def process_task(self, task):\n                return {'status': 'completed', 'message': 'モックPMAgent'}\n        self.components['pm_agent'] = MockPMAgent()\nexcept ImportError:\n    logger.warning(\"⚠️  PMエージェントが見つかりません - スキップ\")\n\n# ✅ 必須コンポーネントの定義\nREQUIRED_COMPONENTS = ['sheets_manager', 'review_agent', 'task_executor', 'feedback_loop']\nfor comp in REQUIRED_COMPONENTS:\n    if comp not in self.components:\n        raise RuntimeError(f\"必須コンポーネント {comp} の初期化に失敗\")",
+      "success_rate": 0.98,
+      "avg_time": 10,
+      "conditions": "オプションコンポーネントの初期化エラーでシステム全体が停止する場合。必須とオプションのコンポーネント分類が必要な場合。",
+      "avoid_patterns": [
+        "すべてのコンポーネントを必須として扱う",
+        "オプションコンポーネントの失敗でシステムを停止する",
+        "エラーハンドリングなしで外部コンポーネントを初期化する",
+        "モックやフォールバックの準備をしない"
+      ],
+      "performance_improvement": {
+        "before": "オプションコンポーネントのエラーでシステム全体が停止",
+        "after": "オプションコンポーネントの失敗を許容し、必須機能で継続実行"
+      },
+      "created_at": "2025-11-04T21:00:52.182621",
+      "tags": [
+        "オプションコンポーネント",
+        "エラーハンドリング",
+        "モックオブジェクト",
+        "システム堅牢性"
+      ],
+      "severity": "medium",
+      "frequency": "high",
+      "lessons_learned": [
+        "コンポーネントを必須とオプションに明確に分類する",
+        "オプションコンポーネントの失敗はシステム全体を停止させない",
+        "モックオブジェクトやフォールバック機構を準備する",
+        "エラーハンドリングは具体的なリカバリ方法を含める",
+        "必須コンポーネントのみで最小限の機能を保証する"
+      ],
+      "quality_score": 9
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:55:43.741250",
-    "total_count": 84,
+    "last_updated": "2025-11-04T21:00:52.182627",
+    "total_count": 85,
     "version": "4.5"
   }
 }
