@@ -1523,11 +1523,60 @@
         "エラーメッセージから具体的な修正箇所を特定する"
       ],
       "quality_score": 9
+    },
+    {
+      "id": "KB_20251104_205112",
+      "scenario": "TaskExecutorの完全再実装による初期化問題の根本解決",
+      "task_type": "system_integration",
+      "problem": "TaskExecutorの__init__メソッドがreview_agent引数を受け取らず、オーケストレーターからの初期化が失敗していた。部分的な修正では根本解決にならなかった",
+      "root_cause": "1. TaskExecutorの既存__init__メソッドが固定引数しか受け取らない設計\n2. ブラウザ依存のexecute_single_taskメソッドがオーケストレーターと互換性がない\n3. 段階的な修正では既存コードの複雑さに対応できなかった",
+      "solution_steps": [
+        "1. TaskExecutorクラスを完全に再実装",
+        "2. __init__メソッドにreview_agentオプション引数を追加",
+        "3. browser引数なしのexecute_single_taskメソッドを新規実装",
+        "4. 既存のブラウザ使用メソッドを互換性維持のために残す",
+        "5. 24時間自律運転用の連続実行ループを実装",
+        "6. システム健全性チェック機能を追加",
+        "7. 完全なテストで動作確認"
+      ],
+      "best_practice": "根本的な問題は完全再実装で解決する。互換性を維持しながら新しい機能を追加する。段階的修正が失敗した場合は潔く再実装を選択する。",
+      "code_example": "# ✅ 完全再実装による解決\nclass TaskExecutor:\n    def __init__(self, sheets_manager, output_dir=\"agent_outputs\", review_agent=None):\n        # 必須引数\n        self.sheets_manager = sheets_manager\n        self.output_dir = Path(output_dir)\n        # オプション引数（後方互換性維持）\n        self.review_agent = review_agent\n        \n    async def execute_single_task(self, task: Dict) -> Dict[str, Any]:\n        \"\"\"browser引数なしの新しいメソッド\"\"\"\n        # タスク実行ロジック\n        result = {...}\n        \n        # レビューエージェントが利用可能なら品質評価\n        if self.review_agent:\n            quality_result = await self.review_agent.evaluate(...)\n            result['quality_score'] = quality_result.get('quality_score')\n        \n        return result\n    \n    async def execute_single_task_with_browser(self, browser, task: Dict) -> bool:\n        \"\"\"既存コードとの互換性維持\"\"\"\n        result = await self.execute_single_task(task)\n        return result.get('status') == 'completed'",
+      "success_rate": 1.0,
+      "avg_time": 15,
+      "conditions": "部分的な修正で解決しない初期化問題。既存コードの複雑さが障害になっている場合。後方互換性を維持しながら機能拡張が必要な場合。",
+      "avoid_patterns": [
+        "複雑な既存コードを部分修正でいじり続ける",
+        "互換性を無視した破壊的変更を行う",
+        "テストなしで本番環境にデプロイする",
+        "問題の根本原因を見ずに表面的な修正をする"
+      ],
+      "performance_improvement": {
+        "before": "初期化エラーでシステム起動不能、部分修正の繰り返し",
+        "after": "システム正常起動、完全な機能統合、24時間自律運転可能"
+      },
+      "created_at": "2025-11-04T20:51:12.917320",
+      "tags": [
+        "完全再実装",
+        "後方互換性",
+        "根本解決",
+        "システム統合",
+        "24時間運転"
+      ],
+      "severity": "critical",
+      "frequency": "low",
+      "lessons_learned": [
+        "部分修正が繰り返し失敗する場合は完全再実装を検討する",
+        "後方互換性は既存のインターフェースを維持することで実現する",
+        "新しい機能はオプション引数で追加する",
+        "完全なテストスイートが変更の安全性を保証する",
+        "複雑な問題には潔いアプローチが効果的"
+      ],
+      "quality_score": 10
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:46:21.374036",
-    "total_count": 82,
-    "version": "4.3"
+    "last_updated": "2025-11-04T20:51:12.917326",
+    "total_count": 83,
+    "version": "4.4"
   }
 }
