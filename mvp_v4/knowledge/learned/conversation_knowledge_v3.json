@@ -1666,11 +1666,58 @@
         "必須コンポーネントのみで最小限の機能を保証する"
       ],
       "quality_score": 9
+    },
+    {
+      "id": "KB_20251104_211639",
+      "scenario": "自動修正スクリプトによるコード構造破壊と確実な修正方法",
+      "task_type": "system_integration",
+      "problem": "PMAgent初期化修正スクリプトがコードのインデント構造を破壊し、複数のtryブロックがネストして構文エラーが発生",
+      "root_cause": "部分的な正規表現置換がコードの論理構造を無視し、複数の修正スクリプトの累積適用で構造が破壊された",
+      "solution_steps": [
+        "1. バックアップから確実に復元",
+        "2. 部分修正をやめ、全文修正の原則を厳守",
+        "3. 単純な文字列置換で確実に修正",
+        "4. 修正後は即時構文チェックで検証",
+        "5. 複雑な正規表現より単純な文字列マッチングを優先"
+      ],
+      "best_practice": "自動修正スクリプトは補助ツールとして使用し、常に手動確認とバックアップを前提とする。複雑なコード修正は部分置換より全文書き直しが安全。",
+      "code_example": "# ✅ 安全な修正方法\n# 1. バックアップ作成\ncp file.py file_backup.py\n\n# 2. 単純な文字列置換\nold_code = '''元のコードブロック'''\nnew_code = '''修正後のコードブロック'''\n\nwith open('file.py', 'r') as f:\n    content = f.read()\n\nif old_code in content:\n    content = content.replace(old_code, new_code)\n    \n# 3. 即時検証\npython3 -m py_compile file.py",
+      "success_rate": 0.95,
+      "avg_time": 5,
+      "conditions": "自動修正スクリプトがコード構造を破壊した場合。部分修正が累積的に問題を悪化させている場合。",
+      "avoid_patterns": [
+        "複雑な正規表現での部分置換",
+        "コンテキストを無視した機械的修正",
+        "修正後の即時検証を省略",
+        "バックアップなしでの直接修正"
+      ],
+      "performance_improvement": {
+        "before": "自動修正失敗→デバッグに長時間",
+        "after": "手動確実修正→5分で解決"
+      },
+      "created_at": "2025-11-04T21:16:39.250326",
+      "tags": [
+        "自動修正",
+        "コード構造",
+        "インデントエラー",
+        "確実性",
+        "バックアップ"
+      ],
+      "severity": "high",
+      "frequency": "medium",
+      "lessons_learned": [
+        "自動化ツールは補助であり、完全な解決策ではない",
+        "バックアップは常に必須",
+        "部分修正より全文修正が安全",
+        "修正後は即時検証が必須",
+        "単純な方法ほど確実"
+      ],
+      "quality_score": 8
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T21:00:52.182627",
-    "total_count": 85,
-    "version": "4.5"
+    "last_updated": "2025-11-04T21:16:39.250331",
+    "total_count": 86,
+    "version": "4.6"
   }
 }
