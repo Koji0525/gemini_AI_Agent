@@ -119,7 +119,6 @@ class GoogleSheetsManager:
     ) -> Dict:
         """
         範囲に書き込み
-
     def update_cell(self, sheet_name: str, cell_range: str, value=None, **kwargs):
         """指定したセルを更新する
         
@@ -143,107 +142,7 @@ class GoogleSheetsManager:
             return False
 
 
-        Args:
-            range_str: 範囲文字列
-            values: 書き込むデータ（2次元リスト）
-            logical_sheet: Trueの場合、シート名を論理名として解決
-
-        Returns:
-            書き込み結果
-        """
-        try:
-            # シート名解決
-            if logical_sheet and "!" in range_str:
-                sheet_part, cell_part = range_str.split("!", 1)
-                resolved_sheet = self._resolve_sheet_name(sheet_part)
-                range_str = f"{resolved_sheet}!{cell_part}"
-
-            # 🔧 自動型変換: 1次元配列を2次元配列に変換
-            if values and not isinstance(values[0], (list, tuple)):
-                values = [values]
-
-            body = {"values": values}
-
-            result = (
-                self.service.spreadsheets()
-                .values()
-                .update(
-                    spreadsheetId=self.spreadsheet_id,
-                    range=range_str,
-                    valueInputOption="RAW",
-                    body=body,
-                )
-                .execute()
-            )
-
-            logger.info(f"✅ 書き込み成功: {range_str} ({result.get('updatedCells')}セル)")
-
-            return result
-
-        except HttpError as e:
-            logger.error(f"❌ 書き込みエラー: {e}")
-            raise
-
-    def append_rows(
-        self, sheet_name: str, values: List[List[Any]], logical_sheet: bool = True
-    ) -> Dict:
-        """
-        行を追加（デバッグ版）
-
-        Args:
-            sheet_name: シート名（論理名）
-            values: 追加するデータ（1次元または2次元配列）
-            logical_sheet: Trueの場合、シート名を論理名として解決
-
-        Returns:
-            追加結果
-        """
-        try:
-            # 🔍 デバッグログ: 入力データの確認
-            print(f"   sheet_name={sheet_name}")
-            print(f"   values型={type(values)}")
-            if values:
-                print(f"   values長さ={len(values)}")
-                print(f"   values[0]型={type(values[0])}")
-                print(f"   values内容={values[:2] if len(values) > 2 else values}")
-
-            # シート名解決
-            if logical_sheet:
-                sheet_name = self._resolve_sheet_name(sheet_name)
-                print(f"   解決後シート名={sheet_name}")
-
-            # 🔧 自動型変換: 1次元配列を2次元配列に変換
-            type(values[0]) if values else None
-            if values and not isinstance(values[0], (list, tuple)):
-                values = [values]
-                print(f"   変換後={values}")
-            else:
-                print(f"✅ 型変換不要（既に2次元配列）")
-
-            body = {"values": values}
-
-            result = (
-                self.service.spreadsheets()
-                .values()
-                .append(
-                    spreadsheetId=self.spreadsheet_id,
-                    range=f"{sheet_name}!A1",
-                    valueInputOption="RAW",
-                    insertDataOption="INSERT_ROWS",
-                    body=body,
-                )
-                .execute()
-            )
-
-            return result
-
-        except Exception as e:
-            print(f"❌ 行追加エラー: {e}")
-            raise
-
-    
-    
-    def update_cell(self, sheet_name: str, cell_range: str, value=None, **kwargs):
+    (self, sheet_name: str, cell_range: str, value=None, **kwargs):
         """指定したセルを更新する（柔軟な引数対応）
         
         Args:
@@ -259,17 +158,14 @@ class GoogleSheetsManager:
         try:
             sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(sheet_name)
             sheet.update(cell_range, [[value]])
-            self.logger.info(f"📊 セル更新完了: {sheet_name}!{cell_range} = {value}")
+            self.logger.info(f"📊 セル更新完了: {sheet_name}            return True
+        except Exception as e:
+            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            return False
             return True
         except Exception as e:
             self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
             return False
-!{cell_range} = {value}")
-            return True
-        except Exception as e:
-            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
-            return False
-!{cell_range} = {value}")
             return True
         except Exception as e:
             self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
