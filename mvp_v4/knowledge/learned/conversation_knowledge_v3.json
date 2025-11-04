@@ -1204,11 +1204,58 @@
       ],
       "severity": "medium",
       "frequency": "rare"
+    },
+    {
+      "id": "KB_20251104_200728",
+      "scenario": "Git履歴クリーンアップと巨大ファイル問題の完全解決",
+      "task_type": "git_troubleshooting",
+      "problem": "Git履歴に100MB超の巨大ファイルが複数残り、GitHubプッシュが拒否される。BFG実行後も強制プッシュしなかったため、リモートに古い履歴が残存",
+      "root_cause": "1. BFGで履歴書き換え後、git push --forceを実行しなかった\n2. ローカルとリモートでコミット履歴が分岐（274コミットの差）\n3. .gitignore設定前の巨大ファイルが履歴に記録されたまま",
+      "solution_steps": [
+        "1. git fetch origin でリモート状態を取得",
+        "2. 重要ファイル（ナレッジベース75件）をバックアップ",
+        "3. git reset --hard origin/main でリモート状態に完全同期",
+        "4. 物理的に巨大ファイルを削除（.git.backup* ディレクトリ）",
+        "5. バックアップからナレッジベースを復元",
+        "6. git add . && git commit でクリーンな状態をコミット",
+        "7. 通常プッシュ（git push origin main）で成功"
+      ],
+      "best_practice": "BFG実行後は必ず強制プッシュ。履歴分岐時はreset --hardでリモートに合わせる。巨大ファイルは最初から.gitignoreで除外する。",
+      "code_example": "# リモート状態に完全同期\ngit fetch origin\ngit reset --hard origin/main\n\n# 巨大ファイル物理削除\nrm -rf .git.backup* backups/ bfg.jar\n\n# クリーンなコミット\ngit add .\ngit commit -m \"Clean: Git履歴クリーンアップ\"\ngit push origin main",
+      "success_rate": 1.0,
+      "avg_time": 5,
+      "conditions": "BFG実行後もプッシュが拒否される場合。ローカルとリモートでコミット履歴に大きな差がある場合。",
+      "avoid_patterns": [
+        "BFG実行後、強制プッシュを忘れる",
+        "手動で複雑なgit filter-branchを使う",
+        ".gitignore設定前に巨大ファイルをコミット"
+      ],
+      "performance_improvement": {
+        "before": "プッシュ拒否、履歴分岐274コミット",
+        "after": "通常プッシュ成功、クリーンな履歴"
+      },
+      "created_at": "2025-11-04T20:07:28.623710",
+      "tags": [
+        "Git",
+        "BFG",
+        "履歴クリーンアップ",
+        "強制同期",
+        "巨大ファイル"
+      ],
+      "severity": "high",
+      "frequency": "rare",
+      "lessons_learned": [
+        "BFG実行後は必ず--forceプッシュが必要",
+        "git reset --hard origin/main で確実に同期",
+        "物理ファイル削除とGit履歴削除は別作業",
+        "バックアップ必須（ナレッジベース75件保護）"
+      ],
+      "quality_score": 9
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T19:52:18.313794",
-    "total_count": 75,
-    "version": "3.4"
+    "last_updated": "2025-11-04T20:07:28.623715",
+    "total_count": 76,
+    "version": "3.6"
   }
 }
