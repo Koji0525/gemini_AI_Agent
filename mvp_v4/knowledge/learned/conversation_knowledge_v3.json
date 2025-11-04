@@ -1385,11 +1385,54 @@
         "継続的改善こそが真の自律開発"
       ],
       "quality_score": 10
+    },
+    {
+      "id": "KB_20251104_203223",
+      "scenario": "QualityFeedbackLoop初期化エラーの解決",
+      "task_type": "integration_testing",
+      "problem": "統合テスト実行時にQualityFeedbackLoop.__init__() missing 1 required positional argument: 'review_agent' エラーが発生",
+      "root_cause": "QualityFeedbackLoopの初期化にreview_agent引数が必要だが、統合テストでこの引数が渡されていなかった。コンポーネント間の依存関係が正しく設定されていない",
+      "solution_steps": [
+        "1. QualityFeedbackLoopの__init__メソッドを確認して必要な引数を特定",
+        "2. 統合テストのQualityFeedbackLoop初期化コードを修正",
+        "3. review_agent引数を正しく渡すように修正",
+        "4. 構文チェックとテスト再実行で問題解決を確認"
+      ],
+      "best_practice": "コンポーネント初期化時はすべての必須引数を確認する。統合テストでは実際の使用状況を模倣する。エラーメッセージから不足している引数を特定する。",
+      "code_example": "# ✅ 修正前（エラー発生）\nfeedback_loop = QualityFeedbackLoop(sheets_manager, task_executor)\n\n# ✅ 修正後（正常動作）\nfeedback_loop = QualityFeedbackLoop(sheets_manager, task_executor, review_agent)\n\n# QualityFeedbackLoopの__init__メソッド\ndef __init__(self, sheets_manager, task_executor, review_agent):\n    self.sheets_manager = sheets_manager\n    self.task_executor = task_executor\n    self.review_agent = review_agent  # ← この引数が不足していた",
+      "success_rate": 1.0,
+      "avg_time": 5,
+      "conditions": "TypeError: __init__() missing 1 required positional argument が発生する場合。コンポーネント初期化で引数不足が疑われる場合。",
+      "avoid_patterns": [
+        "エラーメッセージを詳細に読まずに試行錯誤する",
+        "コンポーネントのシグネチャを確認せずに使用する",
+        "統合テストでモックオブジェクトの依存関係を考慮しない"
+      ],
+      "performance_improvement": {
+        "before": "統合テスト失敗、品質フィードバックループ動作不能",
+        "after": "統合テスト成功、品質フィードバックループ正常動作"
+      },
+      "created_at": "2025-11-04T20:32:23.534225",
+      "tags": [
+        "初期化エラー",
+        "統合テスト",
+        "引数不足",
+        "コンポーネント連携"
+      ],
+      "severity": "medium",
+      "frequency": "medium",
+      "lessons_learned": [
+        "エラーメッセージは具体的な解決策を示している",
+        "コンポーネント初期化時はシグネチャを厳密に確認する",
+        "統合テストは実際の依存関係を再現する必要がある",
+        "TypeErrorは引数関連の問題を示すことが多い"
+      ],
+      "quality_score": 9
     }
   ],
   "metadata": {
-    "last_updated": "2025-11-04T20:24:16.381171",
-    "total_count": 79,
-    "version": "4.0"
+    "last_updated": "2025-11-04T20:32:23.534230",
+    "total_count": 80,
+    "version": "4.1"
   }
 }
