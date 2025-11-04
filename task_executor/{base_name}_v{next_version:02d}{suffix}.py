@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 """
-TaskExecutor v01 - タスク実行のオーケストレーター
-
-P0-1: タスク実行時間の計測機能追加
-- elapsed_time: タスク実行時間（秒）
-- retry_count: リトライ回数
-- error_type: エラー分類
-- fix_applied: 自動修復フラグ
+TaskExecutor - タスク実行のオーケストレーター
 
 Google Sheets → Gemini → 結果保存 → Sheets更新
 の全フローを管理
 """
 import asyncio
 import sys
-import time  # ← 追加
 from pathlib import Path
 from typing import Dict
 from datetime import datetime
@@ -58,10 +51,6 @@ class TaskExecutor:
         title = task.get("title", "No Title")
         prompt = task.get("prompt", "")
 
-        # ✅ P0-1: 実行時間計測開始
-        task_start = time.time()
-        retry_count = task.get("retry_count", 0)  # リトライ回数を引き継ぐ
-
         print(f"\n🎯 タスク: {title}")
         print(f"   ID: {task_id}")
         print(f"   プロンプト: {prompt[:100]}...")
@@ -87,14 +76,11 @@ class TaskExecutor:
 
             print(f"✅ レスポンス取得成功: {len(response)} 文字")
 
-            # ✅ P0-1: 実行時間計算
-            elapsed_time = round(time.time() - task_start, 2)
-
             # ファイル保存
             output_file = self.save_result(task_id, title, response)
             print(f"💾 保存: {output_file}")
 
-            # 成功ステータスに更新（✅ 計測データを追加）
+            # 成功ステータスに更新
             self.sheets_manager.update_task_status(
                 task_id=task_id,
                 status="completed",
@@ -103,33 +89,17 @@ class TaskExecutor:
                     "length": len(response),
                 },
                 output_file=str(output_file),
-                # ✅ P0-1: 計測データ
-                elapsed_time=elapsed_time,
-                retry_count=retry_count,
-                error_type=None,
-                fix_applied=False,
             )
 
-            print(f"✅ タスク完了: {title} (実行時間: {elapsed_time}秒)")
+            print(f"✅ タスク完了: {title}")
             return True
 
         except Exception as e:
-            # ✅ P0-1: 失敗時も実行時間を記録
-            elapsed_time = round(time.time() - task_start, 2)
-            error_type = type(e).__name__
-
             print(f"❌ タスク失敗: {e}")
 
-            # 失敗ステータスに更新（✅ 計測データを追加）
+            # 失敗ステータスに更新
             self.sheets_manager.update_task_status(
-                task_id=task_id,
-                status="failed",
-                error_message=str(e),
-                # ✅ P0-1: 計測データ
-                elapsed_time=elapsed_time,
-                retry_count=retry_count,
-                error_type=error_type,
-                fix_applied=False,
+                task_id=task_id, status="failed", error_message=str(e)
             )
 
             return False
@@ -165,7 +135,7 @@ async def main():
     """
     メイン実行関数
     """
-    print("\n🚀 TaskExecutor v01 起動")
+    print("\n🚀 TaskExecutor 起動")
 
     # SheetsManager初期化
     sheets_manager = GoogleSheetsManager(
