@@ -313,3 +313,77 @@ class PatternExtractor:
             return "RateLimitError"
         else:
             return "GeneralError"
+
+    async def extract(self, logs):
+        """ログからパターンを抽出"""
+        print("🔍 パターン抽出を実行中...")
+
+        try:
+            # 簡易的なパターン抽出ロジック
+            patterns = []
+
+            if isinstance(logs, list) and logs:
+                # エラーパターンの検出
+                error_patterns = self._extract_error_patterns(logs)
+                patterns.extend(error_patterns)
+
+                # 成功パターンの検出
+                success_patterns = self._extract_success_patterns(logs)
+                patterns.extend(success_patterns)
+
+            print(f"✅ {len(patterns)}個のパターンを抽出")
+            return patterns
+
+        except Exception as e:
+            print(f"❌ パターン抽出エラー: {e}")
+            return []
+
+    def _extract_error_patterns(self, logs):
+        """エラーパターンを抽出"""
+        error_patterns = []
+
+        # 簡易的なエラーパターン検出
+        for log in logs:
+            if isinstance(log, dict) and log.get("status") == "error":
+                pattern = {
+                    "type": "error",
+                    "pattern": log.get("error_type", "unknown"),
+                    "frequency": 1,
+                    "context": log.get("context", {}),
+                    "suggested_fix": self._suggest_fix(log),
+                }
+                error_patterns.append(pattern)
+
+        return error_patterns
+
+    def _extract_success_patterns(self, logs):
+        """成功パターンを抽出"""
+        success_patterns = []
+
+        # 簡易的な成功パターン検出
+        for log in logs:
+            if isinstance(log, dict) and log.get("status") == "success":
+                pattern = {
+                    "type": "success",
+                    "pattern": log.get("task_type", "unknown"),
+                    "frequency": 1,
+                    "context": log.get("context", {}),
+                    "best_practice": log.get("method", "standard"),
+                }
+                success_patterns.append(pattern)
+
+        return success_patterns
+
+    def _suggest_fix(self, error_log):
+        """エラーに対する修正提案を生成"""
+        error_type = error_log.get("error_type", "")
+
+        fix_suggestions = {
+            "ModuleNotFoundError": "必要なパッケージをインストールしてください",
+            "ImportError": "インポートパスを確認してください",
+            "AttributeError": "オブジェクトの属性を確認してください",
+            "TypeError": "データ型を確認してください",
+            "ValueError": "入力値を確認してください",
+        }
+
+        return fix_suggestions.get(error_type, "エラーの詳細を確認してください")
