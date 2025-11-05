@@ -91,5 +91,9 @@
   "tools/interfaces.py": "d09cd655f4063745194ab32e57ac69de",
   "scripts/copy_paste_validator.py": "8ae87a606b8b867a144a96a11faa23a7",
   "agents/self_healing/pattern_extractor.py": "800bdb42cb00cd5f7d13ddc239320597",
-  "agents/self_healing/knowledge_base_manager.py": "2510f62db6e32b4e45544a14dcd5115e"
+  "agents/self_healing/knowledge_base_manager.py": "2510f62db6e32b4e45544a14dcd5115e",
+  "mvp_v4/scripts/conversation_to_knowledge_v4.py": "0d65b6336510a290000fea5c5c26aadf",
+  "scripts/integrated_orchestrator_v26_complete.py": "5968277de9a98cfd9aef7f456a5222d5",
+  "core_agents/pm_agent_v30.py": "1002928e8493fb8711f0f3b535674437",
+  "core_agents/quality_feedback_loop.py": "5745dc1ffec8bb876f0c94d38c7bd46b"
 }

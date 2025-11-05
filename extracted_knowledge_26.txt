@@ -1,0 +1,61 @@
+【ナレッジ登録開始】
+タイトル: セキュリティヘッダーの設定不足問題
+カテゴリ: セキュリティ/Web
+重要度: 高
+
+【問題】
+何が起きた: 一般的なWeb脆弱性に対して防御策が不十分
+環境: Webアプリケーション, 本番環境
+
+【原因分析】
+根本原因: セキュリティヘッダーの設定漏れや不適切な設定
+直接原因: 
+1. Content Security Policy (CSP) の未設定
+2. XSS対策ヘッダーの不足
+3. HTTPSの強制が不十分
+
+【解決策】
+解決手法: 包括的なセキュリティヘッダーの設定
+実装例:
+from flask import Flask, Response
+
+app = Flask(__name__)
+
+@app.after_request
+def set_security_headers(response):
+    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+# またはミドルウェアを使用
+class SecurityHeadersMiddleware:
+    def __init__(self, app):
+        self.app = app
+    
+    def __call__(self, environ, start_response):
+        def custom_start_response(status, headers, exc_info=None):
+            headers.extend([
+                ('Content-Security-Policy', "default-src 'self'"),
+                ('X-Content-Type-Options', 'nosniff'),
+                ('X-Frame-Options', 'DENY')
+            ])
+            return start_response(status, headers, exc_info)
+        
+        return self.app(environ, custom_start_response)
+
+【学び】
+1. セキュリティヘッダーは多層防御の基本
+2. CSPは慎重に設定する
+3. 定期的なセキュリティスキャンを実施する
+
+【予防策】
+- セキュリティヘッダーの自動テスト
+- セキュリティスキャンツールの導入
+- 依存パッケージの脆弱性監視
+
+成功率: 95%
+【ナレッジ登録終了】

@@ -1,0 +1,50 @@
+【ナレッジ登録開始】
+タイトル: 非同期タスクの並行実行問題
+カテゴリ: Python/非同期処理
+重要度: 高
+
+【問題】
+何が起きた: 複数の非同期タスクを同時に実行すると競合状態が発生
+環境: asyncio, 並行処理環境
+
+【原因分析】
+根本原因: 共有リソースへの同時アクセスと適切な排他制御の欠如
+直接原因: 
+1. 非同期関数間で状態を共有している
+2. ロック機構を使用していない
+3. タスクの依存関係を考慮していない
+
+【解決策】
+解決手法: 非同期ロックの使用とタスクの適切な分離
+実装例:
+import asyncio
+
+# 非同期ロックの使用
+lock = asyncio.Lock()
+
+async def safe_operation():
+    async with lock:
+        # クリティカルセクション
+        await shared_resource.update()
+
+# タスクの分離
+async def main():
+    # 独立したタスクは並行実行
+    task1 = asyncio.create_task(independent_operation1())
+    task2 = asyncio.create_task(independent_operation2())
+    
+    # 依存タスクは順次実行または適切に調整
+    await asyncio.gather(task1, task2)
+
+【学び】
+1. 共有リソースには非同期ロックを使用する
+2. 独立したタスクは並行実行、依存タスクは調整する
+3. デッドロックに注意する
+
+【予防策】
+- 共有状態を最小限に抑える
+- ロックの取得順序を一貫させる
+- タイムアウト設定でデッドロックを防止
+
+成功率: 90%
+【ナレッジ登録終了】

@@ -1,0 +1,3 @@
+content = '''
+multi-line string
+'''

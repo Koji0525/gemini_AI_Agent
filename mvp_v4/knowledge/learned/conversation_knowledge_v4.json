@@ -1,0 +1,754 @@
+[
+  {
+    "scenario": "await構文のコンテキストエラー",
+    "cause": "根本原因: 非同期関数の呼び出しコンテキストが不適切",
+    "solution": "解決手法: 適切な非同期コンテキストの確保\n直接原因:\n  1. 非同期関数を同期コンテキストで呼び出した\n  2. イベントループの管理が不適切\n実装例:\n# 正しい呼び出し方\nasync def main():\n    result = await async_function()\n\n# 実行\nasyncio.run(main())",
+    "learnings": [
+      "非同期関数はasyncコンテキスト内でawaitする",
+      "トップレベルではasyncio.run()を使用する",
+      "イベントループのライフサイクルを理解する"
+    ],
+    "prevention": [
+      "非同期関数の呼び出し規約を文書化",
+      "コードレビューでコンテキストを確認",
+      "非同期テストの実施"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "非同期関数の構文エラー",
+      "category": "Python/非同期処理",
+      "priority": "高",
+      "environment": "Python 3.8+, asyncio環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T10:41:17.928513"
+    }
+  },
+  {
+    "scenario": "await構文のコンテキストエラー",
+    "cause": "根本原因: 非同期関数の呼び出しコンテキストが不適切",
+    "solution": "解決手法: 適切な非同期コンテキストの確保\n直接原因:\n  1. 非同期関数を同期コンテキストで呼び出した\n  2. イベントループの管理が不適切\n実装例:\n# 正しい呼び出し方\nasync def main():\n    result = await async_function()\n\n# 実行\nasyncio.run(main())",
+    "learnings": [
+      "非同期関数はasyncコンテキスト内でawaitする",
+      "トップレベルではasyncio.run()を使用する",
+      "イベントループのライフサイクルを理解する"
+    ],
+    "prevention": [
+      "非同期関数の呼び出し規約を文書化",
+      "コードレビューでコンテキストを確認",
+      "非同期テストの実施"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "非同期関数の構文エラー",
+      "category": "Python/非同期処理",
+      "priority": "高",
+      "environment": "Python 3.8+, asyncio環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T10:54:32.206480"
+    }
+  },
+  {
+    "scenario": "integrated_orchestrator_v27_loop3_integration.pyで構文エラー発生",
+    "cause": "根本原因: 正規表現置換時に制御文字とf-stringの改行文字が不正に処理された",
+    "solution": "解決手法: 不可視文字除去とstr.replace()での確実な置換\n直接原因:\n  1. f-string内の\\nがエスケープされず未終了文字列エラー\n  2. 不可視文字U+0001がコードに混入\n  3. ヒアドキュメント内での文字列処理が不適切\n実装例:\n# 不可視文字を除去\ncontent = ''.join(char for char in content if ord(char) >= 32 or char in '\\n\\t')\n\n# 正規表現を使わず確実に置換\ncontent = content.replace('import time\\n', 'import time\\nfrom agents.self_healing.self_learning_pipeline import SelfLearningPipeline\\n')",
+    "learnings": [
+      "正規表現置換よりstr.replace()の方が確実",
+      "ヒアドキュメント内では制御文字に注意",
+      "構文チェックを各ステップで実施する"
+    ],
+    "prevention": [
+      "コード生成時は不可視文字除去処理を追加",
+      "正規表現より単純な文字列置換を優先",
+      "py_compileで構文チェックを自動化"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "f-string構文エラーと不可視文字問題",
+      "category": "Python/デバッグ",
+      "priority": "高",
+      "environment": "Python 3.12, asyncio環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:09:18.028983"
+    }
+  },
+  {
+    "scenario": "get_all_values()メソッドが存在せずナレッジベース確認に失敗",
+    "cause": "根本原因: GoogleSheetsManagerの実装が想定と異なり最小限のメソッドのみ提供",
+    "solution": "解決手法: 利用可能メソッドの調査と手動確認による代替\n直接原因:\n  1. get_all_values()ではなくread_range()が正しいメソッド\n  2. 非同期メソッドのインターフェースが不明確\n  3. ドキュメントと実装の不一致\n実装例:\n# 利用可能メソッドの調査\nmethods = [m for m in dir(GoogleSheetsManager) if not m.startswith('_')]\nget_methods = [m for m in methods if 'get' in m.lower() or 'read' in m.lower()]\n\n# 手動確認による代替\necho \"https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit\"",
+    "learnings": [
+      "実際のメソッドをdir()で確認する重要性",
+      "APIラッパーは最小限の実装の場合がある",
+      "手動確認も有効な代替手段"
+    ],
+    "prevention": [
+      "新しいクラス使用時はメソッド一覧を確認",
+      "フォールバックとして手動確認方法を準備",
+      "インターフェース契約テストの作成"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "GoogleSheetsManagerメソッド不一致問題",
+      "category": "Python/API統合",
+      "priority": "中",
+      "environment": "Google Sheets API, gspread非同期環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:09:18.115833"
+    }
+  },
+  {
+    "scenario": "knowledge_baseシートが重複だらけの過去ログで実用的ではない",
+    "cause": "根本原因: ログをそのまま蓄積するだけで品質管理と重複排除が行われていない",
+    "solution": "解決手法: actionable_knowledge新シート作成と品質管理プロセスの導入\n直接原因:\n  1. 生ログをナレッジとして誤って扱っている\n  2. 重複排除メカニズムがない\n  3. 実用的な形式に変換する処理がない\n実装例:\nclass KnowledgeExtractor:\n    async def extract_actionable_knowledge(self):\n        # 生ログから実用的ナレッジを抽出\n        raw_logs = await self.sheets.read_range(\"knowledge_base\", \"A2:F1500\")\n        \n        # タスクタイプごとにグループ化と重複排除\n        grouped = defaultdict(list)\n        for row in raw_logs:\n            task_type = row[2] if len(row) > 2 else \"unknown\"\n            grouped[task_type].append(row)",
+    "learnings": [
+      "生ログと実用ナレッジは分離すべき",
+      "重複排除はナレッジ品質の基本",
+      "データ量より質が重要"
+    ],
+    "prevention": [
+      "ナレッジ登録時に品質チェックを実施",
+      "定期的なナレッジメンテナンスを計画",
+      "使用頻度の低いナレッジはアーカイブ"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "ナレッジベースの品質問題と再設計",
+      "category": "システム設計/データ管理",
+      "priority": "高",
+      "environment": "Google Sheets, 1,400件のナレッジ蓄積",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:09:18.203220"
+    }
+  },
+  {
+    "scenario": "file_version_manager.pyの昇格機能が変数を展開せず失敗",
+    "cause": "根本原因: ファイルバージョン管理ツールのテンプレート文字列が未展開",
+    "solution": "解決手法: 手動でのファイルコピーによる確実な昇格\n直接原因:\n  1. フォーマット文字列のバグ\n  2. 出力メッセージ内の{変数}がそのまま表示\n  3. プロモーション後のファイル確認が不十分\n実装例:\n# 手動昇格スクリプト\ncp scripts/integrated_orchestrator_v27_loop3_integration.py \\\n   scripts/integrated_orchestrator.py\n\n# バックアップ作成\nBACKUP_DIR=\"_BACKUP/$(date +%Y%m%d_%H%M%S)_manual\"\nmkdir -p \"$BACKUP_DIR\"\ncp scripts/integrated_orchestrator.py \"$BACKUP_DIR/\"",
+    "learnings": [
+      "自動化ツールも完全ではないことを認識",
+      "手動プロセスも重要なバックアップ手段",
+      "昇格後の動作確認が必須"
+    ],
+    "prevention": [
+      "重要な変更は手動確認を併用",
+      "バックアップ体制を常に維持",
+      "ツールの出力を詳細に監視"
+    ],
+    "success_rate": 92,
+    "metadata": {
+      "title": "本番昇格プロセスの手動対応",
+      "category": "バージョン管理/デプロイ",
+      "priority": "中",
+      "environment": "Pythonファイルバージョン管理システム",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:09:18.291871"
+    }
+  },
+  {
+    "scenario": "非同期メソッドを同期コンテキストで呼び出してエラー発生",
+    "cause": "根本原因: 非同期関数の実行コンテキストが適切でない",
+    "solution": "解決手法: 適切な非同期コンテキストの確保と実行\n直接原因:\n  1. async関数をawaitせずに呼び出した\n  2. イベントループの管理が不適切\n  3. 非同期コンテキスト外での呼び出し\n実装例:\n# 正しい非同期呼び出し\nasync def main():\n    result = await async_function()\n\n# トップレベルでの実行\nasyncio.run(main())",
+    "learnings": [
+      "非同期関数はasyncコンテキスト内でawaitする",
+      "トップレベルではasyncio.run()を使用する",
+      "イベントループのライフサイクルを理解する"
+    ],
+    "prevention": [
+      "非同期関数の呼び出し規約を文書化",
+      "コードレビューでコンテキストを確認",
+      "非同期テストの実施"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "非同期メソッドの呼び出しコンテキストエラー",
+      "category": "Python/非同期処理",
+      "priority": "高",
+      "environment": "Python 3.8+, asyncio環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:35.755660"
+    }
+  },
+  {
+    "scenario": "dotenv.load_dotenv()でAssertionError発生",
+    "cause": "根本原因: ヒアドキュメント内でload_dotenv()を呼ぶとフレームスタック参照に失敗",
+    "solution": "解決手法: os.getenv()で直接環境変数を取得\n直接原因:\n  1. ヒアドキュメントの実行コンテキスト問題\n  2. フレームバックがNoneになる状況\n  3. 環境変数読み込みのタイミング問題\n実装例:\n# 問題のある方法\nfrom dotenv import load_dotenv\nload_dotenv()  # AssertionError発生\n\n# 解決策\nimport os\nspreadsheet_id = os.getenv(\"SPREADSHEET_ID\")",
+    "learnings": [
+      "ヒアドキュメント内では一部の関数が動作しない",
+      "環境変数は直接取得も有効な手段",
+      "コンテキストに依存する関数は注意が必要"
+    ],
+    "prevention": [
+      "ヒアドキュメント内での複雑な関数呼び出しを避ける",
+      "環境変数取得はシンプルな方法を優先",
+      "エラーハンドリングを強化"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "環境変数読み込みのAssertionError",
+      "category": "Python/環境設定",
+      "priority": "中",
+      "environment": "Python 3.12, ヒアドキュメント内",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:35.841959"
+    }
+  },
+  {
+    "scenario": "_completeサフィックス付きファイルがバージョン番号抽出に失敗",
+    "cause": "根本原因: ファイル名の命名規則がバージョン抽出ロジックと一致しない",
+    "solution": "解決手法: 手動でのバージョンコピーと命名規則の統一\n直接原因:\n  1. _completeサフィックスがバージョン正規表現とマッチしない\n  2. バージョン番号抽出パターンが限定的\n  3. 命名規則の一貫性がない\n実装例:\n# 手動でのバージョンコピー\ncp scripts/integrated_orchestrator_v26_complete.py \\\n   scripts/integrated_orchestrator_v27_loop3_integration.py\n\n# 命名規則の統一\n# 良い例: integrated_orchestrator_v27.py\n# 悪い例: integrated_orchestrator_v27_loop3_integration_complete.py",
+    "learnings": [
+      "命名規則はツールの仕様に合わせる",
+      "複雑なサフィックスは避ける",
+      "手動操作も重要なワークアラウンド"
+    ],
+    "prevention": [
+      "ファイル命名規則を文書化",
+      "バージョン管理ツールの仕様を理解",
+      "定期的な命名規則のレビュー"
+    ],
+    "success_rate": 88,
+    "metadata": {
+      "title": "ファイルバージョン管理の命名規則問題",
+      "category": "バージョン管理/命名規則",
+      "priority": "中",
+      "environment": "file_version_manager.py, 自動バージョン管理システム",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:35.930501"
+    }
+  },
+  {
+    "scenario": "ナレッジ検索で関連性の低い結果が返される",
+    "cause": "根本原因: 単純なキーワードマッチでは文脈を考慮できない",
+    "solution": "解決手法: 重み付きスコア計算と文脈ベースのマッチング\n直接原因:\n  1. タスクタイプとコンテキストの関連性計算が不十分\n  2. キーワード重み付けが適切でない\n  3. 類似度計算アルゴリズムが簡素すぎる\n実装例:\n# 改善された類似度計算\ndef calculate_similarity_score(task_type, keywords, knowledge):\n    score = 0\n    \n    # タスクタイプ一致（重み: 10点）\n    if task_type and task_type.lower() in knowledge['type'].lower():\n        score += 10\n    \n    # キーワードコンテキスト一致（重み: 5点）\n    for keyword in keywords:\n        if keyword and keyword.lower() in knowledge['context'].lower():\n            score += 5\n    \n    # パターン名一致（重み: 3点）\n    for keyword in keywords:\n        if keyword and keyword.lower() in knowledge['pattern'].lower():\n            score += 3\n    \n    return score",
+    "learnings": [
+      "類似度計算は重み付けが重要",
+      "文脈情報を活用することで精度向上",
+      "単純マッチより複合的な評価が有効"
+    ],
+    "prevention": [
+      "類似度アルゴリズムの定期的な評価",
+      "検索結果の品質モニタリング",
+      "ユーザーフィードバックの収集"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "ナレッジ検索機能の類似度計算問題",
+      "category": "アルゴリズム/検索システム",
+      "priority": "高",
+      "environment": "ナレッジベース検索システム, 類似度計算",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:36.018415"
+    }
+  },
+  {
+    "scenario": "学習サイクルのトリガー条件が非効率的",
+    "cause": "根本原因: 固定間隔学習では状況変化に即応できない",
+    "solution": "解決手法: 動的学習トリガーと閾値の最適化\n直接原因:\n  1. 6時間間隔では新しいパターン検出が遅い\n  2. エラー閾値50件が高すぎる\n  3. 緊急対応の5回連続エラーも反応が遅い\n実装例:\n# 改善された学習トリガー条件\nasync def _run_learning_loop(self):\n    while self.running:\n        # 条件1: 新規エラー30件（50→30に短縮）\n        if self.error_count >= 30:\n            await self.self_learning.run_learning_cycle()\n            self.error_count = 0\n        \n        # 条件2: 3時間経過（6時間→3時間に短縮）\n        elif time.time() - self.last_learning_time >= 10800:\n            await self.self_learning.run_learning_cycle()\n            self.last_learning_time = time.time()\n        \n        # 条件3: 3回連続エラー（5回→3回に短縮）\n        elif self.consecutive_errors >= 3:\n            await self.self_learning.run_learning_cycle()\n            self.consecutive_errors = 0\n        \n        await asyncio.sleep(60)",
+    "learnings": [
+      "学習頻度はデータ量と変化速度に応じて調整",
+      "閾値は実際の運用データで最適化する",
+      "動的な調整メカニズムが重要"
+    ],
+    "prevention": [
+      "学習効果の定量的な測定",
+      "トリガー条件の定期的な見直し",
+      "A/Bテストでのパラメータ最適化"
+    ],
+    "success_rate": 80,
+    "metadata": {
+      "title": "自動学習トリガーの最適化問題",
+      "category": "機械学習/最適化",
+      "priority": "中",
+      "environment": "自律学習システム, 6時間間隔学習",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:36.109939"
+    }
+  },
+  {
+    "scenario": "タスク実行時に過去の成功ナレッジを参照せず非効率的な実行",
+    "cause": "根本原因: タスク実行フローにナレッジ参照ステップが組み込まれていない",
+    "solution": "解決手法: タスク実行前の自動ナレッジ検索統合\n直接原因:\n  1. execute_single_taskにナレッジ検索機能なし\n  2. 過去の成功パターンを活用する仕組みがない\n  3. ナレッジベースとの連携が不十分\n実装例:\nasync def execute_single_task(self, task):\n    # ナレッジ検索機能の追加\n    task_type = task.get('required_role', '')\n    keywords = [task.get('task_name', ''), task.get('description', '')]\n    \n    if hasattr(self, 'kb_manager') and self.kb_manager:\n        knowledge = await self.kb_manager.search_relevant_knowledge(\n            task_type=task_type, keywords=keywords)\n        \n        if knowledge:\n            task['_knowledge_ref'] = knowledge\n            print(f\"📚 ナレッジ活用: {knowledge.get('pattern_name', 'N/A')}\")",
+    "learnings": [
+      "ナレッジは蓄積だけでなく活用が重要",
+      "タスク実行フローにナレッジ参照を組み込む",
+      "過去の成功体験を現在の作業に活かす"
+    ],
+    "prevention": [
+      "全てのタスク実行でナレッジ参照を義務化",
+      "ナレッジ活用率の計測と改善",
+      "ナレッジ品質の継続的な向上"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "タスク実行前のナレッジ参照漏れ問題",
+      "category": "システム設計/最適化",
+      "priority": "高",
+      "environment": "タスク実行システム, ナレッジベース",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:36.198266"
+    }
+  },
+  {
+    "scenario": "Phase 1完了後のPhase 2計画が具体的な実装タスクに落とし込めていない",
+    "cause": "根本原因: 高レベルの目標から具体的な実装タスクへの分解が不十分",
+    "solution": "解決手法: 具体的な実装タスクとスケジュールへの分解\n直接原因:\n  1. 目標設定が抽象的で測定可能でない\n  2. 実装タスクの優先順位付けが明確でない\n  3. スケジュールと担当責任が不明確\n実装例:\n# Phase 2実装計画の具体化\nPhase 2目標:\n- タスク成功率: 90.3% → 96% (+5.7pt)\n- ナレッジ活用率: 0% → 70% (+70pt)\n- 自動修復率: 0% → 50% (+50pt)\n\n実装タスク:\n1. Task 1: ナレッジ検索機能の実装 (11/4-11/5)\n2. Task 2: パターン抽出頻度の強化 (11/6)\n3. Task 3: 類似度ベースのナレッジ検索 (11/8-11/11)",
+    "learnings": [
+      "目標は測定可能な数値で設定する",
+      "実装タスクは具体的な期間と担当を明確に",
+      "優先順位付けでリソース配分を最適化"
+    ],
+    "prevention": [
+      "フェーズ移行時に詳細な実装計画を作成",
+      "定期的な進捗確認と計画見直し",
+      "目標達成度の定量的な測定"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "Phase移行時の計画立案問題",
+      "category": "プロジェクト管理/計画立案",
+      "priority": "中",
+      "environment": "マルチフェーズ開発プロジェクト",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:36.286107"
+    }
+  },
+  {
+    "scenario": "ヒアドキュメント内でのコード生成時にエスケープ文字が不正処理される",
+    "cause": "根本原因: ネストされた文字列処理でエスケープシーケンスが二重処理される",
+    "solution": "解決手法: raw文字列の使用と明示的なエスケープ処理\n直接原因:\n  1. ヒアドキュメント内の\\nが実際の改行として解釈される\n  2. コード生成時のインデントが崩れる\n  3. 特殊文字のエスケープが適切でない",
+    "learnings": [],
+    "prevention": [],
+    "success_rate": 0,
+    "metadata": {
+      "title": "コード生成時のエスケープ処理問題",
+      "category": "コード生成/文字列処理",
+      "priority": "高",
+      "environment": "Pythonヒアドキュメント, コード生成スクリプト",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:13:36.736311"
+    }
+  },
+  {
+    "scenario": "ヒアドキュメント内でPythonコードを生成する際に構文エラーが発生",
+    "cause": "根本原因: ヒアドキュメントの終了区切り文字とコード内の文字列が衝突",
+    "solution": "解決手法: 一意の区切り文字使用と適切なエスケープ\n直接原因:\n  1. EOFとコード内の文字列が干渉\n  2. インデントの不整合\n  3. 特殊文字のエスケープ不足",
+    "learnings": [],
+    "prevention": [],
+    "success_rate": 0,
+    "metadata": {
+      "title": "ヒアドキュメント内の構文エラー問題",
+      "category": "Bash/スクリプト",
+      "priority": "中",
+      "environment": "Bashスクリプト, Pythonコード生成",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:58.633896"
+    }
+  },
+  {
+    "scenario": "複数行テキストからの情報抽出で正規表現が期待通りに動作しない",
+    "cause": "根本原因: 正規表現フラグとパターン設計が不適切",
+    "solution": "解決手法: 適切なフラグ設定と非貪欲マッチの使用\n直接原因:\n  1. DOTALLフラグがないため改行を跨いでマッチしない\n  2. 貪欲マッチで意図しない範囲を取得\n  3. キャプチャグループの設計が不十分\n実装例:\n# 改善前\nmatch = re.search(r'開始(.*)終了', text)\n\n# 改善後\nmatch = re.search(r'開始(.*?)終了', text, re.DOTALL)\n\n# または複数行モード\nmatch = re.search(r'開始(.*?)終了', text, re.MULTILINE | re.DOTALL)",
+    "learnings": [
+      "複数行テキストではDOTALLフラグが重要",
+      "貪欲マッチより非貪欲マッチが安全",
+      "キャプチャグループは最小限に"
+    ],
+    "prevention": [
+      "正規表現テストツールでの事前確認",
+      "エッジケースでのテスト実施",
+      "パターンの単純化を心がける"
+    ],
+    "success_rate": 88,
+    "metadata": {
+      "title": "正規表現パターンのマッチング失敗問題",
+      "category": "Python/正規表現",
+      "priority": "中",
+      "environment": "Python reモジュール, 複数行テキスト処理",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:58.734971"
+    }
+  },
+  {
+    "scenario": "モジュールインポート時にModuleNotFoundErrorが発生",
+    "cause": "根本原因: パス設定とモジュール探索パスの不備",
+    "solution": "解決手法: 明示的なパス追加と適切なインポート文\n直接原因:\n  1. sys.pathへのパス追加忘れ\n  2. 相対パスと絶対パスの混在\n  3. __init__.pyファイルの不足\n実装例:\n# パスを明示的に追加\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))\n\n# 絶対インポートの使用\nfrom package.module import ClassName\n\n# または相対インポート\nfrom .sibling_module import function_name",
+    "learnings": [
+      "プロジェクトルートをsys.pathに追加する",
+      "絶対インポートと相対インポートを使い分ける",
+      "__init__.pyでパッケージを明示する"
+    ],
+    "prevention": [
+      "プロジェクトのルートパスを環境変数で管理",
+      "インポートエラーの早期検出",
+      "パス設定を共通化"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "モジュールインポートパス問題",
+      "category": "Python/モジュール管理",
+      "priority": "高",
+      "environment": "Python 3.8+, 複数ディレクトリ構造",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:58.818603"
+    }
+  },
+  {
+    "scenario": "複数の非同期タスクを同時に実行すると競合状態が発生",
+    "cause": "根本原因: 共有リソースへの同時アクセスと適切な排他制御の欠如",
+    "solution": "解決手法: 非同期ロックの使用とタスクの適切な分離\n直接原因:\n  1. 非同期関数間で状態を共有している\n  2. ロック機構を使用していない\n  3. タスクの依存関係を考慮していない\n実装例:\nimport asyncio\n\n# 非同期ロックの使用\nlock = asyncio.Lock()\n\nasync def safe_operation():\n    async with lock:\n        # クリティカルセクション\n        await shared_resource.update()\n\n# タスクの分離\nasync def main():\n    # 独立したタスクは並行実行\n    task1 = asyncio.create_task(independent_operation1())\n    task2 = asyncio.create_task(independent_operation2())\n    \n    # 依存タスクは順次実行または適切に調整\n    await asyncio.gather(task1, task2)",
+    "learnings": [
+      "共有リソースには非同期ロックを使用する",
+      "独立したタスクは並行実行、依存タスクは調整する",
+      "デッドロックに注意する"
+    ],
+    "prevention": [
+      "共有状態を最小限に抑える",
+      "ロックの取得順序を一貫させる",
+      "タイムアウト設定でデッドロックを防止"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "非同期タスクの並行実行問題",
+      "category": "Python/非同期処理",
+      "priority": "高",
+      "environment": "asyncio, 並行処理環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:58.928453"
+    }
+  },
+  {
+    "scenario": "環境変数の読み込み失敗やセキュリティ問題が発生",
+    "cause": "根本原因: 環境変数の管理方法が一貫していない",
+    "solution": "解決手法: 階層的な環境変数管理とセキュアな取り扱い\n直接原因:\n  1. .envファイルのバージョン管理\n  2. デフォルト値の設定不足\n  3. 機密情報の平文保存\n実装例:\nimport os\nfrom typing import Optional\n\ndef get_env_var(key: str, default: Optional[str] = None) -> str:\n    value = os.getenv(key)\n    if value is None:\n        if default is None:\n            raise ValueError(f\"環境変数 {key} が設定されていません\")\n        return default\n    return value\n\n# 使用例\nDATABASE_URL = get_env_var('DATABASE_URL')\nAPI_KEY = get_env_var('API_KEY', 'default_key')\n\n# .env.exampleの提供\n# .envは.gitignoreに追加",
+    "learnings": [
+      "環境変数には適切なデフォルト値を設定する",
+      "機密情報は環境変数で管理する",
+      ".envファイルはバージョン管理しない"
+    ],
+    "prevention": [
+      "環境変数の検証を実装する",
+      "機密情報の漏洩防止対策",
+      "環境ごとの設定を分離する"
+    ],
+    "success_rate": 92,
+    "metadata": {
+      "title": "環境変数管理のベストプラクティス",
+      "category": "環境設定/セキュリティ",
+      "priority": "中",
+      "environment": "複数環境(開発/本番), 機密情報管理",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.016317"
+    }
+  },
+  {
+    "scenario": "予期しない例外でプログラムがクラッシュする",
+    "cause": "根本原因: 例外の捕捉範囲が狭すぎるか適切でない",
+    "solution": "解決手法: 適切な例外階層の捕捉とリソース管理\n直接原因:\n  1. 具体的な例外のみ捕捉している\n  2. 例外情報のロギング不足\n  3. リソース解放の保証がない\n実装例:\nimport logging\nfrom contextlib import contextmanager\n\n# 適切な例外処理\ntry:\n    # リソースを使用する操作\n    with open('file.txt', 'r') as f:\n        content = f.read()\nexcept FileNotFoundError as e:\n    logging.warning(f\"ファイルが見つかりません: {e}\")\n    # 代替処理\n    content = \"デフォルトコンテンツ\"\nexcept Exception as e:\n    logging.error(f\"予期しないエラー: {e}\")\n    raise\n\n# コンテキストマネージャーの使用\n@contextmanager\ndef managed_resource(*args, **kwds):\n    resource = acquire_resource(*args, **kwds)\n    try:\n        yield resource\n    finally:\n        release_resource(resource)",
+    "learnings": [
+      "例外は適切なレベルで捕捉する",
+      "リソース解放はfinallyで保証する",
+      "エラー情報は適切にログに記録する"
+    ],
+    "prevention": [
+      "例外の種類に応じた処理を実装する",
+      "コンテキストマネージャーを活用する",
+      "エラーログの監視を設定する"
+    ],
+    "success_rate": 94,
+    "metadata": {
+      "title": "エラーハンドリングの不足問題",
+      "category": "Python/例外処理",
+      "priority": "高",
+      "environment": "本番環境, ユーザー入力処理",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.105772"
+    }
+  },
+  {
+    "scenario": "設定値がコード中に散在し変更が困難",
+    "cause": "根本原因: 設定の一元管理ができていない",
+    "solution": "解決手法: 設定クラスの導入と環境ごとの設定ファイル\n直接原因:\n  1. ハードコードされた設定値\n  2. 環境ごとの設定切り替えが不便\n  3. 設定の検証メカニズムがない\n実装例:\nfrom pydantic import BaseSettings\nfrom typing import List\n\nclass Settings(BaseSettings):\n    app_name: str = \"My App\"\n    database_url: str\n    allowed_hosts: List[str] = [\"localhost\"]\n    \n    class Config:\n        env_file = \".env\"\n        env_file_encoding = \"utf-8\"\n\n# 使用例\nsettings = Settings()\n\n# 環境ごとの設定\n# .env.development, .env.production など",
+    "learnings": [
+      "設定はコードから分離する",
+      "環境変数と設定ファイルを組み合わせる",
+      "設定値の検証を実装する"
+    ],
+    "prevention": [
+      "設定のスキーマ定義を実施する",
+      "環境ごとの設定ファイルを準備する",
+      "設定値の変更履歴を管理する"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "設定ファイルの管理問題",
+      "category": "設定管理/保守性",
+      "priority": "中",
+      "environment": "複数環境, 設定値の頻繁な変更",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.201093"
+    }
+  },
+  {
+    "scenario": "デバッグ時に十分な情報が得られない、またはログが多すぎる",
+    "cause": "根本原因: ロギングレベルと出力先の設定が不適切",
+    "solution": "解決手法: 階層的なロギング設定と構造化ログ\n直接原因:\n  1. 適切なロギングレベルが設定されていない\n  2. ログのフォーマットが統一されていない\n  3. 重要な情報がログに記録されていない\n実装例:\nimport logging\nimport sys\n\ndef setup_logging(level=logging.INFO):\n    logger = logging.getLogger()\n    logger.setLevel(level)\n    \n    # フォーマットの設定\n    formatter = logging.Formatter(\n        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'\n    )\n    \n    # コンソールハンドラー\n    console_handler = logging.StreamHandler(sys.stdout)\n    console_handler.setFormatter(formatter)\n    logger.addHandler(console_handler)\n    \n    # ファイルハンドラー（必要に応じて）\n    file_handler = logging.FileHandler('app.log')\n    file_handler.setFormatter(formatter)\n    logger.addHandler(file_handler)\n\n# 使用例\nsetup_logging(logging.DEBUG)  # 開発環境\n# setup_logging(logging.INFO)  # 本番環境",
+    "learnings": [
+      "環境に応じてロギングレベルを調整する",
+      "ログメッセージは検索しやすい形式にする",
+      "パフォーマンス影響を考慮する"
+    ],
+    "prevention": [
+      "ロギング設定を一元管理する",
+      "ログローテーションを設定する",
+      "重要な操作は必ずログに記録する"
+    ],
+    "success_rate": 88,
+    "metadata": {
+      "title": "ロギング設定の不備問題",
+      "category": "ロギング/監視",
+      "priority": "中",
+      "environment": "本番環境, デバッグ環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.303631"
+    }
+  },
+  {
+    "scenario": "本番環境で想定外のバグが発生、テストでカバーされていなかった",
+    "cause": "根本原因: テスト戦略とカバレッジ目標が不十分",
+    "solution": "解決手法: 多層的なテスト戦略とカバレッジ計測\n直接原因:\n  1. 単体テストのみで結合テストが不足\n  2. エッジケースのテスト不足\n  3. テストデータのバリエーション不足\n実装例:\nimport pytest\nfrom unittest.mock import Mock, patch\n\n# 単体テスト\ndef test_unit_function():\n    assert add(2, 3) == 5\n\n# 結合テスト\ndef test_integration():\n    with patch('module.external_api') as mock_api:\n        mock_api.return_value = \"mock_response\"\n        result = main_function()\n        assert result == \"expected\"\n\n# カバレッジ計測\n# pytest --cov=myapp tests/",
+    "learnings": [
+      "単体テスト、結合テスト、E2Eテストを組み合わせる",
+      "カバレッジ目標を設定して計測する",
+      "モックとスタブを適切に使用する"
+    ],
+    "prevention": [
+      "テストカバレッジの閾値を設定する",
+      "継続的インテグレーションでテストを自動化する",
+      "定期的にテスト戦略を見直す"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "テストカバレッジの不足問題",
+      "category": "テスト/品質保証",
+      "priority": "高",
+      "environment": "継続的インテグレーション環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.409148"
+    }
+  },
+  {
+    "scenario": "特定の操作で応答時間が遅く、ユーザー体験が悪化",
+    "cause": "根本原因: 非効率なアルゴリズムとリソース使用",
+    "solution": "解決手法: プロファイリングと最適化の実施\n直接原因:\n  1. N+1クエリ問題\n  2. メモリリーク\n  3. 不適切なキャッシュ戦略\n実装例:\nimport cProfile\nimport pstats\nfrom io import StringIO\n\n# プロファイリングの実施\ndef profile_function():\n    pr = cProfile.Profile()\n    pr.enable()\n    \n    # 対象の関数実行\n    target_function()\n    \n    pr.disable()\n    s = StringIO()\n    ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')\n    ps.print_stats()\n    print(s.getvalue())\n\n# データベースクエリの最適化\n# 例: N+1問題の解決\n# users = User.objects.all()  # 悪い例\n# for user in users:\n#     print(user.profile.name)\n    \n# users = User.objects.select_related('profile').all()  # 良い例",
+    "learnings": [
+      "計測せずに最適化しない",
+      "ボトルネックを特定してから対策する",
+      "キャッシュは適切に使用する"
+    ],
+    "prevention": [
+      "定期的なパフォーマンス監視",
+      "負荷テストの実施",
+      "コードレビューでのパフォーマンス考慮"
+    ],
+    "success_rate": 82,
+    "metadata": {
+      "title": "パフォーマンスボトルネック問題",
+      "category": "パフォーマンス/最適化",
+      "priority": "中",
+      "environment": "本番環境, 高負荷状況",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:17:59.499703"
+    }
+  },
+  {
+    "scenario": "データベース接続が枯渇し、アプリケーションが応答不能になる",
+    "cause": "根本原因: 接続プールの設定不備と接続リーク",
+    "solution": "解決手法: 接続プールの適切な設定と監視\n直接原因:\n  1. 接続の適切な解放が行われていない\n  2. プールサイズが小さすぎる\n  3. アイドル接続のタイムアウト設定がない\n実装例:\nimport psycopg2\nfrom psycopg2 import pool\n\n# 接続プールの作成\nconnection_pool = psycopg2.pool.SimpleConnectionPool(\n    minconn=1,\n    maxconn=10,\n    host='localhost',\n    database='mydb',\n    user='user',\n    password='password'\n)\n\n# 接続の取得と解放\ndef get_data():\n    conn = connection_pool.getconn()\n    try:\n        with conn.cursor() as cursor:\n            cursor.execute(\"SELECT * FROM table\")\n            return cursor.fetchall()\n    finally:\n        connection_pool.putconn(conn)",
+    "learnings": [
+      "接続は必ず適切に解放する",
+      "プールサイズは負荷に応じて調整する",
+      "接続状態を定期的に監視する"
+    ],
+    "prevention": [
+      "接続プールの使用を義務化",
+      "接続リークの検出ツールを導入",
+      "データベースの接続制限を理解する"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "データベース接続プール管理問題",
+      "category": "データベース/接続管理",
+      "priority": "高",
+      "environment": "高トラフィック環境, データベース接続制限",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:35:59.647396"
+    }
+  },
+  {
+    "scenario": "キャッシュとデータベース間でデータの不整合が発生",
+    "cause": "根本原因: キャッシュの更新戦略が不適切",
+    "solution": "解決手法: 適切なキャッシュ戦略と無効化パターン\n直接原因:\n  1. ライトスルー/ライトビハインド戦略の選択ミス\n  2. キャッシュ削除のタイミングが悪い\n  3. 複数インスタンス間でのキャッシュ同期不足\n実装例:\nimport redis\nfrom datetime import timedelta\n\n# Redisキャッシュの使用例\nr = redis.Redis(host='localhost', port=6379, db=0)\n\ndef get_user(user_id):\n    # キャッシュから取得を試みる\n    cached_user = r.get(f\"user:{user_id}\")\n    if cached_user:\n        return json.loads(cached_user)\n    \n    # キャッシュにない場合はDBから取得\n    user = db.get_user(user_id)\n    if user:\n        # キャッシュに保存（TTL設定）\n        r.setex(f\"user:{user_id}\", timedelta(hours=1), json.dumps(user))\n    \n    return user\n\ndef update_user(user_id, data):\n    # データベースを更新\n    db.update_user(user_id, data)\n    # キャッシュを無効化\n    r.delete(f\"user:{user_id}\")",
+    "learnings": [
+      "キャッシュ戦略はユースケースに合わせて選択する",
+      "TTLを設定して古いデータを自動削除する",
+      "更新時はキャッシュを無効化する"
+    ],
+    "prevention": [
+      "キャッシュヒット率を監視する",
+      "キャッシュキーの命名規則を統一する",
+      "キャッシュなしでも動作するようにする"
+    ],
+    "success_rate": 88,
+    "metadata": {
+      "title": "キャッシュの一貫性問題",
+      "category": "キャッシュ/データ整合性",
+      "priority": "高",
+      "environment": "分散システム, 複数インスタンス",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:35:59.739749"
+    }
+  },
+  {
+    "scenario": "外部APIのレート制限に引っかかりサービスが利用できなくなる",
+    "cause": "根本原因: API呼び出し頻度の制御が不十分",
+    "solution": "解決手法: レート制限の遵守と適切なリトライ戦略\n直接原因:\n  1. レート制限の把握不足\n  2. エクスポネンシャルバックオフの未実装\n  3. 一括処理での過剰な呼び出し\n実装例:\nimport time\nfrom functools import wraps\n\ndef rate_limited(max_per_second):\n    min_interval = 1.0 / max_per_second\n    def decorator(func):\n        last_time_called = 0.0\n        @wraps(func)\n        def rate_limited_function(*args, **kwargs):\n            nonlocal last_time_called\n            elapsed = time.time() - last_time_called\n            left_to_wait = min_interval - elapsed\n            if left_to_wait > 0:\n                time.sleep(left_to_wait)\n            ret = func(*args, **kwargs)\n            last_time_called = time.time()\n            return ret\n        return rate_limited_function\n    return decorator\n\n# 使用例\n@rate_limited(10)  # 1秒間に10回まで\ndef call_external_api():\n    # API呼び出し\n    pass",
+    "learnings": [
+      "外部APIのレート制限を必ず確認する",
+      "エクスポネンシャルバックオフを実装する",
+      "バッチ処理時は特に注意する"
+    ],
+    "prevention": [
+      "APIコールの監視とアラート設定",
+      "サンドボックス環境でのテスト",
+      "フォールバックメカニズムの準備"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "外部APIのレート制限問題",
+      "category": "API統合/レート制限",
+      "priority": "中",
+      "environment": "外部API連携, 高頻度呼び出し",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:35:59.828108"
+    }
+  },
+  {
+    "scenario": "一般的なWeb脆弱性に対して防御策が不十分",
+    "cause": "根本原因: セキュリティヘッダーの設定漏れや不適切な設定",
+    "solution": "解決手法: 包括的なセキュリティヘッダーの設定\n直接原因:\n  1. Content Security Policy (CSP) の未設定\n  2. XSS対策ヘッダーの不足\n  3. HTTPSの強制が不十分\n実装例:\nfrom flask import Flask, Response\n\napp = Flask(__name__)\n\n@app.after_request\ndef set_security_headers(response):\n    response.headers['Content-Security-Policy'] = \"default-src 'self'\"\n    response.headers['X-Content-Type-Options'] = 'nosniff'\n    response.headers['X-Frame-Options'] = 'DENY'\n    response.headers['X-XSS-Protection'] = '1; mode=block'\n    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'\n    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'\n    return response\n\n# またはミドルウェアを使用\nclass SecurityHeadersMiddleware:\n    def __init__(self, app):\n        self.app = app\n    \n    def __call__(self, environ, start_response):\n        def custom_start_response(status, headers, exc_info=None):\n            headers.extend([\n                ('Content-Security-Policy', \"default-src 'self'\"),\n                ('X-Content-Type-Options', 'nosniff'),\n                ('X-Frame-Options', 'DENY')\n            ])\n            return start_response(status, headers, exc_info)\n        \n        return self.app(environ, custom_start_response)",
+    "learnings": [
+      "セキュリティヘッダーは多層防御の基本",
+      "CSPは慎重に設定する",
+      "定期的なセキュリティスキャンを実施する"
+    ],
+    "prevention": [
+      "セキュリティヘッダーの自動テスト",
+      "セキュリティスキャンツールの導入",
+      "依存パッケージの脆弱性監視"
+    ],
+    "success_rate": 95,
+    "metadata": {
+      "title": "セキュリティヘッダーの設定不足問題",
+      "category": "セキュリティ/Web",
+      "priority": "高",
+      "environment": "Webアプリケーション, 本番環境",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:35:59.915385"
+    }
+  },
+  {
+    "scenario": "パスワードの平文保存や脆弱なハッシュ方式による情報漏洩",
+    "cause": "根本原因: パスワードセキュリティの基本原則の理解不足",
+    "solution": "解決手法: 安全なパスワードハッシュと適切な取り扱い\n直接原因:\n  1. パスワードの平文保存\n  2. 脆弱なハッシュアルゴリズムの使用\n  3. ソルトの不使用または不適切な使用\n実装例:\nimport bcrypt\nimport secrets\n\ndef hash_password(password: str) -> str:\n    # ソルトの生成とパスワードのハッシュ化\n    salt = bcrypt.gensalt()\n    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)\n    return hashed.decode('utf-8')\n\ndef verify_password(password: str, hashed: str) -> bool:\n    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))\n\ndef generate_secure_token(length=32):\n    # 暗号学的に安全なトークンの生成\n    return secrets.token_urlsafe(length)\n\n# パスワードポリシーの実施\ndef validate_password_strength(password: str) -> bool:\n    if len(password) < 8:\n        return False\n    # その他のバリデーションルール\n    return True",
+    "learnings": [
+      "パスワードは絶対に平文で保存しない",
+      "適切なハッシュアルゴリズムを使用する",
+      "ソルトは必ず使用する"
+    ],
+    "prevention": [
+      "定期的なセキュリティ監査の実施",
+      "パスワードポリシーの強制",
+      "多要素認証の導入検討"
+    ],
+    "success_rate": 96,
+    "metadata": {
+      "title": "パスワードの安全な取り扱い問題",
+      "category": "セキュリティ/認証",
+      "priority": "高",
+      "environment": "ユーザー認証システム, データベース",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:36:00.004219"
+    }
+  },
+  {
+    "scenario": "異なるタイムゾーン間で日付時刻の不整合が発生",
+    "cause": "根本原因: タイムゾーンの一貫性のない取り扱い",
+    "solution": "解決手法: タイムゾーンを意識した一貫した日付時刻処理\n直接原因:\n  1. ナイーブなdatetimeオブジェクトの使用\n  2. タイムゾーン情報の保存漏れ\n  3. クライアントとサーバー間のタイムゾーン不一致\n実装例:\nfrom datetime import datetime, timezone\nimport pytz\n\n# 現在時刻の取得（UTC）\nnow_utc = datetime.now(timezone.utc)\n\n# 特定のタイムゾーンへの変換\njst = pytz.timezone('Asia/Tokyo')\nnow_jst = now_utc.astimezone(jst)\n\n# 文字列として保存（ISOフォーマット）\ntimestamp_str = now_utc.isoformat()\n\n# 文字列からdatetimeへの変換\ndef parse_iso_timestamp(timestamp_str):\n    dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))\n    if dt.tzinfo is None:\n        dt = dt.replace(tzinfo=timezone.utc)\n    return dt\n\n# データベースでの保存\n# 常にUTCで保存し、表示時に変換する",
+    "learnings": [
+      "内部処理では常にUTCを使用する",
+      "タイムゾーン情報を保持する",
+      "表示時にのみローカルタイムゾーンに変換する"
+    ],
+    "prevention": [
+      "日付時刻処理の共通ライブラリを作成",
+      "タイムゾーン関連のテストを充実させる",
+      "ドキュメントでタイムゾーン方針を明確化"
+    ],
+    "success_rate": 90,
+    "metadata": {
+      "title": "日付時刻処理のタイムゾーン問題",
+      "category": "データ処理/日付時刻",
+      "priority": "中",
+      "environment": "国際化アプリケーション, 分散システム",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:36:00.093860"
+    }
+  },
+  {
+    "scenario": "悪意のあるファイルアップロードによるセキュリティ侵害",
+    "cause": "根本原因: ファイルアップロード時の適切な検証と制限の欠如",
+    "solution": "解決手法: 多層的なファイルアップロードセキュリティ対策\n直接原因:\n  1. ファイルタイプの検証不足\n  2. ファイルサイズ制限の不備\n  3. アップロードディレクトリの実行権限問題\n実装例:\nimport os\nimport magic\nfrom werkzeug.utils import secure_filename\n\nALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}\nMAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB\n\ndef allowed_file(filename):\n    return '.' in filename and \\\n           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS\n\ndef validate_file(file_storage):\n    # ファイルサイズチェック\n    file_storage.seek(0, os.SEEK_END)\n    file_size = file_storage.tell()\n    file_storage.seek(0)\n    \n    if file_size > MAX_FILE_SIZE:\n        raise ValueError(\"ファイルサイズが大きすぎます\")\n    \n    # ファイルタイプチェック\n    if not allowed_file(file_storage.filename):\n        raise ValueError(\"許可されていないファイル形式です\")\n    \n    # 実際のファイルタイプを確認\n    file_content = file_storage.read(1024)\n    file_storage.seek(0)\n    \n    file_type = magic.from_buffer(file_content, mime=True)\n    if not file_type.startswith(('image/', 'text/', 'application/pdf')):\n        raise ValueError(\"不正なファイル形式です\")\n    \n    # ファイル名のサニタイズ\n    filename = secure_filename(file_storage.filename)\n    \n    return filename",
+    "learnings": [
+      "ファイルアップロードは多層的に検証する",
+      "クライアント側とサーバー側の両方で検証する",
+      "アップロードファイルは実行権限なしで保存する"
+    ],
+    "prevention": [
+      "定期的なセキュリティ監査の実施",
+      "ファイルスキャン機能の導入",
+      "アップロードディレクトリの分離"
+    ],
+    "success_rate": 92,
+    "metadata": {
+      "title": "ファイルアップロードのセキュリティ問題",
+      "category": "セキュリティ/ファイル処理",
+      "priority": "高",
+      "environment": "ファイルアップロード機能, Webアプリケーション",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:36:00.187589"
+    }
+  },
+  {
+    "scenario": "長時間稼働でメモリ使用量が増加し続け、最終的にクラッシュ",
+    "cause": "根本原因: オブジェクトの参照が適切に解放されていない",
+    "solution": "解決手法: メモリ使用量の監視と適切なガベージコレクション\n直接原因:\n  1. 循環参照の存在\n  2. グローバル変数への不適切な参照\n  3. リソースの明示的解放不足\n実装例:\nimport gc\nimport tracemalloc\nimport psutil\nimport os\n\ndef monitor_memory():\n    process = psutil.Process(os.getpid())\n    return process.memory_info().rss / 1024 / 1024  # MB\n\ndef detect_memory_leaks():\n    # メモリ使用量のスナップショット取得\n    tracemalloc.start()\n    \n    # 対象の処理実行前\n    snapshot1 = tracemalloc.take_snapshot()\n    \n    # 対象の処理実行\n    target_operation()\n    \n    # 対象の処理実行後\n    snapshot2 = tracemalloc.take_snapshot()\n    \n    # メモリ使用量の比較\n    top_stats = snapshot2.compare_to(snapshot1, 'lineno')\n    \n    for stat in top_stats[:10]:\n        print(stat)\n    \n    tracemalloc.stop()\n\ndef clear_references():\n    # 明示的なガベージコレクション\n    gc.collect()\n    \n    # 循環参照の検出と解除\n    gc.set_debug(gc.DEBUG_LEAK)\n\n# 弱参照の使用\nimport weakref\n\nclass DataProcessor:\n    def __init__(self):\n        self._cache = weakref.WeakValueDictionary()",
+    "learnings": [
+      "定期的にメモリ使用量を監視する",
+      "循環参照を避ける設計をする",
+      "大きなデータ構造は適切に解放する"
+    ],
+    "prevention": [
+      "メモリ使用量のアラート設定",
+      "定期的なメモリプロファイリング",
+      "コードレビューでのメモリ管理確認"
+    ],
+    "success_rate": 85,
+    "metadata": {
+      "title": "メモリリークの検出と防止問題",
+      "category": "パフォーマンス/メモリ管理",
+      "priority": "高",
+      "environment": "長時間稼働サービス, 大量データ処理",
+      "format_version": "v4_simple",
+      "timestamp": "2025-11-05T11:36:00.277239"
+    }
+  }
+]
