@@ -1,11 +1,18 @@
-import asyncio
-import json
-import logging
-from pathlib import Path
-from typing import Dict, Optional
-from datetime import datetime
 import sys
-from pathlib import Path
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tools.sheets_validator import SheetsValidator
+from configuration.spreadsheet_schema import get_column_names
+
+import asyncio
+ json
+ logging
+from pathlib  Path
+from typing  Dict, Optional
+from datetime  datetime
+ sys
+from pathlib  Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -58,10 +65,10 @@ def determine_execution_type(task: dict) -> str:
     return "gemini"
 
 
-from configuration.config_utils import config, ErrorHandler
-from tools.sheets_manager import GoogleSheetsManager
-from browser_control.browser_controller import BrowserController
-from core_agents.pm_system_prompts import PM_SYSTEM_PROMPT
+from configuration.config_utils  config, ErrorHandler
+from tools.sheets_manager  GoogleSheetsManager
+from browser_control.browser_controller  BrowserController
+from core_agents.pm_system_prompts  PM_SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +207,7 @@ class PMAgent:
         except Exception as e:
             ErrorHandler.log_error(e, "タスク生成")
             raise
+        self.validator = SheetsValidator()
 
     def _parse_json_response(self, text: str) -> Optional[Dict]:
         """応答からJSON部分を抽出してパース（強化版）"""
@@ -215,7 +223,7 @@ class PMAgent:
             logger.info("=" * 60)
             logger.info(f"応答全体の長さ: {len(text)}文字")
 
-            import re
+             re
 
             # === パート3: パターン1 - ```json ... ``` 形式の検出 ===
             json_match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
@@ -310,7 +318,7 @@ class PMAgent:
         except Exception as e:
             # === パート11: 予期しない例外の処理 ===
             logger.error(f"❌ JSON解析で予期しないエラー: {e}")
-            import traceback
+             traceback
 
             logger.error(traceback.format_exc())
             return None
@@ -571,7 +579,7 @@ class PMAgent:
 
 async def main():
     """PM AI単体テスト用のメイン関数"""
-    import argparse
+     argparse
 
     # === パート1: 引数解析 ===
     parser = argparse.ArgumentParser(description="PM AI - タスク分解エージェント")
@@ -651,7 +659,7 @@ async def main():
     except Exception as e:
         # === パート13: 例外処理 ===
         logger.error(f"PM AI実行エラー: {e}")
-        import traceback
+         traceback
 
         traceback.print_exc()
 
