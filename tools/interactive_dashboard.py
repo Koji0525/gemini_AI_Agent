@@ -107,7 +107,9 @@ class InteractiveDashboard:
         try:
             import subprocess
 
-            result = subprocess.run([sys.executable, "tools/task_automation_engine.py"], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "tools/task_automation_engine.py"], capture_output=True, text=True
+            )
             print(result.stdout)
         except Exception as e:
             print(f"❌ エラー: {e}")
@@ -133,7 +135,9 @@ class InteractiveDashboard:
 
             if "status" in headers:
                 status_idx = headers.index("status")
-                statuses = [row[status_idx].lower() if len(row) > status_idx else "" for row in rows]
+                statuses = [
+                    row[status_idx].lower() if len(row) > status_idx else "" for row in rows
+                ]
 
                 from collections import Counter
 
@@ -160,7 +164,9 @@ class InteractiveDashboard:
         try:
             import subprocess
 
-            result = subprocess.run([sys.executable, "tools/real_pattern_learner.py"], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "tools/real_pattern_learner.py"], capture_output=True, text=True
+            )
             # 重要な部分のみ表示
             lines = result.stdout.split("\n")
             for line in lines:

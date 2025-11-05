@@ -150,7 +150,9 @@ class UnifiedInitializer:
                     kwargs[arg] = os.getenv("SPREADSHEET_ID")
                 elif arg in ["sheets_manager", "browser_controller"]:
                     # 依存関係の解決
-                    dep_class = "GoogleSheetsManager" if arg == "sheets_manager" else "BrowserController"
+                    dep_class = (
+                        "GoogleSheetsManager" if arg == "sheets_manager" else "BrowserController"
+                    )
                     kwargs[arg] = self.get(dep_class)
                 else:
                     # デフォルト値
@@ -199,7 +201,8 @@ class UnifiedInitializer:
                                     "line": i + 1,
                                     "class": class_name,
                                     "issue": f"引数不一致: 期待{expected_count}引数, 実際{args_count}引数",
-                                    "expected_args": pattern.required_args + list(pattern.optional_args.keys()),
+                                    "expected_args": pattern.required_args
+                                    + list(pattern.optional_args.keys()),
                                     "code_snippet": line,
                                 }
                             )

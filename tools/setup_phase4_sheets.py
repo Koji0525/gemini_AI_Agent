@@ -20,7 +20,8 @@ def setup_improvement_suggestions_sheet():
 
     config = ConfigLoader()
     sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE"),
     )
 
     spreadsheet = sheets.gc.open_by_key(sheets.spreadsheet_id)
@@ -53,7 +54,11 @@ def setup_improvement_suggestions_sheet():
 
         worksheet.update("A1:O1", [headers])
         worksheet.format(
-            "A1:O1", {"textFormat": {"bold": True}, "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9}}
+            "A1:O1",
+            {
+                "textFormat": {"bold": True},
+                "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9},
+            },
         )
         print("✅ improvement_suggestions シート作成完了")
 
@@ -82,7 +87,11 @@ def setup_improvement_suggestions_sheet():
 
         worksheet.update("A1:L1", [headers])
         worksheet.format(
-            "A1:L1", {"textFormat": {"bold": True}, "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9}}
+            "A1:L1",
+            {
+                "textFormat": {"bold": True},
+                "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9},
+            },
         )
         print("✅ ab_test_results シート作成完了")
 
@@ -109,7 +118,11 @@ def setup_improvement_suggestions_sheet():
 
         worksheet.update("A1:J1", [headers])
         worksheet.format(
-            "A1:J1", {"textFormat": {"bold": True}, "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9}}
+            "A1:J1",
+            {
+                "textFormat": {"bold": True},
+                "backgroundColor": {"red": 0.9, "green": 0.9, "blue": 0.9},
+            },
         )
         print("✅ auto_generated_code シート作成完了")
 

@@ -16,7 +16,9 @@ except ImportError:
     # フォールバック
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("sheets_manager", project_root / "tools" / "sheets_manager.py")
+    spec = importlib.util.spec_from_file_location(
+        "sheets_manager", project_root / "tools" / "sheets_manager.py"
+    )
     sheets_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sheets_module)
     GoogleSheetsManager = sheets_module.GoogleSheetsManager

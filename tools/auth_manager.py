@@ -41,7 +41,10 @@ class UnifiedAuthManager:
         return AuthConfig(
             service_account_file=service_account_file,
             spreadsheet_id=spreadsheet_id,
-            scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ],
             fallback_strategies=[
                 "service_account",
                 "environment_variables",

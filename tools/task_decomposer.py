@@ -20,12 +20,20 @@ class TaskDecomposer:
         try:
             if not self.sheets.authenticated:
                 print("❌ スプレッドシート認証されていません")
+                print("💡 認証設定を確認してください:")
+                print(
+                    f"  - GOOGLE_SERVICE_ACCOUNT_FILE: {os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE')}"
+                )
+                print(
+                    f"  - ファイル存在: {os.path.exists(os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', ''))}"
+                )
                 return False
 
             # project_goal を読み込み
             goals = self.sheets.read_sheet("project_goal")
             if not goals:
                 print("ℹ️ project_goal にデータがありません")
+                print("💡 project_goal シートにゴールを追加してください")
                 return False
 
             print(f"📊 project_goal から {len(goals)} 件のゴールを読み込み")
@@ -46,7 +54,7 @@ class TaskDecomposer:
                 if not goal_title:
                     continue
 
-                # ゴールからタスクを分解（シンプルな例）
+                # ゴールからタスクを分解
                 tasks_from_goal = self._create_tasks_from_goal(
                     goal_title, goal_description, goal_priority
                 )
@@ -75,7 +83,6 @@ class TaskDecomposer:
         """ゴールからタスクを作成"""
         tasks = []
 
-        # シンプルなタスク分解ロジック
         base_tasks = [
             {
                 "title": f"分析: {goal_title}",
@@ -161,7 +168,7 @@ def main():
     if success:
         print("🎉 タスク分解完了")
     else:
-        print("❌ タスク分解失敗")
+        print("❌ タスク分解失敗 - 認証またはデータの問題")
 
     return success
 

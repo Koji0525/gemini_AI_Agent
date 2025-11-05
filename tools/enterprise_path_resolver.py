@@ -41,7 +41,13 @@ class EnterprisePathResolver:
 
     def _find_project_root(self) -> Path:
         """プロジェクトルートを智能的に発見"""
-        possible_indicators = [".git", "requirements.txt", "pyproject.toml", "setup.py", "Dockerfile"]
+        possible_indicators = [
+            ".git",
+            "requirements.txt",
+            "pyproject.toml",
+            "setup.py",
+            "Dockerfile",
+        ]
 
         current_path = Path(__file__).resolve()
 
@@ -70,7 +76,11 @@ class EnterprisePathResolver:
                 "env_vars": ["GOOGLE_APPLICATION_CREDENTIALS"],
                 "description": "Google推奨の環境変数",
             },
-            {"name": "explicit_path", "env_vars": ["GOOGLE_SERVICE_ACCOUNT_FILE"], "description": "明示的なパス指定"},
+            {
+                "name": "explicit_path",
+                "env_vars": ["GOOGLE_SERVICE_ACCOUNT_FILE"],
+                "description": "明示的なパス指定",
+            },
             {
                 "name": "cloud_default",
                 "env_vars": [],
@@ -222,7 +232,9 @@ class EnterprisePathResolver:
 
         # 推奨事項
         if not report["environment_variables"].get("GOOGLE_APPLICATION_CREDENTIALS"):
-            report["recommendations"].append("GOOGLE_APPLICATION_CREDENTIALS環境変数を設定することを推奨")
+            report["recommendations"].append(
+                "GOOGLE_APPLICATION_CREDENTIALS環境変数を設定することを推奨"
+            )
 
         return report
 

@@ -89,18 +89,21 @@ class GoogleSheetsManager:
             return False
 
     def _find_credentials_file(self) -> Optional[str]:
-        """認証情報ファイルを探す"""
-        candidates = [
-            self.credentials_path,
-            os.getenv("GOOGLE_CREDENTIALS_PATH"),
-            "credentials.json",
-            "configuration/service_account.json",
-        ]
+        """Find credentials file from multiple possible locations"""
+        # .envのGOOGLE_SERVICE_ACCOUNT_FILEを優先して使用
+        primary_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+        possible_paths = [primary_path, "credentials.json", "configuration/service_account.json"]
 
-        for path in candidates:
+        for path in possible_paths:
             if path and os.path.exists(path):
+                print(f"✅ Found credentials at: {path}")
                 return path
 
+        print("❌ No credentials file found")
+        print("📝 Expected locations:")
+        print(f"    1. GOOGLE_SERVICE_ACCOUNT_FILE env var: {primary_path}")
+        print("    2. ./credentials.json")
+        print("    3. ./configuration/service_account.json")
         return None
 
     def open_spreadsheet(self, spreadsheet_id: str) -> bool:

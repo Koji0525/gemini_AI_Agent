@@ -17,7 +17,9 @@ try:
 except ImportError:
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("sheets_manager", project_root / "tools" / "sheets_manager.py")
+    spec = importlib.util.spec_from_file_location(
+        "sheets_manager", project_root / "tools" / "sheets_manager.py"
+    )
     sheets_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sheets_module)
     GoogleSheetsManager = sheets_module.GoogleSheetsManager
@@ -94,7 +96,9 @@ class PatternBasedOptimizer:
             for row in rows:
                 if len(row) > headers.index("status") if "status" in headers else -1:
                     status = row[headers.index("status")]
-                    if status and any(fail_word in status.lower() for fail_word in ["fail", "error", "timeout"]):
+                    if status and any(
+                        fail_word in status.lower() for fail_word in ["fail", "error", "timeout"]
+                    ):
                         failed_tasks.append(row)
 
             print(f"✅ 失敗タスクを {len(failed_tasks)}件 発見")
@@ -266,7 +270,9 @@ class PatternBasedOptimizer:
                         if len(row) > status_index and "success" in row[status_index].lower():
                             success_count += 1
 
-                performance["success_rate"] = (success_count / total_tasks * 100) if total_tasks > 0 else 0
+                performance["success_rate"] = (
+                    (success_count / total_tasks * 100) if total_tasks > 0 else 0
+                )
                 performance["total_tasks"] = total_tasks
                 performance["success_count"] = success_count
 
