@@ -6,9 +6,7 @@ LogIntegrator: 複数のログソースを統合
 AIが学習するための包括的なデータセットを構築。
 """
 from datetime import datetime
-from typing import Dict, Any, List, Optional
-from collections import defaultdict
-import json
+from typing import Any, Dict, List, Optional
 
 
 class IntegratedLog:
@@ -108,15 +106,26 @@ class LogIntegrator:
             sheets_manager: GoogleSheetsManagerインスタンス
         """
         self.sheets_manager = sheets_manager
-        self.gc = sheets_manager.gc
-        self.spreadsheet_id = sheets_manager.spreadsheet_id
+        #        # ✅ gc属性は使用しない（sheets_manager経由でアクセス）        # スプレッドシートIDを取得（環境変数から読み込み）
+        import os
+
+        self.spreadsheet_id = os.getenv("SPREADSHEET_ID", "")
         print("✅ LogIntegrator初期化完了")
 
     def _get_sheet(self, sheet_name: str):
-        """シートを取得"""
+        """
+        シートを取得（sheets_manager経由）
+
+        Args:
+            sheet_name: シート名
+
+        Returns:
+            シートデータ（DataFrame形式） または None
+        """
         try:
-            spreadsheet = self.gc.open_by_key(self.spreadsheet_id)
-            return spreadsheet.worksheet(sheet_name)
+            # ✅ sheets_manager の標準メソッドを使用
+            df = self.sheets_manager.read_sheet(sheet_name)
+            return df
         except Exception as e:
             print(f"⚠️ シート取得エラー ({sheet_name}): {e}")
             return None
@@ -209,7 +218,7 @@ class LogIntegrator:
         print("\n5️⃣  エージェント情報を統合...")
         agent_count = 0
         for log in all_logs.get("agent", []):
-            agent_name = log.get("agent_name", "")
+            log.get("agent_name", "")
             # エージェント名からタスクIDを推測（あれば）
             # 実際の紐付けロジックは要調整
             agent_count += 1
