@@ -1,0 +1,51 @@
+【ナレッジ登録開始】
+タイトル: ナレッジ検索機能の類似度計算問題
+カテゴリ: アルゴリズム/検索システム
+重要度: 高
+
+【問題】
+何が起きた: ナレッジ検索で関連性の低い結果が返される
+環境: ナレッジベース検索システム, 類似度計算
+
+【原因分析】
+根本原因: 単純なキーワードマッチでは文脈を考慮できない
+直接原因: 
+1. タスクタイプとコンテキストの関連性計算が不十分
+2. キーワード重み付けが適切でない
+3. 類似度計算アルゴリズムが簡素すぎる
+
+【解決策】
+解決手法: 重み付きスコア計算と文脈ベースのマッチング
+実装例:
+# 改善された類似度計算
+def calculate_similarity_score(task_type, keywords, knowledge):
+    score = 0
+    
+    # タスクタイプ一致（重み: 10点）
+    if task_type and task_type.lower() in knowledge['type'].lower():
+        score += 10
+    
+    # キーワードコンテキスト一致（重み: 5点）
+    for keyword in keywords:
+        if keyword and keyword.lower() in knowledge['context'].lower():
+            score += 5
+    
+    # パターン名一致（重み: 3点）
+    for keyword in keywords:
+        if keyword and keyword.lower() in knowledge['pattern'].lower():
+            score += 3
+    
+    return score
+
+【学び】
+1. 類似度計算は重み付けが重要
+2. 文脈情報を活用することで精度向上
+3. 単純マッチより複合的な評価が有効
+
+【予防策】
+- 類似度アルゴリズムの定期的な評価
+- 検索結果の品質モニタリング
+- ユーザーフィードバックの収集
+
+成功率: 85%
+【ナレッジ登録終了】

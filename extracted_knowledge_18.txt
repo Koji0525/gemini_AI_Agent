@@ -1,0 +1,56 @@
+【ナレッジ登録開始】
+タイトル: エラーハンドリングの不足問題
+カテゴリ: Python/例外処理
+重要度: 高
+
+【問題】
+何が起きた: 予期しない例外でプログラムがクラッシュする
+環境: 本番環境, ユーザー入力処理
+
+【原因分析】
+根本原因: 例外の捕捉範囲が狭すぎるか適切でない
+直接原因: 
+1. 具体的な例外のみ捕捉している
+2. 例外情報のロギング不足
+3. リソース解放の保証がない
+
+【解決策】
+解決手法: 適切な例外階層の捕捉とリソース管理
+実装例:
+import logging
+from contextlib import contextmanager
+
+# 適切な例外処理
+try:
+    # リソースを使用する操作
+    with open('file.txt', 'r') as f:
+        content = f.read()
+except FileNotFoundError as e:
+    logging.warning(f"ファイルが見つかりません: {e}")
+    # 代替処理
+    content = "デフォルトコンテンツ"
+except Exception as e:
+    logging.error(f"予期しないエラー: {e}")
+    raise
+
+# コンテキストマネージャーの使用
+@contextmanager
+def managed_resource(*args, **kwds):
+    resource = acquire_resource(*args, **kwds)
+    try:
+        yield resource
+    finally:
+        release_resource(resource)
+
+【学び】
+1. 例外は適切なレベルで捕捉する
+2. リソース解放はfinallyで保証する
+3. エラー情報は適切にログに記録する
+
+【予防策】
+- 例外の種類に応じた処理を実装する
+- コンテキストマネージャーを活用する
+- エラーログの監視を設定する
+
+成功率: 94%
+【ナレッジ登録終了】

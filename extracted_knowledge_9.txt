@@ -1,0 +1,51 @@
+【ナレッジ登録開始】
+タイトル: 自動学習トリガーの最適化問題
+カテゴリ: 機械学習/最適化
+重要度: 中
+
+【問題】
+何が起きた: 学習サイクルのトリガー条件が非効率的
+環境: 自律学習システム, 6時間間隔学習
+
+【原因分析】
+根本原因: 固定間隔学習では状況変化に即応できない
+直接原因: 
+1. 6時間間隔では新しいパターン検出が遅い
+2. エラー閾値50件が高すぎる
+3. 緊急対応の5回連続エラーも反応が遅い
+
+【解決策】
+解決手法: 動的学習トリガーと閾値の最適化
+実装例:
+# 改善された学習トリガー条件
+async def _run_learning_loop(self):
+    while self.running:
+        # 条件1: 新規エラー30件（50→30に短縮）
+        if self.error_count >= 30:
+            await self.self_learning.run_learning_cycle()
+            self.error_count = 0
+        
+        # 条件2: 3時間経過（6時間→3時間に短縮）
+        elif time.time() - self.last_learning_time >= 10800:
+            await self.self_learning.run_learning_cycle()
+            self.last_learning_time = time.time()
+        
+        # 条件3: 3回連続エラー（5回→3回に短縮）
+        elif self.consecutive_errors >= 3:
+            await self.self_learning.run_learning_cycle()
+            self.consecutive_errors = 0
+        
+        await asyncio.sleep(60)
+
+【学び】
+1. 学習頻度はデータ量と変化速度に応じて調整
+2. 閾値は実際の運用データで最適化する
+3. 動的な調整メカニズムが重要
+
+【予防策】
+- 学習効果の定量的な測定
+- トリガー条件の定期的な見直し
+- A/Bテストでのパラメータ最適化
+
+成功率: 80%
+【ナレッジ登録終了】

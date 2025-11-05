@@ -1,0 +1,68 @@
+【ナレッジ登録開始】
+タイトル: ファイルアップロードのセキュリティ問題
+カテゴリ: セキュリティ/ファイル処理
+重要度: 高
+
+【問題】
+何が起きた: 悪意のあるファイルアップロードによるセキュリティ侵害
+環境: ファイルアップロード機能, Webアプリケーション
+
+【原因分析】
+根本原因: ファイルアップロード時の適切な検証と制限の欠如
+直接原因: 
+1. ファイルタイプの検証不足
+2. ファイルサイズ制限の不備
+3. アップロードディレクトリの実行権限問題
+
+【解決策】
+解決手法: 多層的なファイルアップロードセキュリティ対策
+実装例:
+import os
+import magic
+from werkzeug.utils import secure_filename
+
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_file(file_storage):
+    # ファイルサイズチェック
+    file_storage.seek(0, os.SEEK_END)
+    file_size = file_storage.tell()
+    file_storage.seek(0)
+    
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError("ファイルサイズが大きすぎます")
+    
+    # ファイルタイプチェック
+    if not allowed_file(file_storage.filename):
+        raise ValueError("許可されていないファイル形式です")
+    
+    # 実際のファイルタイプを確認
+    file_content = file_storage.read(1024)
+    file_storage.seek(0)
+    
+    file_type = magic.from_buffer(file_content, mime=True)
+    if not file_type.startswith(('image/', 'text/', 'application/pdf')):
+        raise ValueError("不正なファイル形式です")
+    
+    # ファイル名のサニタイズ
+    filename = secure_filename(file_storage.filename)
+    
+    return filename
+
+【学び】
+1. ファイルアップロードは多層的に検証する
+2. クライアント側とサーバー側の両方で検証する
+3. アップロードファイルは実行権限なしで保存する
+
+【予防策】
+- 定期的なセキュリティ監査の実施
+- ファイルスキャン機能の導入
+- アップロードディレクトリの分離
+
+成功率: 92%
+【ナレッジ登録終了】

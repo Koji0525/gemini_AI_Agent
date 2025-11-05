@@ -1,0 +1,48 @@
+【ナレッジ登録開始】
+タイトル: テストカバレッジの不足問題
+カテゴリ: テスト/品質保証
+重要度: 高
+
+【問題】
+何が起きた: 本番環境で想定外のバグが発生、テストでカバーされていなかった
+環境: 継続的インテグレーション環境
+
+【原因分析】
+根本原因: テスト戦略とカバレッジ目標が不十分
+直接原因: 
+1. 単体テストのみで結合テストが不足
+2. エッジケースのテスト不足
+3. テストデータのバリエーション不足
+
+【解決策】
+解決手法: 多層的なテスト戦略とカバレッジ計測
+実装例:
+import pytest
+from unittest.mock import Mock, patch
+
+# 単体テスト
+def test_unit_function():
+    assert add(2, 3) == 5
+
+# 結合テスト
+def test_integration():
+    with patch('module.external_api') as mock_api:
+        mock_api.return_value = "mock_response"
+        result = main_function()
+        assert result == "expected"
+
+# カバレッジ計測
+# pytest --cov=myapp tests/
+
+【学び】
+1. 単体テスト、結合テスト、E2Eテストを組み合わせる
+2. カバレッジ目標を設定して計測する
+3. モックとスタブを適切に使用する
+
+【予防策】
+- テストカバレッジの閾値を設定する
+- 継続的インテグレーションでテストを自動化する
+- 定期的にテスト戦略を見直す
+
+成功率: 85%
+【ナレッジ登録終了】
