@@ -20,7 +20,8 @@ class PMTasksLoader:
 
         try:
             sheets_manager = GoogleSheetsManager(
-                spreadsheet_id=get_config("SPREADSHEET_ID"), service_account_file=get_config("SERVICE_ACCOUNT_FILE")
+                spreadsheet_id=get_config("SPREADSHEET_ID"),
+                service_account_file=get_config("SERVICE_ACCOUNT_FILE"),
             )
             self.sheets_client = sheets_manager.gc
             self.spreadsheet_id = get_config("SPREADSHEET_ID")
@@ -33,7 +34,9 @@ class PMTasksLoader:
         except Exception as e:
             print(f"⚠️ Google Sheets初期化失敗: {e}")
 
-    def load_tasks(self, max_tasks: Optional[int] = None, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+    def load_tasks(
+        self, max_tasks: Optional[int] = None, status_filter: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """タスクを読み込む"""
         if self.sheets_client and self.spreadsheet_id:
             try:
@@ -46,7 +49,9 @@ class PMTasksLoader:
 
         return []
 
-    def _load_from_sheets(self, max_tasks: Optional[int], status_filter: Optional[str]) -> List[Dict[str, Any]]:
+    def _load_from_sheets(
+        self, max_tasks: Optional[int], status_filter: Optional[str]
+    ) -> List[Dict[str, Any]]:
         """Google Sheetsからタスクを読み込む（スネークケース対応 + row_number追加）"""
         try:
             if not self.worksheet:

@@ -215,7 +215,9 @@ class EnhancedErrorHandler:
 
             for frame_summary in tb_list:
                 # コード文脈を取得(前後1行)
-                code_context = self._get_code_context(frame_summary.filename, frame_summary.lineno, context_lines=1)
+                code_context = self._get_code_context(
+                    frame_summary.filename, frame_summary.lineno, context_lines=1
+                )
 
                 frame = StackTraceFrame(
                     file_path=frame_summary.filename,
@@ -242,7 +244,9 @@ class EnhancedErrorHandler:
             last_frame = tb_list[-1]
 
             return CodeLocation(
-                file_path=last_frame.filename, line_number=last_frame.lineno, function_name=last_frame.name
+                file_path=last_frame.filename,
+                line_number=last_frame.lineno,
+                function_name=last_frame.name,
             )
 
         except Exception as e:
@@ -273,7 +277,10 @@ class EnhancedErrorHandler:
 
             # 行番号付きで整形
             surrounding_code = "\n".join(
-                [f"{start_line + i + 1:4d} | {line.rstrip()}" for i, line in enumerate(surrounding_lines)]
+                [
+                    f"{start_line + i + 1:4d} | {line.rstrip()}"
+                    for i, line in enumerate(surrounding_lines)
+                ]
             )
 
             return problematic_code, surrounding_code
@@ -282,7 +289,9 @@ class EnhancedErrorHandler:
             logger.warning(f"⚠️ コードスニペット抽出エラー: {e}")
             return None, None
 
-    def _get_code_context(self, file_path: str, line_number: int, context_lines: int = 1) -> Optional[str]:
+    def _get_code_context(
+        self, file_path: str, line_number: int, context_lines: int = 1
+    ) -> Optional[str]:
         """指定行の前後のコードコンテキストを取得"""
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -329,13 +338,20 @@ class EnhancedErrorHandler:
         # CRITICAL: システム停止レベル
         if any(
             kw in error_lower
-            for kw in ["systemerror", "memoryerror", "recursionerror", "keyboardinterrupt", "syntaxerror"]
+            for kw in [
+                "systemerror",
+                "memoryerror",
+                "recursionerror",
+                "keyboardinterrupt",
+                "syntaxerror",
+            ]
         ):
             return ErrorSeverity.CRITICAL
 
         # HIGH: 機能不全
         if any(
-            kw in error_lower for kw in ["attributeerror", "importerror", "modulenotfound", "typeerror", "valueerror"]
+            kw in error_lower
+            for kw in ["attributeerror", "importerror", "modulenotfound", "typeerror", "valueerror"]
         ):
             return ErrorSeverity.HIGH
 
@@ -448,7 +464,9 @@ class TaskErrorHandler:
             logger.error(f"💥 タスクエラーハンドリング中にエラー: {e}")
             return None
 
-    def _generate_bug_fix_task(self, error_context: ErrorContextModel, original_task: Dict[str, Any]) -> BugFixTask:
+    def _generate_bug_fix_task(
+        self, error_context: ErrorContextModel, original_task: Dict[str, Any]
+    ) -> BugFixTask:
         """バグ修正タスクを生成"""
 
         # バグ修正タスクIDを生成
@@ -505,7 +523,9 @@ if __name__ == "__main__":
 
         # バグ修正タスク生成
         bug_task = task_handler.handle_task_error(
-            exception=e, task={"task_id": "TEST_TASK_001", "description": "テストタスク"}, agent_name="TestAgent"
+            exception=e,
+            task={"task_id": "TEST_TASK_001", "description": "テストタスク"},
+            agent_name="TestAgent",
         )
 
         if bug_task:

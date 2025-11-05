@@ -6,6 +6,7 @@ import os
 from typing import List, Dict, Any
 from tools.sheets_manager import GoogleSheetsManager
 from configuration.config_loader import ConfigLoader
+from datetime import datetime
 
 
 class PMTasksLoader:
@@ -46,7 +47,9 @@ class PMTasksLoader:
                     row[status_col] = status
 
                     # シートを更新
-                    self.sheets_manager.update_cell(self.tasks_sheet, f"{chr(65 + status_col)}{i}", status)
+                    self.sheets_manager.update_cell(
+                        self.tasks_sheet, f"{chr(65 + status_col)}{i}", status
+                    )
                     updated = True
                     print(f"✅ タスク {task_id} のステータスを {status} に更新")
                     break

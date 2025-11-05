@@ -221,8 +221,12 @@ class InteractiveDashboard:
 
                     print("📅 日別成功率:")
                     for date, stats in sorted(daily_stats.items())[-5:]:  # 直近5日間
-                        success_rate = (stats["success"] / stats["total"] * 100) if stats["total"] > 0 else 0
-                        print(f"   • {date}: {success_rate:.1f}% ({stats['success']}/{stats['total']})")
+                        success_rate = (
+                            (stats["success"] / stats["total"] * 100) if stats["total"] > 0 else 0
+                        )
+                        print(
+                            f"   • {date}: {success_rate:.1f}% ({stats['success']}/{stats['total']})"
+                        )
 
                 else:
                     print("📈 トレンド分析:")
@@ -275,7 +279,12 @@ class InteractiveDashboard:
             # データ統合パイプラインを実行
             from tools.data_integration.pipeline import create_pipeline
 
-            config = {"sources": {"conversation_logs": {"enabled": True}, "spreadsheet_logs": {"enabled": True}}}
+            config = {
+                "sources": {
+                    "conversation_logs": {"enabled": True},
+                    "spreadsheet_logs": {"enabled": True},
+                }
+            }
 
             pipeline = create_pipeline(config)
             results = pipeline.run()

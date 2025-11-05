@@ -121,7 +121,9 @@ class CloudStorageManager:
     # 基本操作（透過的API）
     # ========================================
 
-    async def read_file(self, file_path: str, encoding: Optional[str] = "utf-8") -> Union[str, bytes]:
+    async def read_file(
+        self, file_path: str, encoding: Optional[str] = "utf-8"
+    ) -> Union[str, bytes]:
         """
         ファイルを読み込み（ローカル/クラウド透過的）
 
@@ -170,7 +172,9 @@ class CloudStorageManager:
             logger.error(f"❌ ファイル読み込みエラー: {file_path} - {e}")
             raise
 
-    async def write_file(self, file_path: str, content: Union[str, bytes], encoding: Optional[str] = "utf-8"):
+    async def write_file(
+        self, file_path: str, content: Union[str, bytes], encoding: Optional[str] = "utf-8"
+    ):
         """
         ファイルを書き込み（ローカル/クラウド透過的）
 
@@ -322,12 +326,16 @@ class CloudStorageManager:
 
     async def _download_from_s3(self, file_path: str) -> bytes:
         """S3からダウンロード"""
-        response = await asyncio.to_thread(self.client.get_object, Bucket=self.bucket_name, Key=file_path)
+        response = await asyncio.to_thread(
+            self.client.get_object, Bucket=self.bucket_name, Key=file_path
+        )
         return response["Body"].read()
 
     async def _upload_to_s3(self, file_path: str, content: bytes):
         """S3にアップロード"""
-        await asyncio.to_thread(self.client.put_object, Bucket=self.bucket_name, Key=file_path, Body=content)
+        await asyncio.to_thread(
+            self.client.put_object, Bucket=self.bucket_name, Key=file_path, Body=content
+        )
 
     async def _exists_in_s3(self, file_path: str) -> bool:
         """S3での存在確認"""

@@ -88,7 +88,10 @@ class EnterpriseSheetsManager:
             # サービスアカウント認証
             credentials = service_account.Credentials.from_service_account_file(
                 self.service_account_path,
-                scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
+                scopes=[
+                    "https://www.googleapis.com/auth/spreadsheets",
+                    "https://www.googleapis.com/auth/drive",
+                ],
             )
 
             gc = gspread.authorize(credentials)
@@ -195,7 +198,9 @@ class EnterpriseSheetsManager:
 GoogleSheetsManager = EnterpriseSheetsManager
 
 
-def create_sheets_manager(spreadsheet_id: str = None, service_account_file: str = None) -> EnterpriseSheetsManager:
+def create_sheets_manager(
+    spreadsheet_id: str = None, service_account_file: str = None
+) -> EnterpriseSheetsManager:
     """SheetsManagerを作成（企業版）"""
     return EnterpriseSheetsManager(spreadsheet_id, service_account_file)
 

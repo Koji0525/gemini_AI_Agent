@@ -81,7 +81,12 @@ class TaskDependencyManager:
         """
         if not dependencies:
             logger.info(f"✅ TaskID={task_id}: 依存タスクなし")
-            return {"can_execute": True, "context_tasks": {}, "warnings": [], "summary": "依存タスクなし"}
+            return {
+                "can_execute": True,
+                "context_tasks": {},
+                "warnings": [],
+                "summary": "依存タスクなし",
+            }
 
         logger.info(f"🔍 TaskID={task_id}: 依存タスク {dependencies} をチェック中...")
 
@@ -118,7 +123,9 @@ class TaskDependencyManager:
 
                     if result:
                         context_tasks[dep_id] = result
-                        logger.info(f"✅ TaskID={dep_id}: 結果取得成功（品質: {result['quality_score']}/10）")
+                        logger.info(
+                            f"✅ TaskID={dep_id}: 結果取得成功（品質: {result['quality_score']}/10）"
+                        )
                     else:
                         warning = f"TaskID={dep_id}は品質スコア<{min_quality_score}のため除外"
                         warnings.append(warning)
@@ -137,7 +144,9 @@ class TaskDependencyManager:
             if context_tasks:
                 logger.info(f"✅ {summary}")
             else:
-                logger.warning(f"⚠️ 依存タスクの結果が取得できませんでした。コンテキストなしで実行します。")
+                logger.warning(
+                    f"⚠️ 依存タスクの結果が取得できませんでした。コンテキストなしで実行します。"
+                )
 
             return {
                 "can_execute": True,  # 常にTrue（柔軟実行）
@@ -155,7 +164,9 @@ class TaskDependencyManager:
                 "summary": "エラーのためコンテキストなしで実行",
             }
 
-    async def _get_task_result(self, task_id: str, min_quality_score: float) -> Optional[Dict[str, Any]]:
+    async def _get_task_result(
+        self, task_id: str, min_quality_score: float
+    ) -> Optional[Dict[str, Any]]:
         """
         task_execution_logから指定タスクの結果を取得（品質フィルタ付き）
         GitHubファイルからの完全版取得もサポート
@@ -264,7 +275,10 @@ class TaskDependencyManager:
             return None
 
     def build_context_prompt(
-        self, base_prompt: str, context_tasks: Dict[str, Dict[str, Any]], max_context_length: int = 3000
+        self,
+        base_prompt: str,
+        context_tasks: Dict[str, Dict[str, Any]],
+        max_context_length: int = 3000,
     ) -> str:
         """
         依存タスクの結果を含むコンテキスト付きプロンプトを生成
@@ -308,7 +322,10 @@ class TaskDependencyManager:
 
         enhanced_prompt = "\n".join(context_parts)
 
-        logger.info(f"✅ コンテキスト付きプロンプト生成完了" f"（{len(context_tasks)}件の前タスク結果を含む）")
+        logger.info(
+            f"✅ コンテキスト付きプロンプト生成完了"
+            f"（{len(context_tasks)}件の前タスク結果を含む）"
+        )
 
         return enhanced_prompt
 
