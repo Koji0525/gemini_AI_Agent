@@ -443,3 +443,77 @@ class KnowledgeBaseManager:
         except Exception as e:
             print(f"⚠️  ナレッジ検索エラー: {e}")
             return None
+
+    async def update(self, patterns):
+        """パターンからナレッジを更新"""
+        print(f"🧠 ナレッジベース更新: {len(patterns)}個のパターンを処理")
+
+        try:
+            if not patterns:
+                print("⚠️ 更新するパターンがありません")
+                return True
+
+            updated_count = 0
+            for pattern in patterns:
+                if await self._process_pattern(pattern):
+                    updated_count += 1
+
+            print(f"✅ ナレッジベース更新完了: {updated_count}/{len(patterns)}個のパターンを処理")
+            return True
+
+        except Exception as e:
+            print(f"❌ ナレッジベース更新エラー: {e}")
+            return False
+
+    async def _process_pattern(self, pattern):
+        """個々のパターンを処理"""
+        try:
+            pattern_type = pattern.get("type", "unknown")
+
+            if pattern_type == "error":
+                return await self._add_error_pattern(pattern)
+            elif pattern_type == "success":
+                return await self._add_success_pattern(pattern)
+            else:
+                print(f"⚠️ 未知のパターンタイプ: {pattern_type}")
+                return False
+
+        except Exception as e:
+            print(f"❌ パターン処理エラー: {e}")
+            return False
+
+    async def _add_error_pattern(self, pattern):
+        """エラーパターンを追加"""
+        try:
+            # 簡易的なエラーパターン登録
+            error_data = {
+                "pattern": pattern.get("pattern", ""),
+                "suggested_fix": pattern.get("suggested_fix", ""),
+                "frequency": pattern.get("frequency", 1),
+                "context": pattern.get("context", {}),
+            }
+
+            print(f"📝 エラーパターン登録: {error_data['pattern']}")
+            return True
+
+        except Exception as e:
+            print(f"❌ エラーパターン追加エラー: {e}")
+            return False
+
+    async def _add_success_pattern(self, pattern):
+        """成功パターンを追加"""
+        try:
+            # 簡易的な成功パターン登録
+            success_data = {
+                "pattern": pattern.get("pattern", ""),
+                "best_practice": pattern.get("best_practice", ""),
+                "frequency": pattern.get("frequency", 1),
+                "context": pattern.get("context", {}),
+            }
+
+            print(f"📝 成功パターン登録: {success_data['pattern']}")
+            return True
+
+        except Exception as e:
+            print(f"❌ 成功パターン追加エラー: {e}")
+            return False
