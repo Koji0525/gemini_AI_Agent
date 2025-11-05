@@ -77,6 +77,40 @@ class SelfLearningPipeline:
         return recommendations
 
     async def run_learning_cycle(self):
+        """学習サイクル実行（Git自動同期付き）"""
+        patterns_before = len(self.kb_manager.get_all_knowledge())
+
+        # 既存の学習処理
+        original_result = await self._original_learning_cycle()
+
+        # パターン数が増えた場合は自動Git同期
+        patterns_after = len(self.kb_manager.get_all_knowledge())
+        if patterns_after > patterns_before:
+            await self._auto_git_sync(patterns_after - patterns_before)
+
+        return original_result
+
+    async def _auto_git_sync(self, new_patterns_count):
+        """Git自動同期"""
+        try:
+            import subprocess
+
+            # ステージング
+            subprocess.run(["git", "add", "mvp_v4/knowledge/learned/"], check=True)
+
+            # コミット
+            message = f"Learn: {new_patterns_count}個の新規パターンを学習"
+            subprocess.run(["git", "commit", "-m", message], check=True)
+
+            # プッシュ（非同期・エラー無視）
+            subprocess.run(["git", "push", "origin", "main"], timeout=10, capture_output=True)
+
+            print(f"  ✅ Git自動同期完了: {new_patterns_count}パターン")
+        except Exception as e:
+            print(f"  ⚠️  Git同期失敗（継続）: {e}")
+
+    async def _original_learning_cycle(self):
+        """元の学習サイクル処理"""
         """
         学習サイクルを実行
 
