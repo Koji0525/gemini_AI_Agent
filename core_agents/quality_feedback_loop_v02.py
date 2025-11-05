@@ -4,11 +4,11 @@ Phase 4-2で追加: 無限ループ防止、タスク情報保持、評価失敗
 """
 
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class QualityFeedbackLoop:
-    """品質スコアに基づく自動再実行管理（改良版）"""
+    """品質スコアに基づく自動再実行管理(改良版)"""
 
     # 定数定義
     MAX_RETRY_COUNT = 3  # 最大再実行回数
@@ -29,11 +29,11 @@ class QualityFeedbackLoop:
         タスク実行結果を品質評価し、必要に応じて再実行を指示
 
         Args:
-            task: タスク情報（task_id, task_name, retry_count等）
-            result: 実行結果（quality_score, output等）
+            task: タスク情報(task_id, task_name, retry_count等)
+            result: 実行結果(quality_score, output等)
 
         Returns:
-            処理結果（action, reason等）
+            処理結果(action, reason等)
         """
         # 品質スコアの取得と検証
         quality_score = self._validate_quality_score(result.get("quality_score", 0))
@@ -89,10 +89,10 @@ class QualityFeedbackLoop:
         品質スコアを検証し、異常値の場合はデフォルト値を返す
 
         Args:
-            score: 品質スコア（int, float, str等）
+            score: 品質スコア(int, float, str等)
 
         Returns:
-            検証済みの品質スコア（0-10の整数）
+            検証済みの品質スコア(0-10の整数)
         """
         try:
             score_int = int(score)
@@ -107,7 +107,7 @@ class QualityFeedbackLoop:
             # 0点は評価失敗とみなす
             if score_int == 0:
                 print(
-                    f"📋 qualit ⚠️  品質評価失敗（0点） → デフォルト値 {self.DEFAULT_QUALITY_SCORE} を使用"
+                    f"📋 qualit ⚠️  品質評価失敗(0点) → デフォルト値 {self.DEFAULT_QUALITY_SCORE} を使用"
                 )
                 return self.DEFAULT_QUALITY_SCORE
 
@@ -124,8 +124,13 @@ class QualityFeedbackLoop:
         task.get("task_id", "unknown")
 
         # pm_tasksのステータスを更新
-        await self.sheets.update_cell(
-            sheet_name="pm_tasks", cell_address=f"E{task.get('row_number', 0)}", value="completed"
+        row_num = task.get("row_number", 0)
+        if row_num < 1:
+            print(f"⚠️  無効な行番号: {row_num} - スキップ")
+            return
+
+        self.sheets.update_cell(
+            sheet_name="pm_tasks", cell_range=f"E{task.get('row_number', 2)}", value="completed"
         )
 
         print(f"📋 qualit �� ✅ タスク完了: {task.get('task_name', 'Unknown')}")
@@ -135,9 +140,9 @@ class QualityFeedbackLoop:
         task.get("task_id", "unknown")
 
         # pm_tasksのステータスを更新
-        await self.sheets.update_cell(
+        self.sheets.update_cell(
             sheet_name="pm_tasks",
-            cell_address=f"E{task.get('row_number', 0)}",
+            cell_range=f"E{task.get('row_number', 2)}",
             value=f"failed_{reason}",
         )
 
@@ -161,13 +166,13 @@ class QualityFeedbackLoop:
         )
 
     async def _generate_improvement(self, task: Dict[str, Any], result: Dict[str, Any]) -> str:
-        """改善案を生成（5秒以内）"""
+        """改善案を生成(5秒以内)"""
         # TODO: Gemini APIを使用して改善案を生成
         # 現在は簡易版
         return f"タスク '{task.get('task_name')}' の品質を向上させるため、より具体的な実装を行う"
 
     async def _generate_alternative(self, task: Dict[str, Any], result: Dict[str, Any]) -> str:
-        """代替アプローチを生成（5秒以内）"""
+        """代替アプローチを生成(5秒以内)"""
         # TODO: Gemini APIを使用して代替案を生成
         # 現在は簡易版
         return f"タスク '{task.get('task_name')}' の代替アプローチ: 異なる手法で再実装"
@@ -180,7 +185,7 @@ class QualityFeedbackLoop:
         is_alternative: bool = False,
     ) -> None:
         """
-        再実行タスクを作成（元のタスク情報を保持）
+        再実行タスクを作成(元のタスク情報を保持)
 
         Args:
             task: 元のタスク情報

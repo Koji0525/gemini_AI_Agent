@@ -1,172 +1,149 @@
 import logging
-from typing import List, Dict, Any
-from pathlib import Path
 import os
-import sys
-from dotenv import load_dotenv
+from pathlib import Path
+from typing import Any, List, Optional
+
+import gspread
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from configuration.sheet_mapping import SheetMapping
 
-"""
-sheets_manager_v02_mapped.py
-
-シート名マッピング対応版SheetsManager
-
-【変更の理由】
-- コード内の論理名と実際のシート名の不一致を解消
-- configuration/sheet_mapping.pyを使用してシート名を解決
-- 既存のスプレッドシート構造を破壊せずに統合
-"""
-
-
-# プロジェクトルート追加
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-
-load_dotenv()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("sheets_manager")
 
 
 class GoogleSheetsManager:
-    """Google Sheets管理（マッピング対応版）"""
+    """Google Sheets management class with adaptive initialization"""
 
-    def __init__(self, spreadsheet_id: str = None, service_account_file: str = None):
-        """
-        初期化
-
-        Args:
-            spreadsheet_id: スプレッドシートID（省略時は環境変数から取得）
-            service_account_file: サービスアカウントファイルパス
-        """
+    def __init__(self, spreadsheet_id: str = None):
+        """Initialize with flexible credential path detection"""
         self.spreadsheet_id = spreadsheet_id or os.getenv("SPREADSHEET_ID")
-        self.service_account_file = service_account_file or os.getenv(
-            "GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json"
-        )
+        self.client = None
+        self._initialize_client()
 
-        if not self.spreadsheet_id:
-            raise ValueError("SPREADSHEET_IDが設定されていません")
+    def _find_credentials_file(self) -> Optional[str]:
+        """Find credentials file with environment variable support"""
+        candidates = [
+            os.getenv("GOOGLE_CREDENTIALS_PATH"),  # 🔥 環境変数優先
+            os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+            "credentials.json",
+            ".credentials/credentials.json",
+            "configuration/service_account.json",
+            os.path.expanduser("~/.credentials/credentials.json"),
+        ]
 
-        if not Path(self.service_account_file).exists():
-            raise FileNotFoundError(f"{self.service_account_file} が見つかりません")
+        for path in candidates:
+            if path and Path(path).exists():
+                logger.info(f"✅ Found credentials at: {path}")
+                return path
 
-        # 認証
-        self.creds = Credentials.from_service_account_file(
-            self.service_account_file,
-            scopes=["https://www.googleapis.com/auth/spreadsheets"],
-        )
+        logger.warning("❌ No credentials file found")
+        return None
 
-        self.service = build("sheets", "v4", credentials=self.creds)
-        self.sheet_mapping = SheetMapping()
+    def _initialize_client(self):
+        """Initialize Google Sheets client with error handling"""
+        try:
+            creds_path = self._find_credentials_file()
 
-        logger.info(f"✅ SheetsManager初期化完了 (ID: {self.spreadsheet_id[:8]}...)")
+            if not creds_path:
+                logger.error("❌ credentials.json not found. Please provide valid credentials.")
+                logger.info("📝 Expected locations:")
+                logger.info("   1. Set GOOGLE_CREDENTIALS_PATH env var")
+                logger.info("   2. ./credentials.json")
+                logger.info("   3. ./configuration/service_account.json")
+                return
+
+            scope = ["https://www.googleapis.com/auth/spreadsheets"]
+            creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+            self.client = gspread.authorize(creds)
+            logger.info(f"✅ Google Sheets client initialized with {creds_path}")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize Google Sheets client: {e}")
+            self.client = None
 
     def _resolve_sheet_name(self, logical_name: str) -> str:
-        """
-        論理名を実際のシート名に解決
+        """Resolve logical sheet name to actual sheet name"""
+        sheet_mapping = {
+            "pm_tasks": "pm_tasks",
+            "project_goals": "project_goals",
+            "knowledge_base": "knowledge_base",
+            "task_execution_log": "task_execution_log",
+        }
+        return sheet_mapping.get(logical_name, logical_name)
 
-        Args:
-            logical_name: コード内で使用する論理名
+    def read_range(self, sheet_name: str, range_name: str = None) -> List[List[Any]]:
+        """Read data from specified range"""
+        if not self.client:
+            logger.warning("⚠️  Client not initialized - returning empty data")
+            return []
 
-        Returns:
-            実際のシート名
-        """
-        actual_name = self.sheet_mapping.get(logical_name)
-
-        if actual_name != logical_name:
-            logger.debug(f"📊 シート名解決: {logical_name} → {actual_name}")
-
-        return actual_name
-
-    def read_range(self, range_str: str, logical_sheet: bool = True) -> List[List[Any]]:
-        """
-        範囲を読み取り
-
-        Args:
-            range_str: 範囲文字列（例: "pm_goals!A1:F10"）
-            logical_sheet: Trueの場合、シート名を論理名として解決
-
-        Returns:
-            データ（2次元リスト）
-        """
         try:
-            # シート名解決
-            if logical_sheet and "!" in range_str:
-                sheet_part, cell_part = range_str.split("!", 1)
-                resolved_sheet = self._resolve_sheet_name(sheet_part)
-                range_str = f"{resolved_sheet}!{cell_part}"
+            if "!" in sheet_name and not range_name:
+                sheet_name, range_name = sheet_name.split("!", 1)
 
-            result = (
-                self.service.spreadsheets()
-                .values()
-                .get(spreadsheetId=self.spreadsheet_id, range=range_str)
-                .execute()
-            )
+            actual_sheet_name = self._resolve_sheet_name(sheet_name)
+            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(actual_sheet_name)
 
-            values = result.get("values", [])
-            logger.debug(f"✅ 読み取り成功: {range_str} ({len(values)}行)")
+            data = sheet.get(range_name) if range_name else sheet.get_all_values()
+            logger.info(f"✅ Read {len(data)} rows from {actual_sheet_name}")
+            return data
 
-            return values
+        except Exception as e:
+            logger.error(f"❌ Failed to read {sheet_name}: {e}")
+            return []
 
-        except HttpError as e:
-            logger.error(f"❌ 読み取りエラー: {e}")
-            raise
+    def write_range(self, sheet_name: str, range_name: str, data: List[List[Any]]) -> bool:
+        """Write data to specified range"""
+        if not self.client:
+            logger.warning("⚠️  Client not initialized - skipping write")
+            return False
 
-    def write_range(
-        self, range_str: str, values: List[List[Any]], logical_sheet: bool = True
-    ) -> Dict:
-        """
-        範囲に書き込み
-    def update_cell(self, sheet_name: str, cell_range: str, value=None, **kwargs):
-        """指定したセルを更新する
-        
-        Args:
-            sheet_name: シート名
-            cell_range: セル範囲 (例: 'A1')
-            value: 設定する値
-            **kwargs: 互換性のための追加引数
-        """
-        # cell_addressが指定された場合はcell_rangeとして使用
-        if 'cell_address' in kwargs:
-            cell_range = kwargs['cell_address']
-        
         try:
-            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(sheet_name)
+            actual_sheet_name = self._resolve_sheet_name(sheet_name)
+            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(actual_sheet_name)
+            sheet.update(range_name, data)
+            logger.info(f"✅ Wrote data to {actual_sheet_name}!{range_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to write {sheet_name}: {e}")
+            return False
+
+    def update_cell(self, sheet_name: str, cell_range: str, value: Any = None, **kwargs) -> bool:
+        """Update specific cell"""
+        if not self.client:
+            logger.warning("⚠️  Client not initialized - skipping update")
+            return False
+
+        if "cell_address" in kwargs:
+            cell_range = kwargs["cell_address"]
+
+        try:
+            actual_sheet_name = self._resolve_sheet_name(sheet_name)
+            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(actual_sheet_name)
             sheet.update(cell_range, [[value]])
-            self.logger.info(f"📊 セル更新完了: {sheet_name}!{cell_range} = {value}")
+            logger.info(f"✅ Updated {actual_sheet_name}!{cell_range}")
             return True
+
         except Exception as e:
-            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            logger.error(f"❌ Failed to update cell: {e}")
             return False
 
+    def append_rows(self, sheet_name: str, data: List[List[Any]]) -> bool:
+        """Append rows to sheet"""
+        if not self.client:
+            logger.warning("⚠️  Client not initialized - skipping append")
+            return False
 
-    (self, sheet_name: str, cell_range: str, value=None, **kwargs):
-        """指定したセルを更新する（柔軟な引数対応）
-        
-        Args:
-            sheet_name: シート名
-            cell_range: セル範囲 (例: 'A1')
-            value: 設定する値
-            **kwargs: 互換性のための追加引数 (cell_addressなど)
-        """
-        # cell_addressが指定された場合はcell_rangeとして使用
-        if 'cell_address' in kwargs:
-            cell_range = kwargs['cell_address']
-        
         try:
-            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(sheet_name)
-            sheet.update(cell_range, [[value]])
-            self.logger.info(f"📊 セル更新完了: {sheet_name}            return True
-        except Exception as e:
-            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
-            return False
+            actual_sheet_name = self._resolve_sheet_name(sheet_name)
+            sheet = self.client.open_by_key(self.spreadsheet_id).worksheet(actual_sheet_name)
+            sheet.append_rows(data)
+            logger.info(f"✅ Appended {len(data)} rows to {actual_sheet_name}")
             return True
+
         except Exception as e:
-            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
+            logger.error(f"❌ Failed to append rows: {e}")
             return False
-            return True
-        except Exception as e:
-            self.logger.error(f"❌ セル更新失敗: {sheet_name}!{cell_range} - {e}")
-            return False
+
+    def is_ready(self) -> bool:
+        """Check if client is ready to use"""
+        return self.client is not None

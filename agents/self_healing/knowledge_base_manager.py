@@ -5,9 +5,9 @@ KnowledgeBaseManager: 統合ナレッジベース管理
 全ての実行ログを統合し、パターンを抽出して学習データを蓄積する。
 AIがAIを進化させる自己強化ループの中核。
 """
-from datetime import datetime
-from typing import Dict, Any, List
 import logging
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 import json
@@ -76,7 +76,7 @@ class KnowledgeBaseManager:
             sheets_manager: GoogleSheetsManagerインスタンス
         """
         self.sheets_manager = sheets_manager
-        # self.gc = sheets_manager.gc  # ⚠️ 削除: GoogleSheetsManagerは.gcを持たない
+        #
         self.spreadsheet_id = sheets_manager.spreadsheet_id
 
         print("✅ KnowledgeBaseManager初期化完了")
