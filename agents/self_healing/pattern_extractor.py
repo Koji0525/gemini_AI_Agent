@@ -5,11 +5,12 @@ PatternExtractor: パターン抽出エンジン
 統合ログから成功パターン、失敗パターン、修正レシピを自動抽出。
 機械学習の訓練データとして使用可能な形式で出力。
 """
-from typing import Dict, List
-from collections import defaultdict
 import json
+from collections import defaultdict
+from typing import Dict, List
+
 from .knowledge_base_manager import KnowledgePattern
-from .log_integrator import LogIntegrator, IntegratedLog
+from .logging.log_integrator import IntegratedLog, LogIntegrator
 
 
 class PatternExtractor:

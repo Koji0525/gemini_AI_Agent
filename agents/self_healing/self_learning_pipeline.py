@@ -37,7 +37,7 @@ class SelfLearningPipeline:
 
         # その他のコンポーネント初期化
         self.log_integrator = LogIntegrator(sheets_manager)
-        self.pattern_extractor = PatternExtractor()
+        self.pattern_extractor = PatternExtractor(self.log_integrator)
 
         logger.info("✅ SelfLearningPipeline 初期化完了")
 
@@ -75,3 +75,43 @@ class SelfLearningPipeline:
             )
 
         return recommendations
+
+    async def run_learning_cycle(self):
+        """
+        学習サイクルを実行
+
+        Returns:
+            dict: 学習結果
+                - patterns_found: 抽出されたパターン数
+                - knowledge_updated: ナレッジ更新有無
+        """
+        try:
+            # 1. 学習推奨事項を取得
+            recommendations = await self.get_learning_recommendations()
+
+            patterns_found = len(recommendations) if recommendations else 0
+            knowledge_updated = patterns_found > 0
+
+            # 2. 推奨事項があればナレッジ更新
+            if knowledge_updated:
+                # ナレッジベースに登録
+                for rec in recommendations:
+                    try:
+                        await self.knowledge_base_manager.add_pattern(rec)
+                    except Exception as e:
+                        print(f"⚠️ パターン登録エラー: {e}")
+
+            return {
+                "patterns_found": patterns_found,
+                "knowledge_updated": knowledge_updated,
+                "status": "success",
+            }
+
+        except Exception as e:
+            print(f"❌ 学習サイクルエラー: {e}")
+            return {
+                "patterns_found": 0,
+                "knowledge_updated": False,
+                "status": "error",
+                "error": str(e),
+            }
