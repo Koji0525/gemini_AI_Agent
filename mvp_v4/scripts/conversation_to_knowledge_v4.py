@@ -1,197 +1,187 @@
 #!/usr/bin/env python3
 """
-会話ログからナレッジ抽出 v4.0
-- 複数行形式自動対応
-- フォーマット自動修正
-- 品質スコア算出
+新しいシンプルフォーマット対応ナレッジ抽出器 - コピペ途切れ防止版
 """
+import re
 import json
-import sys
+import os
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Optional
-
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
-from mvp_v4.scripts.knowledge_format_validator import KnowledgeFormatValidator
 
 
 class ConversationKnowledgeExtractorV4:
-    """会話ログからナレッジを抽出（v4: 自動フォーマット修正対応）"""
+    def __init__(self):
+        self.knowledge_file = "mvp_v4/knowledge/learned/conversation_knowledge_v4.json"
+        os.makedirs(os.path.dirname(self.knowledge_file), exist_ok=True)
 
-    def __init__(self, output_dir: str = "mvp_v4/knowledge/learned"):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.output_file = self.output_dir / "conversation_knowledge_v3.json"
-        self.validator = KnowledgeFormatValidator()
+    def extract_from_simple_format(self, text):
+        """新しいシンプルフォーマットからナレッジを抽出"""
+        try:
+            print("🔍 新しいフォーマットでナレッジを抽出中...")
 
-    def extract_from_simple_format(self, text: str, auto_fix: bool = True) -> Optional[Dict]:
-        """
-        シンプル形式から抽出（v4: 自動修正機能付き）
+            # シンプルな正規表現パターン - コピペ途切れに強い
+            patterns = {
+                "title": r"タイトル:\s*(.+)",
+                "category": r"カテゴリ:\s*(.+)",
+                "priority": r"重要度:\s*(.+)",
+                "scenario": r"何が起きた:\s*(.+)",
+                "environment": r"環境:\s*(.+)",
+                "root_cause": r"根本原因:\s*(.+)",
+                "solution_approach": r"解決手法:\s*(.+)",
+                "success_rate": r"成功率:\s*(\d+)%",
+            }
 
-        Args:
-            text: 入力テキスト
-            auto_fix: True=自動修正を適用, False=そのまま処理
-        """
-        # 自動修正を適用
-        if auto_fix:
-            text, logs = self.validator.auto_fix(text)
-            for log in logs:
-                print(f"  {log}")
+            knowledge = {"metadata": {}, "content": {}}
 
-        knowledge = {
-            "id": f"CONV_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "task_type": "general",
-            "scenario": "",
-            "best_practice": "",
-            "code_example": "",
-            "success_rate": 0.0,
-            "created_at": datetime.now().isoformat(),
-        }
+            # 基本フィールドの抽出
+            for key, pattern in patterns.items():
+                match = re.search(pattern, text)
+                if match:
+                    if key in ["title", "category", "priority"]:
+                        knowledge["metadata"][key] = match.group(1).strip()
+                    else:
+                        knowledge["content"][key] = match.group(1).strip()
 
-        # 各行を解析
-        lines = text.strip().split("\n")
-        for line in lines:
-            line = line.strip()
+            # リスト形式のフィールド抽出
+            direct_causes = re.findall(
+                r"(\d+)\.\s*(.+)",
+                (
+                    re.search(r"直接原因:\s*(.*?)(?=【解決策】)", text, re.DOTALL).group(1)
+                    if re.search(r"直接原因:\s*(.*?)(?=【解決策】)", text, re.DOTALL)
+                    else ""
+                ),
+            )
+            knowledge["content"]["direct_causes"] = [cause[1] for cause in direct_causes]
 
-            # 何が起きた
-            if line.startswith("何が起きた"):
-                knowledge["scenario"] = line.split(":", 1)[1].strip() if ":" in line else ""
+            learnings = re.findall(
+                r"(\d+)\.\s*(.+)",
+                (
+                    re.search(r"【学び】\s*(.*?)(?=【予防策】)", text, re.DOTALL).group(1)
+                    if re.search(r"【学び】\s*(.*?)(?=【予防策】)", text, re.DOTALL)
+                    else ""
+                ),
+            )
+            knowledge["content"]["learnings"] = [learn[1] for learn in learnings]
 
-            # 原因
-            elif line.startswith("原因"):
-                knowledge["context"] = line.split(":", 1)[1].strip() if ":" in line else ""
+            prevention = re.findall(
+                r"-\s*(.+)",
+                (
+                    re.search(r"【予防策】\s*(.*?)(?=成功率)", text, re.DOTALL).group(1)
+                    if re.search(r"【予防策】\s*(.*?)(?=成功率)", text, re.DOTALL)
+                    else ""
+                ),
+            )
+            knowledge["content"]["prevention"] = prevention
 
-            # 狙い
-            elif line.startswith("狙い"):
-                knowledge["best_practice"] = line.split(":", 1)[1].strip() if ":" in line else ""
+            # コード例の抽出（複数行対応）
+            code_match = re.search(r"実装例:\s*(.+?)(?=【学び】)", text, re.DOTALL)
+            if code_match:
+                knowledge["content"]["code_examples"] = code_match.group(1).strip()
 
-            # 成功率
-            elif line.startswith("成功率"):
-                try:
-                    rate_str = line.split(":", 1)[1].strip().replace("%", "")
-                    knowledge["success_rate"] = float(rate_str) / 100.0
-                except:
-                    knowledge["success_rate"] = 0.0
+            # 必須フィールドチェック
+            if not knowledge["content"].get("scenario"):
+                print("❌ '何が起きた' フィールドが見つかりません")
+                return None
 
-            # コード例
-            elif line.startswith("```"):
-                knowledge["code_example"] += line + "\n"
+            if not knowledge["content"].get("root_cause"):
+                print("❌ '根本原因' フィールドが見つかりません")
+                return None
 
-            # 教訓
-            elif line.startswith("教訓"):
-                knowledge["lessons_learned"] = line.split(":", 1)[1].strip() if ":" in line else ""
+            print("✅ ナレッジ抽出成功")
+            return self._format_final_knowledge(knowledge)
 
-        # 品質スコア算出
-        quality_score = self._calculate_quality_score(knowledge)
-        knowledge["quality_score"] = quality_score
+        except Exception as e:
+            print(f"❌ 抽出エラー: {e}")
+            import traceback
 
-        # 必須フィールドチェック
-        if not knowledge["scenario"] or not knowledge["best_practice"]:
-            print(f"⚠️  必須フィールド不足")
+            traceback.print_exc()
             return None
 
-        return knowledge
+    def _format_final_knowledge(self, extracted):
+        """最終ナレッジ形式に変換"""
+        return {
+            "scenario": extracted["content"].get("scenario", ""),
+            "cause": f"根本原因: {extracted['content'].get('root_cause', '')}",
+            "solution": self._build_solution_text(extracted),
+            "learnings": extracted["content"].get("learnings", []),
+            "prevention": extracted["content"].get("prevention", []),
+            "success_rate": int(extracted["content"].get("success_rate", 0)),
+            "metadata": {
+                "title": extracted["metadata"].get("title", ""),
+                "category": extracted["metadata"].get("category", ""),
+                "priority": extracted["metadata"].get("priority", "medium"),
+                "environment": extracted["content"].get("environment", ""),
+                "format_version": "v4_simple",
+                "timestamp": datetime.now().isoformat(),
+            },
+        }
 
-    def _calculate_quality_score(self, knowledge: Dict) -> int:
-        """品質スコア算出（v4）"""
-        score = 0
+    def _build_solution_text(self, extracted):
+        """解決策テキストを構築"""
+        solution_parts = []
 
-        # 基本項目（各2点）
-        if knowledge.get("scenario"):
-            score += 2
-        if knowledge.get("best_practice"):
-            score += 2
-        if knowledge.get("context"):
-            score += 1
+        if extracted["content"].get("solution_approach"):
+            solution_parts.append(f"解決手法: {extracted['content']['solution_approach']}")
 
-        # 詳細度（各1点）
-        if knowledge.get("code_example"):
-            score += 2
-        if knowledge.get("lessons_learned"):
-            score += 1
-        if knowledge.get("success_rate", 0) > 0:
-            score += 1
+        if extracted["content"].get("direct_causes"):
+            solution_parts.append("直接原因:")
+            for i, cause in enumerate(extracted["content"]["direct_causes"], 1):
+                solution_parts.append(f"  {i}. {cause}")
 
-        # 内容の充実度
-        if len(knowledge.get("scenario", "")) > 20:
-            score += 1
-        if len(knowledge.get("best_practice", "")) > 30:
-            score += 1
+        if extracted["content"].get("code_examples"):
+            solution_parts.append("実装例:")
+            solution_parts.append(extracted["content"]["code_examples"])
 
-        return min(score, 10)
+        return "\n".join(solution_parts)
 
-    def save_knowledge(self, knowledge: Dict) -> bool:
-        """ナレッジを保存（品質スコア6点以上）"""
-        if knowledge.get("quality_score", 0) < 6:
-            print(f"⚠️  品質スコア不足: {knowledge.get('quality_score', 0)}/10")
+    def save_knowledge(self, knowledge):
+        """ナレッジを保存"""
+        try:
+            # 既存のナレッジを読み込み
+            existing_knowledge = []
+            if os.path.exists(self.knowledge_file):
+                with open(self.knowledge_file, "r", encoding="utf-8") as f:
+                    existing_knowledge = json.load(f)
+
+            # 新しいナレッジを追加
+            existing_knowledge.append(knowledge)
+
+            # 保存
+            with open(self.knowledge_file, "w", encoding="utf-8") as f:
+                json.dump(existing_knowledge, f, ensure_ascii=False, indent=2)
+
+            print(f"💾 ナレッジを保存しました: {self.knowledge_file}")
+            return True
+
+        except Exception as e:
+            print(f"❌ 保存エラー: {e}")
             return False
 
-        # 既存データを読み込み
-        if self.output_file.exists():
-            with open(self.output_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        else:
-            data = {"knowledge_base": []}
 
-        # 重複チェック
-        for existing in data["knowledge_base"]:
-            if existing.get("scenario") == knowledge.get("scenario"):
-                print(f"⚠️  重複のためスキップ")
-                return False
+def main():
+    """コマンドラインからの実行用"""
+    import sys
 
-        # 追加
-        data["knowledge_base"].append(knowledge)
-
-        # 保存
-        with open(self.output_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        print(f"✅ ナレッジ保存成功 (品質スコア: {knowledge['quality_score']}/10)")
-        print(f"📚 総件数: {len(data['knowledge_base'])}件")
-        return True
-
-
-# テスト実行
-if __name__ == "__main__":
     extractor = ConversationKnowledgeExtractorV4()
 
-    # テストケース1: 複数行形式
-    test_multi_line = """
-何が起きた:
-ナレッジベース最速自動起動を実装
+    if len(sys.argv) > 1:
+        # ファイルから読み込み
+        with open(sys.argv[1], "r", encoding="utf-8") as f:
+            content = f.read()
+    else:
+        # 標準入力から読み込み
+        print("ナレッジ内容を入力してください（Ctrl+Dで終了）:")
+        content = sys.stdin.read()
 
-原因:
-毎回フル初期化していたため起動に5秒かかっていた
+    knowledge = extractor.extract_from_simple_format(content)
+    if knowledge:
+        extractor.save_knowledge(knowledge)
+        print("✅ ナレッジ登録完了！")
+        return True
+    else:
+        print("❌ ナレッジ登録失敗")
+        return False
 
-狙い:
-ChromaDB存在チェックのみで0.5秒以内に起動完了
 
-成功率: 98%
-
-教訓:
-- 初回のみバックグラウンド初期化
-- キャッシュ活用で2回目以降は即座完了
-"""
-
-    print("=" * 70)
-    print("🧪 テスト1: 複数行形式")
-    print("=" * 70)
-    kb = extractor.extract_from_simple_format(test_multi_line)
-    if kb:
-        print(f"✅ 抽出成功: {kb['scenario']}")
-
-    # テストケース2: 1行形式
-    test_single_line = """
-何が起きた: ナレッジ抽出が複数行形式で失敗
-原因: extract_from_simple_formatが1行形式のみ対応
-狙い: 自動フォーマット修正機能を追加
-成功率: 100%
-"""
-
-    print("\n" + "=" * 70)
-    print("🧪 テスト2: 1行形式")
-    print("=" * 70)
-    kb = extractor.extract_from_simple_format(test_single_line)
-    if kb:
-        print(f"✅ 抽出成功: {kb['scenario']}")
+if __name__ == "__main__":
+    success = main()
+    exit(0 if success else 1)
