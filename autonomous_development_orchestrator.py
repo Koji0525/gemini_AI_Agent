@@ -32,6 +32,10 @@ class AutonomousDevelopmentOrchestrator:
         from tools.knowledge_sync import sync_knowledge_on_startup
         sync_knowledge_on_startup()
 
+        # ナレッジベース自動同期
+        from tools.knowledge_sync import sync_knowledge_on_startup
+        sync_knowledge_on_startup()
+
         logger.info("=" * 60)
         logger.info("🚀 24時間自律開発システム起動中...")
         logger.info("=" * 60)
