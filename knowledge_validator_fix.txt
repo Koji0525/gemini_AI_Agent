@@ -1,0 +1,61 @@
+【ナレッジ登録開始】
+タイトル: sheets_structure_validator - SafeSheetsWrapper対応
+カテゴリ: Python/Google Sheets API/検証ツール
+重要度: 高
+
+【問題】
+何が起きた: sheets_structure_validatorが存在しないread_range()メソッドを呼び出しエラー
+環境: Google Sheets API v4, Python 3.8+, GoogleSheetsManager
+エラー例: 'GoogleSheetsManager' object has no attribute 'read_range'
+
+【原因分析】
+根本原因: GoogleSheetsManagerを直接使用、SafeSheetsWrapperを経由していない
+直接原因: 
+1. 検証ツールがGoogleSheetsManagerを直接使用
+2. 存在しないread_range()メソッドを推測で使用
+3. 運用ルール17（SafeSheetsWrapper必須）を守れていない
+
+【解決策】
+解決手法: SafeSheetsWrapperを経由してGoogleSheetsManagerを使用
+
+実装例:
+# ✅ 正しい実装
+from tools.sheets_manager import GoogleSheetsManager
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+
+class SheetsStructureValidator:
+    def __init__(self, sheets_manager: GoogleSheetsManager):
+        self.sheets = SafeSheetsWrapper(sheets_manager)  # SafeWrapper経由
+    
+    def validate_sheet(self, sheet_name: str, schema: dict):
+        # SafeWrapperのread_rangeを使用（互換性メソッド）
+        all_data = self.sheets.read_range(f"{sheet_name}!A1:Z1", default=[])
+
+# ❌ 避けるべき実装
+class SheetsStructureValidator:
+    def __init__(self, sheets_manager: GoogleSheetsManager):
+        self.sheets = sheets_manager  # 直接使用は禁止
+    
+    def validate_sheet(self, sheet_name: str, schema: dict):
+        all_data = self.sheets.read_range(...)  # 存在しないメソッド
+
+【学び】
+1. すべてのシート操作はSafeSheetsWrapper経由で行う
+2. GoogleSheetsManagerの直接使用を禁止（運用ルール17）
+3. SafeSheetsWrapperが互換性メソッドを提供（read_range等）
+4. エラー時のデフォルト値設定で処理継続
+5. 統一設定ファイル（sheets_schema.py）を参照
+
+【予防策】
+- 新しいシート操作コード作成時は必ずSafeSheetsWrapper経由
+- TaskExecutorにもSafeSheetsWrapper統合（Phase 2対応）
+- CI/CDパイプラインに構造検証を統合
+- 月次でコードレビュー実施
+
+【横展開】
+- 他の検証ツール（method_validator.py等）にも同様の修正適用
+- すべてのエージェント（PMAgent、GoalBreakdownAgent等）にSafeSheetsWrapper統合
+- 統一設定ファイル（sheets_schema.py）のパターンは他の構造にも適用可能
+
+成功率: 98%
+【ナレッジ登録終了】

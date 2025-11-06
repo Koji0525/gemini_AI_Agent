@@ -1,0 +1,61 @@
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# task_executor/task_executor.py に追加
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+import sys
+sys.path.insert(0, '/workspaces/gemini_AI_Agent')
+from tools.code_impact_analyzer import CodeImpactAnalyzer
+from tools.env_protector import EnvProtector
+
+class TaskExecutor:
+    def __init__(self):
+        self.impact_analyzer = CodeImpactAnalyzer()
+        self.env_protector = EnvProtector()
+    
+    async def execute_code_modification(self, file_path, new_content):
+        """コード修正タスク実行（自動保護付き）"""
+        
+        # 1. 修正前: 自動バックアップ
+        backup_path = f"{file_path}.backup"
+        shutil.copy2(file_path, backup_path)
+        
+        # 2. 修正前の内容を読み込み
+        with open(file_path, 'r') as f:
+            old_content = f.read()
+        
+        # 3. 影響分析（自動）
+        results = self.impact_analyzer.analyze_python_file(old_content, new_content)
+        
+        # 4. リスク判定
+        if results["risk_level"] == "critical":
+            # 重大な変更 → 人間に報告して中止
+            await self._report_to_human(
+                f"⛔ コード修正中止: {file_path}\n"
+                f"削除される関数: {results['deleted_functions']}\n"
+                f"削除されるクラス: {results['deleted_classes']}"
+            )
+            return {"status": "blocked", "reason": "critical_risk"}
+        
+        elif results["risk_level"] == "high":
+            # 高リスク → ログに記録して実行
+            await self._log_warning(
+                f"⚠️  高リスク修正を実行: {file_path}\n"
+                f"削除される関数: {results['deleted_functions']}"
+            )
+        
+        # 5. 修正実行
+        with open(file_path, 'w') as f:
+            f.write(new_content)
+        
+        return {"status": "success", "risk_level": results["risk_level"]}
+    
+    async def execute_env_modification(self, updates: dict):
+        """.env修正タスク実行（自動保護付き）"""
+        
+        # 1. 自動バックアップ
+        self.env_protector.backup()
+        
+        # 2. 安全な更新（既存キーは保持）
+        self.env_protector.safe_update(updates)
+        
+        return {"status": "success"}

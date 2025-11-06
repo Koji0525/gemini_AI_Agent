@@ -1,0 +1,38 @@
+
+
+## 17. スプレッドシート連携の再発防止（必須）
+
+### 17.1 AI自律開発時の必須フロー
+GoogleSheets操作を含むコード生成時、以下を**自動実行**:
+```python
+# コード生成前: API仕様確認
+python3 tools/api_validator.py GoogleSheetsManager
+
+# SafeWrapper を必ず使用
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+sheets = GoogleSheetsManager()
+safe_sheets = SafeSheetsWrapper(sheets)  # ← 必須
+
+# 間違ったメソッド名でも自動修正
+data = safe_sheets.read_sheet('pm_tasks!A1:Z10')  # OK（自動修正）
+```
+
+### 17.2 禁止事項
+- ❌ 推測によるメソッド名使用（update_cell, read_sheet等）
+- ❌ GoogleSheetsManager の直接使用（必ずSafeWrapper経由）
+- ❌ 1次元配列の直接書き込み（自動で2次元に変換される）
+
+### 17.3 自動フロー実行
+```bash
+# project_goal → pm_tasks → task_execution_log
+python3 tools/sheets_flow_orchestrator.py
+```
+
+### 17.4 エラー発生時
+```bash
+# 統合診断（自動修復付き）
+python3 tools/integrated_diagnostics.py --auto-fix
+
+# API仕様再確認
+python3 tools/api_validator.py GoogleSheetsManager
+```
