@@ -123,3 +123,38 @@ _BACKUP/
 _ARCHIVE/
 Claude/
 demos/
+
+# === セキュリティ強化 (v1.15.1) ===
+.env
+.env.*
+*.backup
+*.backup.*
+*.bak
+**/credentials.json
+*.key
+**/service_account.json
+wordpress_cookies.json.backup
+
+# バックアップファイル完全除外
+*.backup
+*.backup.*
+*.bak
+*.bak*
+.env.backup*
+*.backup
+*.backup.*
+.env.*
+
+# v1.15.0/v1.16.0 開発中の一時ファイル
+README_v1.15.0.md
+/tmp/*.md
+*_TEMP.md
+*_DRAFT.md
+
+# セキュリティチェック用一時ファイル
+gap_analysis.md
+system_check.sh
+
+# キャッシュファイル（機密情報を含む可能性）
+.quality_cache.json
+*.cache.json
