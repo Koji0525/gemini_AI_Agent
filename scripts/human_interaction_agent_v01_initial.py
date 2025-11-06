@@ -108,7 +108,11 @@ class HumanInteractionAgent:
         for pattern, action in self.COMMANDS.items():
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
-                return {"action": action, "text": text, "params": match.groups() if match.groups() else []}
+                return {
+                    "action": action,
+                    "text": text,
+                    "params": match.groups() if match.groups() else [],
+                }
         return None
 
     async def _execute_command(self, command: dict) -> str:
@@ -185,6 +189,8 @@ class HumanInteractionAgent:
 
 def main():
     import argparse
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", required=True, help="リポジトリ名（例: user/repo）")

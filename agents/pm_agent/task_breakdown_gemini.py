@@ -20,7 +20,9 @@ class GeminiTaskBreakdownAgent:
         self.model = genai.GenerativeModel("gemini-2.0-flash-exp")
         print(f"✅ Geminiモデル初期化: gemini-2.0-flash-exp")
 
-    async def generate_tasks_for_goal(self, goal_id: int, goal_description: str, **kwargs) -> List[Dict[str, Any]]:
+    async def generate_tasks_for_goal(
+        self, goal_id: int, goal_description: str, **kwargs
+    ) -> List[Dict[str, Any]]:
         """タスク生成（goal_id対応）"""
 
         print(f"🤖 Geminiにタスク分解を依頼中（Goal {goal_id}）...")
@@ -49,6 +51,8 @@ class GeminiTaskBreakdownAgent:
             print(f"✅ レスポンス受信: {len(response.text)}文字")
 
             # JSON抽出
+
+            # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
             text = response.text
             print(f"📄 レスポンス内容:\n{text[:500]}...")
 

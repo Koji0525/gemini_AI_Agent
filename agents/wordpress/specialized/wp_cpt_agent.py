@@ -42,7 +42,9 @@ class CPTSpecification:
 class WPCPTAgent:
     """WordPressカスタム投稿タイプ管理エージェント"""
 
-    def __init__(self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None):
+    def __init__(
+        self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None
+    ):
         """
         初期化（依存性注入）
 
@@ -63,7 +65,9 @@ class WPCPTAgent:
         """既存の投稿タイプ一覧を取得"""
         print("\n📋 既存の投稿タイプを取得中...")
         try:
-            response = requests.get(f"{self.wp_url}/wp-json/wp/v2/types", auth=self.auth, timeout=10)
+            response = requests.get(
+                f"{self.wp_url}/wp-json/wp/v2/types", auth=self.auth, timeout=10
+            )
 
             if response.status_code == 200:
                 types = response.json()
@@ -102,7 +106,9 @@ class WPCPTAgent:
     async def verify_post_type(self, post_type: str) -> bool:
         """投稿タイプの存在を確認"""
         try:
-            response = requests.get(f"{self.wp_url}/wp-json/wp/v2/types/{post_type}", auth=self.auth, timeout=10)
+            response = requests.get(
+                f"{self.wp_url}/wp-json/wp/v2/types/{post_type}", auth=self.auth, timeout=10
+            )
 
             if response.status_code == 200:
                 print(f"✅ 投稿タイプ '{post_type}' が存在します")
@@ -190,7 +196,13 @@ add_action('init', 'register_cpt_{spec.post_type}');
         print(f"🚀 カスタム投稿タイプ作成: {spec.plural_name}")
         print("=" * 80)
 
-        result = {"success": False, "post_type": spec.post_type, "php_code": "", "filepath": "", "instructions": []}
+        result = {
+            "success": False,
+            "post_type": spec.post_type,
+            "php_code": "",
+            "filepath": "",
+            "instructions": [],
+        }
 
         # 1. 既存の確認
         existing = await self.verify_post_type(spec.post_type)
@@ -284,5 +296,7 @@ async def test_cpt_agent_with_logging():
 
 if __name__ == "__main__":
     import asyncio
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
     asyncio.run(test_cpt_agent_with_logging())

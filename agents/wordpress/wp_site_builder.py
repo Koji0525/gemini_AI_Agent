@@ -15,7 +15,12 @@ from dataclasses import dataclass
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 from configuration.config_loader import ConfigLoader
 from tools.sheets_manager import GoogleSheetsManager
-from agents.wordpress.specialized import WPCPTAgent, CPTSpecification, WPTaxonomyAgent, TaxonomySpecification
+from agents.wordpress.specialized import (
+    WPCPTAgent,
+    CPTSpecification,
+    WPTaxonomyAgent,
+    TaxonomySpecification,
+)
 
 
 @dataclass
@@ -30,7 +35,9 @@ class PortfolioSiteSpec:
 class WPSiteBuilder:
     """WordPress統合サイト構築オーケストレーター"""
 
-    def __init__(self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None):
+    def __init__(
+        self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None
+    ):
         """
         初期化（依存性注入）
 
@@ -182,7 +189,9 @@ class WPSiteBuilder:
 
         # サイト仕様
         site_spec = PortfolioSiteSpec(
-            site_name="Webデザイナーポートフォリオ", cpt_spec=cpt_spec, taxonomy_specs=taxonomy_specs
+            site_name="Webデザイナーポートフォリオ",
+            cpt_spec=cpt_spec,
+            taxonomy_specs=taxonomy_specs,
         )
 
         # サイト構築実行
@@ -224,5 +233,7 @@ async def test_site_builder():
 
 if __name__ == "__main__":
     import asyncio
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
     asyncio.run(test_site_builder())

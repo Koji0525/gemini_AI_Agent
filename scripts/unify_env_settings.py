@@ -161,6 +161,8 @@ def main():
         return False
 
     # .envを更新
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     update_env_file(service_account_file)
 
     print("\n✅ .env設定を統一しました")

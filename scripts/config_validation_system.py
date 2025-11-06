@@ -76,7 +76,10 @@ class ConfigValidator:
             wp_pass = self.config._config.get("wp_pass")
 
             if not all([wp_url, wp_user, wp_pass]):
-                self.validation_result["wp_connection"] = {"status": "failed", "error": "WordPress設定が不完全"}
+                self.validation_result["wp_connection"] = {
+                    "status": "failed",
+                    "error": "WordPress設定が不完全",
+                }
                 print("❌ WordPress設定が不完全です")
                 return
 
@@ -120,7 +123,10 @@ class ConfigValidator:
             # REST API チェック
             response = requests.get(api_base, auth=auth, timeout=10)
             if response.status_code in [200, 401]:
-                self.validation_result["rest_api"] = {"available": True, "limited": response.status_code == 401}
+                self.validation_result["rest_api"] = {
+                    "available": True,
+                    "limited": response.status_code == 401,
+                }
                 print(f"✅ REST API利用可能")
             else:
                 self.validation_result["rest_api"] = {"available": False}
@@ -459,6 +465,8 @@ async def main():
     except Exception as e:
         print(f"❌ エラー: {e}")
         import traceback
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
         traceback.print_exc()
         return None

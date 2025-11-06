@@ -92,7 +92,8 @@ class ACFFieldGroup:
             "title": self.title,
             "fields": [f.to_acf_dict() for f in self.fields],
             "location": [
-                [{"param": "post_type", "operator": "==", "value": post_type}] for post_type in self.post_types
+                [{"param": "post_type", "operator": "==", "value": post_type}]
+                for post_type in self.post_types
             ],
             "menu_order": 0,
             "position": self.position,
@@ -106,7 +107,9 @@ class ACFFieldGroup:
 class WPACFAgent:
     """WordPress ACF管理エージェント"""
 
-    def __init__(self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None):
+    def __init__(
+        self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None
+    ):
         """
         初期化（依存性注入）
 
@@ -349,5 +352,7 @@ async def test_acf_agent():
 
 if __name__ == "__main__":
     import asyncio
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
     asyncio.run(test_acf_agent())

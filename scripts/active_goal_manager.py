@@ -18,7 +18,9 @@ class ActiveGoalManager:
     """Active Goal管理クラス - 本番環境用"""
 
     def __init__(self):
-        self.spreadsheet_id = os.getenv("SPREADSHEET_ID", "1qpMLT9HKlPT9qY17fpqOkSIbehKH77wZ8bA1yfPSO_s")
+        self.spreadsheet_id = os.getenv(
+            "SPREADSHEET_ID", "1qpMLT9HKlPT9qY17fpqOkSIbehKH77wZ8bA1yfPSO_s"
+        )
         service_account_file = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
         self.sheets_manager = GoogleSheetsManager(self.spreadsheet_id, service_account_file)
 
@@ -174,6 +176,8 @@ async def main():
         print(f"     進捗: {goal['progress_rate']}%")
 
     # Progress Dashboardの更新
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     if active_goals:
         await manager.update_progress_dashboard(active_goals)
 

@@ -14,6 +14,34 @@ from agents.testing.testing_agent import TestingAgent
 from agents.error_recovery.error_recovery_agent import ErrorRecoveryAgent
 from tools.auto_knowledge_register import AutoKnowledgeRegister
 
+# 🔧 APIキー強制リフレッシュ
+import sys
+import os
+
+# 🔧 環境変数を強制的にリセット
+if "GEMINI_API_KEY" in os.environ:
+    del os.environ["GEMINI_API_KEY"]
+
+# .envから再読み込み
+from dotenv import load_dotenv
+
+load_dotenv(override=True)  # override=True で既存の環境変数を上書き
+
+# 確認
+api_key = os.getenv("GEMINI_API_KEY")
+print(f"🔑 使用するAPIキー: {api_key[:15] if api_key else 'None'}...")
+
+if not api_key:
+    print("❌ APIキーが読み込めません")
+    sys.exit(1)
+
+if api_key.startswith("AIzaSyBeLG"):
+    print("❌ 古いAPIキーが読み込まれています！")
+    print("   .envファイルを確認してください")
+    sys.exit(1)
+
+print("✅ 新しいAPIキー確認完了")
+
 
 async def test_code_generation(knowledge_register):
     """CodeGenerationAgent テスト"""
@@ -184,6 +212,8 @@ async def main():
         print(f"{status}: {agent_name}")
 
     # ナレッジ統計表示
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     stats = knowledge_register.get_statistics()
     print("\n" + "=" * 70)
     print("📚 自動登録されたナレッジ")

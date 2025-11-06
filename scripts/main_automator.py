@@ -29,8 +29,12 @@ class GeminiAutomator:
             auto_detect_pc_id: Trueの場合、スプレッドシートのB12セルからPC_IDを読み取る
         """
         # まず、サービスアカウントファイルでシートマネージャーを初期化
-        default_service_account = r"C:\Users\color\Documents\gemini_auto_generate\service_account.json"
-        service_account_file = default_service_account if Path(default_service_account).exists() else None
+        default_service_account = (
+            r"C:\Users\color\Documents\gemini_auto_generate\service_account.json"
+        )
+        service_account_file = (
+            default_service_account if Path(default_service_account).exists() else None
+        )
 
         self.sheets_manager = GoogleSheetsManager(config.SPREADSHEET_ID, service_account_file)
 
@@ -72,7 +76,9 @@ class GeminiAutomator:
             else:
                 # フォールバック: ローカル一時フォルダ
                 base_temp_folder = Path(r"C:\Users\color\Documents\gemini_auto_generate")
-                self.download_folder = PathManager.get_safe_path(str(base_temp_folder / "temp_texts"))
+                self.download_folder = PathManager.get_safe_path(
+                    str(base_temp_folder / "temp_texts")
+                )
                 logger.warning(f"B6が空のため、デフォルトフォルダを使用: {self.download_folder}")
         else:
             # 画像モードの場合はB5の設定を使用
@@ -82,14 +88,18 @@ class GeminiAutomator:
             else:
                 # フォールバック: ローカル一時フォルダ
                 base_temp_folder = Path(r"C:\Users\color\Documents\gemini_auto_generate")
-                self.download_folder = PathManager.get_safe_path(str(base_temp_folder / "temp_images"))
+                self.download_folder = PathManager.get_safe_path(
+                    str(base_temp_folder / "temp_images")
+                )
                 logger.warning(f"B5が空のため、デフォルトフォルダを使用: {self.download_folder}")
 
         self.browser_controller = BrowserController(self.download_folder, self.mode, self.service)
         self.credentials: Optional[Dict[str, str]] = None
         self.prompts: List[str] = []
         self.results: List[Dict] = []
-        self.generate_unique_filename = lambda idx: FileNameGenerator.generate_unique_filename(idx, mode=self.mode)
+        self.generate_unique_filename = lambda idx: FileNameGenerator.generate_unique_filename(
+            idx, mode=self.mode
+        )
 
     def load_pc_configuration(self) -> None:
         """PC固有の設定を読み込み"""
@@ -125,7 +135,9 @@ class GeminiAutomator:
             logger.info(f"  Agent出力先 (B14): {config.AGENT_OUTPUT_FOLDER}")
             logger.info(f"  最大反復回数 (B15): {config.MAX_ITERATIONS}")
             if config.SERVICE_ACCOUNT_FILE and Path(config.SERVICE_ACCOUNT_FILE).exists():
-                self.sheets_manager = GoogleSheetsManager(config.SPREADSHEET_ID, config.SERVICE_ACCOUNT_FILE)
+                self.sheets_manager = GoogleSheetsManager(
+                    config.SPREADSHEET_ID, config.SERVICE_ACCOUNT_FILE
+                )
         except Exception as e:
             ErrorHandler.log_error(e, "PC設定読み込み")
             raise
@@ -234,10 +246,14 @@ class GeminiAutomator:
         finally:
             self.results.append(result)
 
-    async def process_single_prompt_text(self, prompt: str, index: int, max_retries: int = 2) -> bool:
+    async def process_single_prompt_text(
+        self, prompt: str, index: int, max_retries: int = 2
+    ) -> bool:
         """テキストモードでプロンプトを処理"""
         try:
-            logger.info(f"\n--- プロンプト {index}/{len(self.prompts)} を処理中（テキストモード）---")
+            logger.info(
+                f"\n--- プロンプト {index}/{len(self.prompts)} を処理中（テキストモード）---"
+            )
             logger.info(f"プロンプト: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
             result = {
                 "index": index,
@@ -271,7 +287,9 @@ class GeminiAutomator:
                                         file_size = save_path.stat().st_size
                                         result["status"] = "success"
                                         result["filename"] = filename
-                                        logger.info(f"✅ JSON保存成功: {filename} ({file_size:,} bytes)")
+                                        logger.info(
+                                            f"✅ JSON保存成功: {filename} ({file_size:,} bytes)"
+                                        )
                                         logger.info(f"保存先: {save_path}")
                                         return True
                                 except Exception as e:
@@ -289,7 +307,9 @@ class GeminiAutomator:
                                         file_size = save_path.stat().st_size
                                         result["status"] = "success"
                                         result["filename"] = filename
-                                        logger.info(f"✅ テキスト保存成功: {filename} ({file_size:,} bytes)")
+                                        logger.info(
+                                            f"✅ テキスト保存成功: {filename} ({file_size:,} bytes)"
+                                        )
                                         logger.info(f"保存先: {save_path}")
                                         return True
                                 except Exception as e:
@@ -389,6 +409,8 @@ async def main():
     import argparse
     import os
 
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Gemini自動生成（ローカル保存版）")
     parser.add_argument(
         "--pc-id",
@@ -396,7 +418,9 @@ async def main():
         default=None,
         help="PC_IDを明示的に指定（指定しない場合はスプレッドシートのB12セルから自動取得）",
     )
-    parser.add_argument("--no-auto-detect", action="store_true", help="スプレッドシートからのPC_ID自動取得を無効化")
+    parser.add_argument(
+        "--no-auto-detect", action="store_true", help="スプレッドシートからのPC_ID自動取得を無効化"
+    )
     args = parser.parse_args()
 
     print("=== Gemini 自動生成スクリプト（ローカル保存版）===")

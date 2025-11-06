@@ -42,7 +42,9 @@ class TaxonomySpecification:
 class WPTaxonomyAgent:
     """WordPressタクソノミー管理エージェント"""
 
-    def __init__(self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None):
+    def __init__(
+        self, config_loader: ConfigLoader, sheets_manager: Optional[GoogleSheetsManager] = None
+    ):
         """
         初期化（依存性注入）
 
@@ -63,15 +65,25 @@ class WPTaxonomyAgent:
         """既存のタクソノミー一覧を取得"""
         print("\n📋 既存のタクソノミーを取得中...")
         try:
-            response = requests.get(f"{self.wp_url}/wp-json/wp/v2/taxonomies", auth=self.auth, timeout=10)
+            response = requests.get(
+                f"{self.wp_url}/wp-json/wp/v2/taxonomies", auth=self.auth, timeout=10
+            )
 
             if response.status_code == 200:
                 taxonomies = response.json()
                 print(f"✅ タクソノミー数: {len(taxonomies)}個")
 
-                standard_taxonomies = ["category", "post_tag", "nav_menu", "link_category", "post_format"]
+                standard_taxonomies = [
+                    "category",
+                    "post_tag",
+                    "nav_menu",
+                    "link_category",
+                    "post_format",
+                ]
 
-                custom_taxonomies = {k: v for k, v in taxonomies.items() if k not in standard_taxonomies}
+                custom_taxonomies = {
+                    k: v for k, v in taxonomies.items() if k not in standard_taxonomies
+                }
 
                 if custom_taxonomies:
                     print(f"   カスタムタクソノミー: {len(custom_taxonomies)}個")
@@ -90,7 +102,9 @@ class WPTaxonomyAgent:
     async def verify_taxonomy(self, taxonomy: str) -> bool:
         """タクソノミーの存在を確認"""
         try:
-            response = requests.get(f"{self.wp_url}/wp-json/wp/v2/taxonomies/{taxonomy}", auth=self.auth, timeout=10)
+            response = requests.get(
+                f"{self.wp_url}/wp-json/wp/v2/taxonomies/{taxonomy}", auth=self.auth, timeout=10
+            )
 
             if response.status_code == 200:
                 print(f"✅ タクソノミー '{taxonomy}' が存在します")
@@ -195,7 +209,13 @@ add_action('init', 'register_taxonomy_{spec.taxonomy}');
         print(f"🚀 カスタムタクソノミー作成: {spec.plural_name}")
         print("=" * 80)
 
-        result = {"success": False, "taxonomy": spec.taxonomy, "php_code": "", "filepath": "", "instructions": []}
+        result = {
+            "success": False,
+            "taxonomy": spec.taxonomy,
+            "php_code": "",
+            "filepath": "",
+            "instructions": [],
+        }
 
         # 1. 既存の確認
         existing = await self.verify_taxonomy(spec.taxonomy)
@@ -289,5 +309,7 @@ async def test_taxonomy_agent_with_logging():
 
 if __name__ == "__main__":
     import asyncio
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
     asyncio.run(test_taxonomy_agent_with_logging())

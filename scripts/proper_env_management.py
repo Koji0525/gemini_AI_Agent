@@ -13,6 +13,8 @@ def setup_environment():
     load_dotenv()
 
     # 環境変数の確認
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     required_vars = {
         "GOOGLE_APPLICATION_CREDENTIALS": os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
         "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID"),
