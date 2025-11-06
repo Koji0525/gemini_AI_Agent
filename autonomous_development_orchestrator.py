@@ -11,7 +11,7 @@ sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
 from tools.sheets_manager import GoogleSheetsManager
 from tools.safe_sheets_wrapper import SafeSheetsWrapper
-from task_executor.task_executor_main import MVPTaskExecutor
+from task_executor.task_executor_main import TaskExecutor
 from core_agents.pm_agent import PMAgent
 from core_agents.review_agent import ReviewAgent, QualityFeedbackLoop
 from agents.self_healing.self_learning_pipeline import SelfLearningPipeline
@@ -28,6 +28,10 @@ class AutonomousDevelopmentOrchestrator:
     """24時間自律開発システムの統合オーケストレータ"""
     
     def __init__(self):
+        # ナレッジベース自動同期
+        from tools.knowledge_sync import sync_knowledge_on_startup
+        sync_knowledge_on_startup()
+
         logger.info("=" * 60)
         logger.info("🚀 24時間自律開発システム起動中...")
         logger.info("=" * 60)
@@ -37,7 +41,7 @@ class AutonomousDevelopmentOrchestrator:
         self.sheets = SafeSheetsWrapper(self.sheets_manager)
         
         # タスク実行層
-        self.task_executor = MVPTaskExecutor(self.sheets_manager)
+        self.task_executor = TaskExecutor(self.sheets_manager)
         
         # PM層
         self.pm_agent = PMAgent(self.sheets)
