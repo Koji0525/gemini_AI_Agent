@@ -158,3 +158,40 @@ system_check.sh
 # キャッシュファイル（機密情報を含む可能性）
 .quality_cache.json
 *.cache.json
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔒 機密情報（絶対にコミットしない）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.env
+.env.*
+*.env
+*.env.*
+.env.backup*
+.env.local
+.env.production
+.env.development
+
+# 認証情報
+credentials.json
+**/credentials.json
+service_account*.json
+*.key
+*.pem
+token.json
+
+# キャッシュファイル（機密情報を含む可能性）
+.quality_cache.json
+*.cache.json
+__pycache__/
+*.pyc
+
+# 一時ファイル
+*_TEMP.md
+*_DRAFT.md
+README_v*.md
+/tmp/*.md
+
+# バックアップファイル
+*.backup
+*.bak
+*~
