@@ -17,7 +17,8 @@ def setup_rules_management():
     """ルール管理シート初期化"""
 
     sheets = GoogleSheetsManager(
-        spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="configuration/service_account.json"
+        spreadsheet_id=os.getenv("SPREADSHEET_ID"),
+        service_account_file="configuration/service_account.json",
     )
 
     spreadsheet = sheets.gc.open_by_key(os.getenv("SPREADSHEET_ID"))
@@ -91,7 +92,16 @@ def setup_rules_management():
     except:
         tools_sheet = spreadsheet.add_worksheet("dev_tools", 100, 10)
 
-    tool_headers = ["tool_id", "tool_name", "purpose", "command", "use_case", "time_saved", "created_at", "status"]
+    tool_headers = [
+        "tool_id",
+        "tool_name",
+        "purpose",
+        "command",
+        "use_case",
+        "time_saved",
+        "created_at",
+        "status",
+    ]
 
     tools = [
         [
@@ -134,12 +144,22 @@ def setup_rules_management():
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # シート3: ルール改定履歴
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     try:
         history_sheet = spreadsheet.worksheet("rule_history")
     except:
         history_sheet = spreadsheet.add_worksheet("rule_history", 200, 8)
 
-    history_headers = ["timestamp", "rule_id", "change_type", "old_value", "new_value", "reason", "changed_by"]
+    history_headers = [
+        "timestamp",
+        "rule_id",
+        "change_type",
+        "old_value",
+        "new_value",
+        "reason",
+        "changed_by",
+    ]
 
     history_sheet.update("A1:G1", [history_headers])
 

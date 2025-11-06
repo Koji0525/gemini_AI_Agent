@@ -109,6 +109,8 @@ class AutonomousSystemV26:
 
         try:
             # エラーログ分析
+
+            # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
             await self.learning_agent.analyze_error_logs()
 
             self.last_learning_time = datetime.now()

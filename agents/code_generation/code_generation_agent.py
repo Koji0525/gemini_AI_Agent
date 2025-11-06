@@ -117,6 +117,8 @@ class CodeGenerationAgent:
             }
 
             # 履歴に記録
+
+            # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
             self.generation_history.append(result)
 
             print(f"✅ コード生成完了: 品質スコア {quality_score}/10")

@@ -59,6 +59,8 @@ class LearningTrigger:
                 print(f"   次回実行まで: {remaining:.1f}時間")
 
             # 30分ごとにチェック
+
+            # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
             print("   30分後に再チェック...\n")
             await asyncio.sleep(1800)
 

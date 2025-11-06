@@ -37,7 +37,12 @@ class Uzbekistanmaagent(AgentTemplate):
             author="Dynamic Agent System",
             created_at=datetime.fromisoformat("2025-10-29T07:38:33.803378"),
             dependencies=["requests", "python-dotenv"],
-            capabilities=["uzbekistan_ma_content", "multilingual_support", "market_analysis", "wordpress_publishing"],
+            capabilities=[
+                "uzbekistan_ma_content",
+                "multilingual_support",
+                "market_analysis",
+                "wordpress_publishing",
+            ],
             tags=["uzbekistan", "m&a", "cms", "auto-generated"],
         )
 
@@ -292,7 +297,9 @@ async def main():
     try:
         # テスト投稿1: 市場概況（日本語）
         print("\n【テスト1】市場概況記事（日本語）")
-        result1 = await agent.run(article_type="market_overview", sector="IT", language="ja", status="draft")
+        result1 = await agent.run(
+            article_type="market_overview", sector="IT", language="ja", status="draft"
+        )
 
         if result1["success"]:
             print(f"✅ 投稿成功！")
@@ -316,6 +323,8 @@ async def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
         traceback.print_exc()
 

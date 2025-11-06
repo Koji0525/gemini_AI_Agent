@@ -195,7 +195,10 @@ class AgentRegistry:
         return self.local_registry.get(agent_id)
 
     def list_agents(
-        self, status: Optional[str] = None, template: Optional[str] = None, tags: Optional[List[str]] = None
+        self,
+        status: Optional[str] = None,
+        template: Optional[str] = None,
+        tags: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
         """
         エージェントリストを取得
@@ -363,6 +366,8 @@ def demo_agent_registry():
         print(f"    実行回数: {agent['execution_count']}回")
 
     # 統計情報
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     print("\n【統計情報】")
     print("-" * 70)
 

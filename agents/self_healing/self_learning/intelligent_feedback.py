@@ -183,12 +183,16 @@ class IntelligentFeedbackGenerator:
 
         # 2. 失敗パターンから提案生成
         if self.kb_manager:
-            failure_patterns = self.kb_manager.search_similar_knowledge({"knowledge_type": "failure_pattern"}, limit=5)
+            failure_patterns = self.kb_manager.search_similar_knowledge(
+                {"knowledge_type": "failure_pattern"}, limit=5
+            )
             proposals.extend(self._generate_failure_based_feedback(failure_patterns))
 
         # 3. 成功パターンから提案生成
         if self.kb_manager:
-            success_patterns = self.kb_manager.search_similar_knowledge({"knowledge_type": "success_pattern"}, limit=5)
+            success_patterns = self.kb_manager.search_similar_knowledge(
+                {"knowledge_type": "success_pattern"}, limit=5
+            )
             proposals.extend(self._generate_success_based_feedback(success_patterns))
 
         # 優先度順にソート
@@ -211,7 +215,11 @@ class IntelligentFeedbackGenerator:
                     priority=2,
                     category="learning",
                     confidence=0.9,
-                    actionable_steps=["様々な種類のタスクを実行", "成功・失敗の両方を記録", "判断プロセスを詳細に記録"],
+                    actionable_steps=[
+                        "様々な種類のタスクを実行",
+                        "成功・失敗の両方を記録",
+                        "判断プロセスを詳細に記録",
+                    ],
                     estimated_impact="high",
                     supporting_evidence=[health],
                 )
@@ -255,7 +263,9 @@ class IntelligentFeedbackGenerator:
 
         return proposals
 
-    def _generate_failure_based_feedback(self, failure_patterns: List[Dict[str, Any]]) -> List[FeedbackProposal]:
+    def _generate_failure_based_feedback(
+        self, failure_patterns: List[Dict[str, Any]]
+    ) -> List[FeedbackProposal]:
         """失敗パターンから提案生成"""
         proposals = []
 
@@ -289,7 +299,9 @@ class IntelligentFeedbackGenerator:
 
         return proposals
 
-    def _generate_success_based_feedback(self, success_patterns: List[Dict[str, Any]]) -> List[FeedbackProposal]:
+    def _generate_success_based_feedback(
+        self, success_patterns: List[Dict[str, Any]]
+    ) -> List[FeedbackProposal]:
         """成功パターンから提案生成"""
         proposals = []
 
@@ -387,7 +399,13 @@ class IntelligentFeedbackGenerator:
                 by_priority[p.priority] = []
             by_priority[p.priority].append(p)
 
-        priority_names = {1: "🔴 最優先", 2: "🟡 高優先度", 3: "🟢 中優先度", 4: "🔵 低優先度", 5: "⚪ 補足"}
+        priority_names = {
+            1: "🔴 最優先",
+            2: "🟡 高優先度",
+            3: "🟢 中優先度",
+            4: "🔵 低優先度",
+            5: "⚪ 補足",
+        }
 
         for priority in sorted(by_priority.keys()):
             report.append(f"\n{priority_names.get(priority, f'優先度{priority}')}")
@@ -410,5 +428,7 @@ class IntelligentFeedbackGenerator:
 
 if __name__ == "__main__":
     # 簡易テスト
+
+    # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
     generator = IntelligentFeedbackGenerator(use_gemini=False)
     print("IntelligentFeedbackGenerator初期化成功")

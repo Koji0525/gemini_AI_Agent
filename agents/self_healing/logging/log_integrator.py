@@ -284,6 +284,8 @@ class LogIntegrator:
         total_contexts = sum(len(log.context_logs) for log in integrated_logs.values())
 
         # 成功率計算
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
         success_count = 0
         total_count = 0
         for log in integrated_logs.values():

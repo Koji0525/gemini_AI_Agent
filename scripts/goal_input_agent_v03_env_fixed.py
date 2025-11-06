@@ -19,7 +19,9 @@ load_dotenv(override=True)
 # 重要: 環境変数が設定されているか確認
 required_env_vars = {
     "SPREADSHEET_ID": os.getenv("SPREADSHEET_ID"),
-    "GOOGLE_SERVICE_ACCOUNT_FILE": os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json"),
+    "GOOGLE_SERVICE_ACCOUNT_FILE": os.getenv(
+        "GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json"
+    ),
 }
 
 print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -54,7 +56,9 @@ class GoalInputAgent:
 
         self.pm_queue_sheet = "pm_tasks"
 
-    def register_goal(self, goal: str, priority: str = "high", goal_type: str = "development") -> dict:
+    def register_goal(
+        self, goal: str, priority: str = "high", goal_type: str = "development"
+    ) -> dict:
         """目標をPM Agentのタスクキューに登録"""
         timestamp = datetime.now().isoformat()
         goal_id = f"GOAL_{timestamp.replace(':', '').replace('-', '').replace('.', '')[:14]}"
@@ -81,7 +85,12 @@ class GoalInputAgent:
             print(f"   内容: {goal}")
             print(f"   優先度: {priority}")
 
-            return {"status": "success", "goal_id": goal_id, "sheet": self.pm_queue_sheet, "timestamp": timestamp}
+            return {
+                "status": "success",
+                "goal_id": goal_id,
+                "sheet": self.pm_queue_sheet,
+                "timestamp": timestamp,
+            }
 
         except Exception as e:
             print(f"❌ 登録失敗: {e}")
@@ -95,7 +104,9 @@ def main():
     parser = argparse.ArgumentParser(description="Goal Input Agent v3.0")
     parser.add_argument("--goal", required=True, help="開発目標")
     parser.add_argument("--priority", default="high", choices=["critical", "high", "medium", "low"])
-    parser.add_argument("--type", default="development", choices=["development", "maintenance", "improvement"])
+    parser.add_argument(
+        "--type", default="development", choices=["development", "maintenance", "improvement"]
+    )
     parser.add_argument("--test", action="store_true", help="テストモード")
 
     args = parser.parse_args()
@@ -136,6 +147,8 @@ def main():
     except Exception as e:
         print(f"\n❌ エラー: {e}")
         import traceback
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
         traceback.print_exc()
         sys.exit(1)

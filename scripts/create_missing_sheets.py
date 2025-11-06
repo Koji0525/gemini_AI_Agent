@@ -37,6 +37,8 @@ def create_missing_sheets():
             print(f"✅ {sheet_name}: 既に存在")
         except:
             # 作成
+
+            # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
             worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=100, cols=len(headers))
             worksheet.update("A1:" + chr(65 + len(headers) - 1) + "1", [headers])
             print(f"✅ {sheet_name}: 作成完了")

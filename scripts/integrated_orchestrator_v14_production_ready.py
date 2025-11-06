@@ -67,7 +67,11 @@ class InitializationManager:
         self.initialized_components = {}
 
     def ensure_attribute(
-        self, obj: object, attr_name: str, fallback_attr: Optional[str] = None, default_value: any = None
+        self,
+        obj: object,
+        attr_name: str,
+        fallback_attr: Optional[str] = None,
+        default_value: any = None,
     ) -> bool:
         """
         属性の存在を保証（互換性対応）
@@ -98,7 +102,9 @@ class InitializationManager:
 
         return False
 
-    def safe_init(self, component_name: str, init_func, fallback_value: any = None, required: bool = True):
+    def safe_init(
+        self, component_name: str, init_func, fallback_value: any = None, required: bool = True
+    ):
         """
         安全な初期化（エラーハンドリング統一）
 
@@ -166,7 +172,9 @@ class IntegratedOrchestrator:
 
         # GoogleSheetsManager初期化
         self.sheets = self.init_manager.safe_init(
-            "GoogleSheetsManager", lambda: GoogleSheetsManager(spreadsheet_id=spreadsheet_id), required=True
+            "GoogleSheetsManager",
+            lambda: GoogleSheetsManager(spreadsheet_id=spreadsheet_id),
+            required=True,
         )
 
         # 🆕 gc属性を保証（互換性対応）
@@ -195,20 +203,29 @@ class IntegratedOrchestrator:
         )
 
         # 統計情報
-        self.stats = {"total_tasks": 0, "successful_tasks": 0, "failed_tasks": 0, "retried_tasks": 0}
+        self.stats = {
+            "total_tasks": 0,
+            "successful_tasks": 0,
+            "failed_tasks": 0,
+            "retried_tasks": 0,
+        }
 
         # === タスク実行エージェント ===
 
         # BrowserController
         self.browser = self.init_manager.safe_init(
-            "BrowserController", lambda: BrowserController(download_folder="./downloads"), required=False
+            "BrowserController",
+            lambda: BrowserController(download_folder="./downloads"),
+            required=False,
         )
 
         # PM Agent
         if self.browser:
             self.pm_agent = self.init_manager.safe_init(
                 "PM Agent",
-                lambda: load_module_from_file("pm_agent", "pm_agent.py").PMAgent(self.sheets, self.browser),
+                lambda: load_module_from_file("pm_agent", "pm_agent.py").PMAgent(
+                    self.sheets, self.browser
+                ),
                 required=False,
             )
         else:
@@ -233,11 +250,20 @@ class IntegratedOrchestrator:
                 "password": os.getenv("WP_PASSWORD"),
             }
 
-            default_design_spec = {"site_type": "ma_portal", "post_types": [], "taxonomies": [], "acf_fields": []}
+            default_design_spec = {
+                "site_type": "ma_portal",
+                "post_types": [],
+                "taxonomies": [],
+                "acf_fields": [],
+            }
 
-            return WordPressOrchestrator(design_spec=default_design_spec, wp_credentials=wp_credentials)
+            return WordPressOrchestrator(
+                design_spec=default_design_spec, wp_credentials=wp_credentials
+            )
 
-        self.wp_orchestrator = self.init_manager.safe_init("WP Orchestrator", init_wp_orchestrator, required=False)
+        self.wp_orchestrator = self.init_manager.safe_init(
+            "WP Orchestrator", init_wp_orchestrator, required=False
+        )
 
         self.control_flag_file = "/tmp/system_control_flag.txt"
         self.running = True
@@ -252,7 +278,9 @@ class IntegratedOrchestrator:
 
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-    async def run_continuous_cycle(self, max_duration_minutes: int = 330, single_cycle: bool = False):
+    async def run_continuous_cycle(
+        self, max_duration_minutes: int = 330, single_cycle: bool = False
+    ):
         """継続的な開発サイクルを実行"""
         start_time = time.time()
         cycle_count = 0
@@ -469,6 +497,8 @@ def main():
     except Exception as e:
         print(f"\n❌ エラー: {e}")
         import traceback
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
         traceback.print_exc()
         sys.exit(1)

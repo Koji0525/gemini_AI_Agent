@@ -132,7 +132,10 @@ class ConfigValidator:
             try:
                 response = requests.get(api_base, auth=auth, timeout=10)
                 if response.status_code in [200, 401]:  # 401も接続は成功
-                    self.validation_result["rest_api"] = {"available": True, "limited": response.status_code == 401}
+                    self.validation_result["rest_api"] = {
+                        "available": True,
+                        "limited": response.status_code == 401,
+                    }
                     print(f"✅ REST API利用可能")
                     if response.status_code == 401:
                         print("   ℹ️  認証が必要な操作は制限される可能性があります")
@@ -182,7 +185,9 @@ class ConfigValidator:
                 if response.status_code == 200:
                     themes = response.json()
                     if themes:
-                        active_theme = next((t for t in themes if t.get("status") == "active"), None)
+                        active_theme = next(
+                            (t for t in themes if t.get("status") == "active"), None
+                        )
                         if active_theme:
                             site_info["theme"] = {
                                 "name": active_theme.get("name", "Unknown"),
@@ -392,6 +397,8 @@ async def main():
     except Exception as e:
         print(f"❌ エラーが発生しました: {e}")
         import traceback
+
+        # 標準環境変数ローダー（自動追加）import sysfrom pathlib import Pathsys.path.insert(0, str(Path(__file__).parent.parent))from tools.env_loader import StandardEnvLoaderif not StandardEnvLoader.load_and_verify():    print("環境変数の読み込みに失敗しました")    sys.exit(1)
 
         traceback.print_exc()
         return None
