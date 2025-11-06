@@ -12,6 +12,7 @@ import os
 from datetime import datetime
 from typing import Dict, Optional
 import sys
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
 
 # ✅ 修正: 修正版RAGエンジンをインポート
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
