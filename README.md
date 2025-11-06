@@ -508,3 +508,55 @@ python3 tools/file_version_manager.py \
 ファイルを修正する前に、必ず以下を実行してください：
 python3 tools/file_version_manager.py --backup <ファイルパス> --reason "<修正理由>"
 ```
+
+## 🚀 v1.14.0 - 24時間自律開発システム（2025-11-06）
+
+### ✨ 新機能
+- **24時間連続稼働**: 人間の介入なしで自律的に開発を継続
+- **2ループアーキテクチャ**: 
+  - Loop 1（学習・修復）: 30秒毎にエラーから学習
+  - Loop 2（タスク実行）: 3分毎にタスクを自動実行
+- **品質フィードバックループ**: 
+  - 4基準評価（完成度、正確性、効率性、保守性）
+  - 7点未満のタスクを最大3回自動リトライ
+- **ナレッジ自動同期**: 起動時に160件のナレッジを自動読み込み
+
+### 🏗️ アーキテクチャ
+```
+AutonomousDevelopmentOrchestrator
+├── Loop 1: SelfLearningPipeline（30秒毎）
+│   ├── ログ収集
+│   ├── パターン抽出
+│   ├── ナレッジ更新
+│   └── 修正戦略生成
+└── Loop 2: QualityFeedbackLoop（3分毎）
+    ├── タスク取得（Google Sheets）
+    ├── RAGエンジンでナレッジ検索
+    ├── タスク実行
+    ├── 品質評価（ReviewAgent）
+    └── 結果記録
+```
+
+### 📊 実績
+- **稼働テスト**: 5分間で10タスク実行成功
+- **エラー率**: 0%
+- **ナレッジベース**: 160件蓄積
+- **品質スコア**: 4基準で自動評価
+
+### 🚀 使用方法
+```bash
+# 24時間バックグラウンド稼働
+nohup python3 autonomous_development_orchestrator.py \
+    > logs/orchestrator_$(date +%Y%m%d_%H%M%S).log 2>&1 &
+
+# ログ確認
+tail -f logs/orchestrator_*.log
+
+# 停止
+kill -SIGINT $(pgrep -f autonomous_development_orchestrator)
+```
+
+### 📚 ドキュメント
+- [完全ガイド](MD/system_docs/*_24H_AUTONOMOUS_SYSTEM_COMPLETE.md)
+- [開発ルール](docs/DEVELOPMENT_RULES_v1.2.4.md)
+
