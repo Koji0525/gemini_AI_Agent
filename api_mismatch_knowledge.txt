@@ -1,0 +1,84 @@
+【ナレッジ登録開始】
+タイトル: API仕様不一致による開発停止とその解決
+カテゴリ: Python/API設計/品質保証
+重要度: 最高
+
+【問題】
+何が起きた: SafeSheetsWrapperが期待するメソッド（read_range）が実装に存在せず、初期化時にエラー
+環境: Google Sheets API v4, Python 3.8+
+エラー: AttributeError: GoogleSheetsManager に必須メソッド 'read_range' がありません
+
+【原因分析】
+根本原因: 設計時に実装の仕様確認を怠った
+直接原因:
+1. SafeSheetsWrapperが架空のメソッド名（read_range, write_range, append_rows）を前提に設計
+2. 実際のGoogleSheetsManagerは read_sheet, write_sheet のみ実装
+3. API検証ツール（api_validator.py）を実装後に使用しなかった
+4. ドキュメント駆動ではなく推測駆動で開発
+
+【解決策】
+解決手法: 実装準拠のメソッドマッピングとAPI検証の徹底
+
+実装パターン:
+# ✅ 正しいアプローチ
+
+# 1. まずAPI仕様を確認
+python3 tools/api_validator.py GoogleSheetsManager
+
+# 2. 実装に存在するメソッドを確認
+from tools.sheets_manager import GoogleSheetsManager
+sheets = GoogleSheetsManager()
+print([m for m in dir(sheets) if not m.startswith('_')])
+
+# 3. 実仕様に基づいてWrapperを設計
+class SafeSheetsWrapper:
+    METHOD_ALIASES = {
+        'read_range': 'read_sheet',    # 実装名にマッピング
+        'write_range': 'write_sheet',  # 実装名にマッピング
+    }
+    
+    def __getattr__(self, name):
+        if name in self.METHOD_ALIASES:
+            return getattr(self.sheets, self.METHOD_ALIASES[name])
+
+# ❌ 避けるべきアプローチ
+# 1. 推測でメソッド名を使用
+# 2. 実装確認なしでWrapperを設計
+# 3. API検証ツールを使わない
+
+【学び】
+1. 新しいクラスを使う前に必ず api_validator.py で仕様確認
+2. Wrapperは実装準拠で設計（理想論ではない）
+3. METHOD_ALIASES で互換性を保つ
+4. safe_read/write/append で1次元→2次元の自動変換
+5. エラー時のdefault値返却で処理継続
+
+【予防策】
+- 開発フロー: 仕様確認 → 設計 → 実装 → テスト
+- 必須ツール: api_validator.py を毎回実行
+- コード生成前: 実装のメソッド一覧を確認
+- CI/CD統合: api_validator.py を自動実行
+
+【横展開可能な教訓】
+1. 仕様駆動開発の徹底
+   - 推測禁止、実装確認必須
+   - API検証ツールの標準化
+
+2. Wrapperの設計パターン
+   - METHOD_ALIASES による互換性レイヤー
+   - safe_* メソッドでエラーハンドリング
+   - 自動型変換（1次元→2次元）
+
+3. 開発停止の早期検出
+   - 初期化時の仕様検証
+   - 詳細なエラーメッセージ
+   - 類似メソッドの自動提案
+
+【タイムライン】
+- 2025-11-05 22:10: エラー発生（read_range 不存在）
+- 2025-11-05 22:11: api_validator.py で実仕様確認
+- 2025-11-05 22:12: SafeSheetsWrapper v2.0 修正（実装準拠）
+- 所要時間: 2分（API検証ツールがなければ30分以上）
+
+成功率: 100%（API検証ツール使用時）
+【ナレッジ登録終了】

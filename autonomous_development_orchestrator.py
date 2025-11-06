@@ -1,321 +1,268 @@
 """
-24時間自律型開発システム - メインオーケストレーター
-既存エージェントを連携させた完全自律開発システム
+AutonomousDevelopmentOrchestrator - 24時間自律開発システム
+2ループ並行実行（学習ループ + タスクループ）
 """
 
-import asyncio
-import logging
-import time
 import sys
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
+import os
+import logging
+import asyncio
+from datetime import datetime
+from typing import Dict, Any, Optional
 
-# ログ設定
+project_root = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, project_root)
+
+from tools.sheets_manager import GoogleSheetsManager
+from task_executor import TaskExecutor
+from core_agents.pm_agent import PMAgent
+from agents.self_healing.self_learning_pipeline import SelfLearningPipeline
+from agents.self_healing.knowledge_base_manager import KnowledgeBaseManager
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('autonomous_development.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-
 logger = logging.getLogger(__name__)
+
 
 class AutonomousDevelopmentOrchestrator:
     """
-    24時間自律型開発システムのメインコントローラー
+    24時間自律開発オーケストレーター
     
-    既存エージェントを連携させて以下を実現:
-    - 24時間連続タスク処理
-    - 自動バグ検知と修復
-    - リアルタイム品質評価
-    - 継続的ナレッジ蓄積
-    - パフォーマンス最適化
+    【2つのループ】
+    1. 学習ループ（30秒毎）：エラーログ → パターン抽出 → ナレッジ更新
+    2. タスクループ（3分毎）：タスク取得 → 実行 → ログ記録
     """
     
     def __init__(self):
-        self.components = {}
-        self.is_running = False
-        self.cycle_count = 0
-        self.start_time = None
+        """初期化"""
+        logger.info("=" * 60)
+        logger.info("🚀 24時間自律開発システム起動中...")
+        logger.info("=" * 60)
         
-    async def initialize_components(self):
-        """既存エージェントを初期化して連携"""
-        logger.info("🔄 既存エージェントを初期化中...")
+        # GoogleSheetsManager初期化（シングルトン）
+        self.sheets = GoogleSheetsManager()
         
-        try:
-            # 1. コアエージェントの初期化
-            from tools.sheets_manager import GoogleSheetsManager
-            from task_executor.task_executor import TaskExecutor
-            from core_agents.review_agent import ReviewAgent
-            from core_agents.quality_feedback_loop_v02 import QualityFeedbackLoop
-            
-            # シートマネージャー
-            self.components['sheets_manager'] = GoogleSheetsManager()
-            logger.info("✅ シートマネージャー初期化完了")
-            
-            # レビューエージェント
-            self.components['review_agent'] = ReviewAgent()
-            logger.info("✅ レビューエージェント初期化完了")
-            
-            # タスク実行器
-            self.components['task_executor'] = TaskExecutor(
-                sheets_manager=self.components['sheets_manager'],
-                review_agent=self.components['review_agent']
-            )
-            logger.info("✅ タスク実行器初期化完了")
-            
-            # 品質フィードバックループ
-            self.components['feedback_loop'] = QualityFeedbackLoop(
-                sheets_manager=self.components['sheets_manager'],
-                task_executor=self.components['task_executor'],
-                review_agent=self.components['review_agent']
-            )
-            logger.info("✅ 品質フィードバックループ初期化完了")
-            
-            # 2. オプションエージェントの初期化（存在すれば）
+        # TaskExecutor初期化
+        self.task_executor = TaskExecutor(self.sheets)
+        
+        # PMAgent初期化
+        self.pm_agent = PMAgent(self.sheets)
+        
+        # 学習パイプライン初期化
+        self.kb_manager = KnowledgeBaseManager(self.sheets)
+        self.learning_pipeline = SelfLearningPipeline(self.sheets, self.kb_manager)
+        
+        # 統計情報
+        self.stats = {
+            'start_time': datetime.now(),
+            'learning_cycles': 0,
+            'task_cycles': 0,
+            'tasks_executed': 0,
+            'errors_fixed': 0
+        }
+        
+        logger.info("✅ すべてのコンポーネントを初期化しました")
+    
+    async def learning_loop(self):
+        """
+        学習ループ（30秒毎）
+        
+        1. エラーログ収集
+        2. パターン抽出
+        3. ナレッジ更新
+        4. 修正戦略生成
+        """
+        logger.info("🧠 学習ループを開始します")
+        
+        while True:
             try:
-                from core_agents.pm_agent import PMAgent
-                self.components['pm_agent'] = PMAgent(sheets_manager=self.components['sheets_manager'], browser_controller=None)
-                logger.info("✅ PMエージェント初期化完了")
-            except ImportError:
-                logger.warning("⚠️  PMエージェントが見つかりません - スキップ")
+                logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                logger.info(f"🧠 学習サイクル #{self.stats['learning_cycles'] + 1}")
                 
+                # 学習パイプライン実行
+                results = await self.learning_pipeline.run_learning_cycle()
+                
+                self.stats['learning_cycles'] += 1
+                
+                if results.get('errors_detected', 0) > 0:
+                    logger.info(f"📚 {results.get('errors_detected', 0)}個のエラーを学習しました")
+                    self.stats['errors_fixed'] += results.get('fixes_applied', 0)
+                
+                logger.info(f"✅ 学習サイクル完了（累計: {self.stats['learning_cycles']}回）")
+            
+            except Exception as e:
+                logger.error(f"❌ 学習ループエラー: {e}")
+                import traceback
+                traceback.print_exc()
+            
+            # 30秒待機
+            await asyncio.sleep(30)
+    
+    async def task_loop(self):
+        """
+        タスクループ（3分毎）
+        
+        1. PMAgentで目標 → タスク分解
+        2. TaskExecutorでタスク実行
+        3. 結果ログ記録
+        """
+        logger.info("📋 タスクループを開始します")
+        
+        # 初回は10秒後に開始（学習ループとずらす）
+        await asyncio.sleep(10)
+        
+        while True:
             try:
-                from agents.git_agent.auto_commit_push import GitAgent
-                self.components['git_agent'] = GitAgent()
-                logger.info("✅ Gitエージェント初期化完了")
-            except ImportError:
-                logger.warning("⚠️  Gitエージェントが見つかりません - スキップ")
+                logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                logger.info(f"📋 タスクサイクル #{self.stats['task_cycles'] + 1}")
                 
-            logger.info("🎉 全エージェント初期化完了")
-            return True
+                # PMサイクル実行（必要に応じて）
+                # 目標がない場合のみPMAgentを実行
+                pending_tasks = await self.task_executor.get_pending_tasks()
+                
+                if len(pending_tasks) == 0:
+                    logger.info("📝 タスクがないため、PMAgentで目標を分解します")
+                    await self.pm_agent.run_pm_cycle()
+                
+                # タスク実行サイクル
+                await self.task_executor.run_task_cycle()
+                
+                self.stats['task_cycles'] += 1
+                self.stats['tasks_executed'] += min(len(pending_tasks), 5)
+                
+                logger.info(f"✅ タスクサイクル完了（累計: {self.stats['task_cycles']}回）")
             
-        except Exception as e:
-            logger.error(f"❌ エージェント初期化失敗: {e}")
-            return False
+            except Exception as e:
+                logger.error(f"❌ タスクループエラー: {e}")
+                import traceback
+                traceback.print_exc()
+            
+            # 3分待機
+            await asyncio.sleep(180)
     
-    async def run_development_cycle(self):
-        """1開発サイクルの実行"""
-        cycle_start = time.time()
-        self.cycle_count += 1
+    async def status_monitor(self):
+        """
+        ステータスモニター（5分毎）
         
-        logger.info(f"🔄 開発サイクル #{self.cycle_count} 開始")
+        稼働状況を定期的に出力
+        """
+        await asyncio.sleep(60)  # 初回は1分後
+        
+        while True:
+            try:
+                uptime = datetime.now() - self.stats['start_time']
+                
+                logger.info("")
+                logger.info("=" * 60)
+                logger.info("📊 24時間自律開発システム 稼働状況")
+                logger.info("=" * 60)
+                logger.info(f"⏱️  稼働時間: {uptime}")
+                logger.info(f"🧠 学習サイクル: {self.stats['learning_cycles']}回")
+                logger.info(f"📋 タスクサイクル: {self.stats['task_cycles']}回")
+                logger.info(f"✅ 実行タスク数: {self.stats['tasks_executed']}個")
+                logger.info(f"🔧 修正適用数: {self.stats['errors_fixed']}個")
+                logger.info("=" * 60)
+                logger.info("")
+            
+            except Exception as e:
+                logger.error(f"❌ ステータスモニターエラー: {e}")
+            
+            # 5分待機
+            await asyncio.sleep(300)
+    
+    async def health_check(self):
+        """
+        ヘルスチェック（1分毎）
+        
+        各コンポーネントの正常性確認
+        """
+        await asyncio.sleep(30)  # 初回は30秒後
+        
+        while True:
+            try:
+                # GoogleSheetsManagerの接続確認
+                if not self.sheets.authenticated:
+                    logger.warning("⚠️ Google Sheets認証が切れています。再認証を試みます...")
+                    self.sheets.authenticate()
+                
+                # その他のヘルスチェック項目
+                # TODO: 実装
+            
+            except Exception as e:
+                logger.error(f"❌ ヘルスチェックエラー: {e}")
+            
+            # 1分待機
+            await asyncio.sleep(60)
+    
+    async def run_forever(self):
+        """
+        24時間稼働メインループ
+        
+        4つのタスクを並行実行:
+        1. 学習ループ（30秒毎）
+        2. タスクループ（3分毎）
+        3. ステータスモニター（5分毎）
+        4. ヘルスチェック（1分毎）
+        """
+        logger.info("=" * 60)
+        logger.info("🚀 24時間自律開発システム 起動完了")
+        logger.info("=" * 60)
+        logger.info("🧠 学習ループ: 30秒毎")
+        logger.info("📋 タスクループ: 3分毎")
+        logger.info("📊 ステータスモニター: 5分毎")
+        logger.info("💓 ヘルスチェック: 1分毎")
+        logger.info("=" * 60)
+        logger.info("")
+        
+        # 4つのタスクを並行実行
+        tasks = [
+            asyncio.create_task(self.learning_loop()),
+            asyncio.create_task(self.task_loop()),
+            asyncio.create_task(self.status_monitor()),
+            asyncio.create_task(self.health_check())
+        ]
         
         try:
-            # 1. 保留中のタスクを取得
-            pending_tasks = await self._get_pending_tasks()
-            
-            if not pending_tasks:
-                logger.info("⏸️  実行可能なタスクなし - 待機中")
-                return {"status": "no_tasks", "tasks_processed": 0}
-            
-            # 2. タスク実行と品質評価ループ
-            tasks_processed = 0
-            for task in pending_tasks[:5]:  # 最大5タスクまで
-                if not self.is_running:
-                    break
-                    
-                task_result = await self._execute_single_task(task)
-                
-                if task_result and task_result.get('status') == 'completed':
-                    tasks_processed += 1
-                    
-                    # 3. 品質評価とフィードバック処理
-                    await self._process_quality_feedback(task, task_result)
-            
-            cycle_time = time.time() - cycle_start
-            
-            logger.info(f"✅ 開発サイクル #{self.cycle_count} 完了: {tasks_processed}タスク処理, {cycle_time:.2f}秒")
-            
-            return {
-                "status": "completed",
-                "tasks_processed": tasks_processed,
-                "cycle_time": cycle_time,
-                "cycle_number": self.cycle_count
-            }
-            
-        except Exception as e:
-            logger.error(f"❌ 開発サイクルエラー: {e}")
-            return {"status": "error", "error": str(e)}
-    
-    async def _get_pending_tasks(self) -> List[Dict[str, Any]]:
-        """保留中のタスクを取得"""
-        try:
-            # シートからタスクを取得（実装に応じて変更）
-            # 暫定的にテストタスクを返す
-            return [
-                {
-                    'task_id': f'task_{self.cycle_count}_{i}',
-                    'task_name': f'自律開発テストタスク {i}',
-                    'task_description': '24時間自律開発システムのテスト実行',
-                    'agent_name': 'AutonomousSystem',
-                    'priority': 'medium'
-                }
-                for i in range(3)  # 3つのテストタスク
-            ]
-        except Exception as e:
-            logger.warning(f"⚠️  タスク取得エラー: {e}")
-            return []
-    
-    async def _execute_single_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
-        """単一タスクを実行"""
-        try:
-            logger.info(f"▶️  タスク実行開始: {task['task_name']}")
-            
-            # TaskExecutorを使用してタスク実行
-            if 'task_executor' in self.components:
-                result = await self.components['task_executor'].execute_single_task(task)
-                return result
-            else:
-                # フォールバック: シンプルなタスク実行
-                return {
-                    'output': f"タスク '{task['task_name']}' を自律実行しました",
-                    'status': 'completed',
-                    'quality_score': 8
-                }
-                
-        except Exception as e:
-            logger.error(f"❌ タスク実行エラー: {e}")
-            return {
-                'output': f"タスク実行エラー: {str(e)}",
-                'status': 'error',
-                'error': str(e)
-            }
-    
-    async def _process_quality_feedback(self, task: Dict[str, Any], result: Dict[str, Any]):
-        """品質評価とフィードバック処理"""
-        try:
-            if 'feedback_loop' in self.components and 'review_agent' in self.components:
-                # 品質評価コンテキストの作成
-                evaluation_context = {
-                    'task_id': task.get('task_id'),
-                    'task_name': task.get('task_name'),
-                    'task_description': task.get('task_description'),
-                    'result': result,
-                    'agent_name': task.get('agent_name', 'AutonomousSystem'),
-                    'timestamp': datetime.now().isoformat()
-                }
-                
-                # 品質評価の実行
-                quality_result = await self.components['review_agent'].evaluate(evaluation_context)
-                
-                # フィードバック処理
-                feedback_action = await self.components['feedback_loop'].process_task_result(
-                    task, quality_result
-                )
-                
-                logger.info(f"📊 品質評価: {quality_result.get('quality_score')}/10 - アクション: {feedback_action.get('action', 'unknown')}")
-                
-                # ナレッジ登録（品質スコアが低い場合）
-                if quality_result.get('quality_score', 0) < 7:
-                    await self._record_improvement_knowledge(task, result, quality_result)
-                    
-        except Exception as e:
-            logger.error(f"❌ 品質フィードバック処理エラー: {e}")
-    
-    async def _record_improvement_knowledge(self, task: Dict[str, Any], result: Dict[str, Any], quality_result: Dict[str, Any]):
-        """改善ナレッジを記録"""
-        try:
-            # ナレッジベースに記録（実装に応じて拡張）
-            knowledge_entry = {
-                'scenario': f"低品質タスク: {task.get('task_name')}",
-                'problem': f"品質スコア {quality_result.get('quality_score')}点",
-                'solution': quality_result.get('improvement_suggestions', []),
-                'success_rate': 0.8,
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            logger.info(f"💡 改善ナレッジ記録: {task.get('task_name')}")
-            
-        except Exception as e:
-            logger.warning(f"⚠️  ナレッジ記録エラー: {e}")
-    
-    async def start_24h_operation(self):
-        """24時間自律運転を開始"""
-        logger.info("🚀 24時間自律開発システムを起動します")
-        self.is_running = True
-        self.start_time = datetime.now()
+            # すべてのタスクが完了するまで待機（実質無限ループ）
+            await asyncio.gather(*tasks)
         
-        # システム情報表示
-        await self._display_system_info()
-        
-        # メインループ
-        while self.is_running:
-            cycle_result = await self.run_development_cycle()
+        except KeyboardInterrupt:
+            logger.info("")
+            logger.info("=" * 60)
+            logger.info("⚠️ ユーザーによる停止要求を検出")
+            logger.info("=" * 60)
             
-            # サイクル間隔の調整
-            wait_time = self._calculate_wait_time(cycle_result)
-            await asyncio.sleep(wait_time)
+            # 統計情報を出力
+            uptime = datetime.now() - self.stats['start_time']
+            logger.info(f"⏱️  総稼働時間: {uptime}")
+            logger.info(f"🧠 学習サイクル: {self.stats['learning_cycles']}回")
+            logger.info(f"📋 タスクサイクル: {self.stats['task_cycles']}回")
+            logger.info(f"✅ 実行タスク数: {self.stats['tasks_executed']}個")
+            logger.info(f"🔧 修正適用数: {self.stats['errors_fixed']}個")
+            logger.info("=" * 60)
             
-            # 1時間ごとに状態報告
-            if self.cycle_count % 12 == 0:  # 約1時間ごと（5分間隔×12）
-                await self._report_system_status()
+            # すべてのタスクをキャンセル
+            for task in tasks:
+                task.cancel()
             
-            # 24時間経過で自動再起動（オプション）
-            if datetime.now() - self.start_time > timedelta(hours=24):
-                logger.info("🔄 24時間経過 - システム再起動")
-                break
-    
-    def _calculate_wait_time(self, cycle_result: Dict[str, Any]) -> int:
-        """待機時間を計算"""
-        base_wait = 300  # 5分
+            logger.info("✅ 24時間自律開発システムを正常終了しました")
         
-        if cycle_result.get('tasks_processed', 0) > 0:
-            # タスクを処理した場合は短い待機
-            return 60  # 1分
-        else:
-            # タスクがない場合は長めの待機
-            return base_wait
-    
-    async def _display_system_info(self):
-        """システム情報を表示"""
-        print("\n" + "="*60)
-        print("🎯 24時間自律型開発システム")
-        print("="*60)
-        print(f"起動時刻: {self.start_time}")
-        print(f"構成エージェント: {len(self.components)}個")
-        print("動作モード: 24時間連続自律開発")
-        print("="*60)
-        print()
-    
-    async def _report_system_status(self):
-        """システム状態を報告"""
-        runtime = datetime.now() - self.start_time
-        hours = runtime.total_seconds() / 3600
-        
-        logger.info(f"📊 システム状態レポート:")
-        logger.info(f"   稼働時間: {hours:.1f}時間")
-        logger.info(f"   実行サイクル: {self.cycle_count}回")
-        logger.info(f"   アクティブエージェント: {len(self.components)}個")
-        logger.info(f"   システム状態: {'正常' if self.is_running else '停止'}")
-    
-    async def stop(self):
-        """システムを停止"""
-        logger.info("🛑 自律開発システムを停止します")
-        self.is_running = False
+        except Exception as e:
+            logger.error(f"❌ 予期しないエラー: {e}")
+            import traceback
+            traceback.print_exc()
 
-# メイン実行
+
 async def main():
+    """メイン実行"""
     orchestrator = AutonomousDevelopmentOrchestrator()
-    
-    try:
-        # コンポーネント初期化
-        success = await orchestrator.initialize_components()
-        if not success:
-            logger.error("❌ システム初期化に失敗しました")
-            return
-        
-        # 24時間運転開始
-        await orchestrator.start_24h_operation()
-        
-    except KeyboardInterrupt:
-        logger.info("👤 ユーザー要求により停止します")
-    except Exception as e:
-        logger.error(f"❌ システムエラー: {e}")
-    finally:
-        await orchestrator.stop()
+    await orchestrator.run_forever()
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n終了しました")

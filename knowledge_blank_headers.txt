@@ -1,0 +1,63 @@
+【ナレッジ登録開始】
+タイトル: スプレッドシート空白ヘッダー問題の解決
+カテゴリ: Google Sheets API/データ整合性/再発防止
+重要度: 高
+
+【問題】
+何が起きた: project_goalシートのヘッダー行に空白列（''）が重複存在
+環境: Google Sheets API v4, gspread, Python 3.8+
+エラー例: the header row in the worksheet contains duplicates: ['']
+
+【原因分析】
+根本原因: スプレッドシートの手動編集時に空白列が挿入された
+直接原因: 
+1. ヘッダー行に空の列が存在
+2. gspreadのget_all_records()が重複エラーを検出
+3. 空白列の自動除外機能がなかった
+
+【解決策】
+解決手法: 空白ヘッダー自動修正スクリプトで空白列を削除
+
+実装例:
+# ✅ 個別シートの修正
+python3 tools/sheet_fixers/fix_blank_headers.py project_goal
+
+# ✅ すべてのシートを一括修正
+python3 tools/sheet_fixers/fix_blank_headers.py --all
+
+# ✅ 確認なしで自動実行
+python3 tools/sheet_fixers/fix_blank_headers.py project_goal --auto
+
+【スクリプトの仕組み】
+1. gspreadを直接使用してスプレッドシートにアクセス
+2. worksheet.get_all_values()で全データを取得
+3. 空白ヘッダーのインデックスを特定
+4. 空白列を除外した新しいデータを作成
+5. worksheet.clear()後、update()で新しいデータを書き込み
+
+【SafeSheetsWrapperとの連携】
+SafeSheetsWrapperにも空白ヘッダー対応を実装:
+- _clean_headers()メソッドで空白を自動除外
+- 重複エラー時に修正方法をログ出力
+- エラー時もデフォルト値を返して処理継続
+
+【学び】
+1. スプレッドシートの構造エラーは読み取り時に検出される
+2. 空白列の自動除外機能を実装することで堅牢性向上
+3. gspreadの直接使用で柔軟な操作が可能
+4. GoogleSheetsManagerの内部実装を確認してから使用（運用ルール13）
+5. CI/CDパイプラインに構造検証を組み込むことで早期発見
+
+【予防策】
+- 月次で構造検証ツールを実行（sheets_structure_validator.py）
+- スプレッドシート編集時に空白列を挿入しない
+- SafeSheetsWrapperを必ず経由してシート操作
+- 定期的に空白ヘッダー修正スクリプトを実行
+
+【横展開】
+- 他の構造エラー（重複ヘッダー、型不一致等）にも同様の修正スクリプト適用可能
+- 空白行の自動削除機能も追加可能
+- データ整合性チェックツールへの統合
+
+成功率: 100%
+【ナレッジ登録終了】

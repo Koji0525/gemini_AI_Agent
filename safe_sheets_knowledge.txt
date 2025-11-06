@@ -1,0 +1,82 @@
+【ナレッジ登録開始】
+タイトル: SafeSheetsWrapper - スプレッドシート連携の安全化
+カテゴリ: Python/Google Sheets API
+重要度: 高
+
+【問題】
+何が起きた: GoogleSheetsManagerのメソッド名推測によるエラー多発
+環境: Google Sheets API v4, Python 3.8+
+エラー例: AttributeError: 'GoogleSheetsManager' object has no attribute 'read_range'
+
+【原因分析】
+根本原因: API仕様確認なしのメソッド名推測使用
+直接原因: 
+1. ドキュメントではなく推測でメソッド名を使用
+2. GoogleSheetsManagerの直接使用による脆弱性
+3. エラー時のリカバリー機能なし
+
+【解決策】
+解決手法: SafeSheetsWrapperによる自動修正とセーフティネット
+実装例:
+
+# ✅ 正しい使い方
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+from tools.sheets_manager import GoogleSheetsManager
+
+sheets = GoogleSheetsManager()
+safe_sheets = SafeSheetsWrapper(sheets)
+
+# メソッド名が間違っていても自動修正
+data = safe_sheets.read_sheet('pm_tasks!A1:Z10')  # → read_range に変換
+
+# エラーでもデフォルト値を返す
+tasks = safe_sheets.safe_read('pm_tasks!A2:Z100', default=[])
+
+# 1次元配列も自動で2次元に変換
+safe_sheets.safe_write('A1:A3', ['task1', 'task2', 'task3'])
+
+# ❌ 避けるべき使い方
+sheets.read_range('pm_tasks!A1:Z10')  # 直接使用は禁止
+
+【機能一覧】
+1. メソッド名自動修正（read_sheet → read_range等）
+2. safe_read: エラー時のデフォルト値返却
+3. safe_write: 1次元→2次元配列の自動変換
+4. safe_append: 安全な追記操作
+5. エラー時の類似メソッド提案
+
+【SheetsFlowOrchestrator】
+機能: project_goal → pm_tasks → task_execution_log の自動フロー
+
+使用例:
+from tools.sheets_flow_orchestrator import SheetsFlowOrchestrator
+
+orchestrator = SheetsFlowOrchestrator(sheets_manager)
+stats = orchestrator.run_full_flow()
+
+# 実行内容
+# 1. project_goal から目標読み取り
+# 2. 目標をタスクに自動分解
+# 3. pm_tasks にタスク書き込み
+# 4. pending タスクを自動検出
+
+【学び】
+1. API使用前に必ず仕様確認（python3 tools/api_validator.py）
+2. 中核クラスは必ずSafeWrapperで保護
+3. エラー時のデフォルト値設定で処理継続
+4. 1次元→2次元配列の自動変換で型エラー防止
+5. 統合診断ツールでの事前検証（integrated_diagnostics.py）
+
+【予防策】
+- 新しいクラス使用前に api_validator.py 実行
+- GoogleSheetsManager の直接使用を禁止
+- TaskExecutor には SafeWrapper を必須統合
+- 月次で重複チェック実行
+
+【横展開】
+- 他の外部API（WordPress, Gemini）にも同様のWrapper適用可能
+- safe_read/write/append パターンは汎用的
+- FlowOrchestrator パターンは他のシート連携にも適用可能
+
+成功率: 98%
+【ナレッジ登録終了】

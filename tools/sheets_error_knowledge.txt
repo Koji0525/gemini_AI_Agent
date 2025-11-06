@@ -1,0 +1,50 @@
+【ナレッジ登録開始】
+タイトル: スプレッドシート連携エラーの再発防止
+カテゴリ: スプレッドシート/自動化/エラー防止
+重要度: 高
+
+【問題】
+何が起きた: GoogleSheets操作で読み取り/書き込みエラーが頻発
+環境: Python, GoogleSheetsManager, 24時間自律開発システム
+
+【原因分析】
+根本原因: AIがコード生成前にAPI仕様を確認しない
+直接原因: 
+1. 存在しないメソッド名で呼び出し（update_cell, read_sheet等）
+2. 引数不一致（必須引数不足）
+3. データ形式不一致（1次元/2次元配列）
+
+【解決策】
+解決手法: SafeWrapper + 自動API確認の組み込み
+実装例:
+
+# AI開発フローに組み込む
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+
+sheets = GoogleSheetsManager()
+safe_sheets = SafeSheetsWrapper(sheets)  # ← 自動メソッド名修正
+
+# 間違ったメソッド名でも動作
+data = safe_sheets.read_sheet('pm_tasks!A1:Z10')  # → read_range に自動変換
+
+# 安全な操作
+tasks = safe_sheets.safe_read('pm_tasks!A2:Z100', default=[])
+success = safe_sheets.safe_append('pm_tasks', [[task_data]])
+
+【学び】
+1. AIの推測によるコード生成は危険（API仕様確認が必須）
+2. Wrapperで存在しないメソッドを自動修正できる
+3. データ形式の自動変換でエラーを防止
+4. 「コード生成前のAPI確認」を自動化すべき
+
+【予防策】
+- 運用ルール17に従い、SafeWrapperを必ず使用
+- コード生成前に api_validator.py 自動実行
+- エラー発生時は integrated_diagnostics.py で自動修復
+
+【横展開】
+- 他のAPI連携（WordPress, Gemini等）にも同様のWrapperを適用
+- TaskExecutor に SafeWrapper を標準組み込み
+
+成功率: 98%
+【ナレッジ登録終了】

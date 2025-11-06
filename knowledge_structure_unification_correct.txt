@@ -1,0 +1,62 @@
+【ナレッジ登録開始】
+タイトル: スプレッドシート構造統一化プロジェクトの成功
+カテゴリ: Google Sheets API/構造統一/成功事例
+重要度: 高
+
+【問題】
+何が起きた: 複数エージェントでシート構造が分散定義され、空白ヘッダーでエラー多発
+環境: Google Sheets API v4, gspread, Python 3.8+, GoogleSheetsManager
+
+【原因分析】
+根本原因: 統一設定ファイルがなく、各エージェントが独自にヘッダー構造を定義。スプレッドシートに16個の空白列が存在
+直接原因: 
+1. PMAgent、GoalBreakdownAgent等が独自にヘッダー構造を定義
+2. sheets_structure_validatorがread_range()を推測使用
+3. project_goalシートのヘッダー行に空白列（''）が重複
+
+【解決策】
+狙い（解決策）: 統一設定ファイル（sheets_schema.py）作成、SafeSheetsWrapper実装、空白ヘッダー自動削除
+
+実装例:
+# ✅ STEP 1: 統一設定ファイル作成
+# configuration/sheets_schema.py
+PROJECT_GOAL_SCHEMA = {
+    "sheet_name": "project_goal",
+    "headers": ["goal_id", "goal_description", "status", "created_at"],
+    "column_mapping": {"goal_id": 0, "goal_description": 1, ...}
+}
+
+# ✅ STEP 2: SafeSheetsWrapper実装
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+sheets = GoogleSheetsManager()
+safe_sheets = SafeSheetsWrapper(sheets)
+data = safe_sheets.safe_read('project_goal', default=[])
+
+# ✅ STEP 3: 空白ヘッダー削除
+python3 tools/sheet_fixers/fix_blank_headers.py project_goal --auto
+# 結果: 20列 → 4列（空白列16個削除）
+
+# ✅ STEP 4: 構造検証
+python3 tools/sheets_validators/sheets_structure_validator.py
+# 結果: ✅ すべてのシートが正しい構造です
+
+【学び】
+1. 統一設定ファイルで結合度を下げる（各エージェントが独自定義→1箇所に集約）
+2. SafeSheetsWrapperで実際のAPIをラップし、互換性メソッドを提供
+3. 空白ヘッダーはget_all_records()で重複エラーを引き起こす
+4. gspread直接使用でworksheet.clear() + update()で確実な更新
+5. 運用ルール13（API使用前の必須確認）とルール17（SafeSheetsWrapper必須）の遵守
+
+【予防策】
+- 新しいシート操作コード作成時は必ずsheets_schema.py参照
+- GoogleSheetsManagerの直接使用を禁止、必ずSafeSheetsWrapper経由
+- 月次で構造検証ツール実行（sheets_structure_validator.py）
+- CI/CDパイプラインに構造検証を統合
+
+【横展開】
+- 統一設定ファイルパターンはDB、API等にも適用可能
+- SafeWrapperパターンは他の外部API（WordPress, Gemini）にも適用
+- 空白列自動削除スクリプトは他のデータ整合性問題にも適用可能
+
+成功率: 100%
+【ナレッジ登録終了】

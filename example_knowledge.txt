@@ -1,37 +1,51 @@
 【ナレッジ登録開始】
-タイトル: 非同期関数の構文エラー
-カテゴリ: Python/非同期処理
+タイトル: .env上書き・機能削除の再発防止自動化
+カテゴリ: 開発プロセス/自動化/品質保証
 重要度: 高
 
 【問題】
-何が起きた: await構文のコンテキストエラー
-環境: Python 3.8+, asyncio環境
+何が起きた: AIによる.env上書きとコード変更時の機能削除が多発
+環境: Python開発環境、Git管理プロジェクト
 
 【原因分析】
-根本原因: 非同期関数の呼び出しコンテキストが不適切
+根本原因: 変更前の保護・検証プロセスが手動で漏れが発生
 直接原因: 
-1. 非同期関数を同期コンテキストで呼び出した
-2. イベントループの管理が不適切
+1. .envファイルが書き込み可能で上書きリスク
+2. コード変更時の影響範囲を事前評価する仕組みがない
+3. Git操作時の自動チェックがない
 
 【解決策】
-解決手法: 適切な非同期コンテキストの確保
+解決手法: 4つの自動化ツールで多層防御
 実装例:
-# 正しい呼び出し方
-async def main():
-    result = await async_function()
 
-# 実行
-asyncio.run(main())
+# 1. 統合診断（最初に実行）
+python3 /mnt/user-data/outputs/integrated_protection_check.py --auto-fix
+
+# 2. .env保護
+python3 /mnt/user-data/outputs/env_protector.py protect
+
+# 3. コード変更分析
+python3 /mnt/user-data/outputs/code_impact_analyzer.py old.py new.py
+
+# 4. Git自動保護フック
+bash /mnt/user-data/outputs/setup_protection_hooks.sh
 
 【学び】
-1. 非同期関数はasyncコンテキスト内でawaitする
-2. トップレベルではasyncio.run()を使用する
-3. イベントループのライフサイクルを理解する
+1. 手動チェックは漏れるため自動化必須
+2. 多層防御（事前バックアップ+変更検証+自動フック）が有効
+3. 統合診断ツールで保護状態を可視化することで運用が定着
+4. Gitフックで変更時に自動介入することで人的ミスを防止
 
 【予防策】
-- 非同期関数の呼び出し規約を文書化
-- コードレビューでコンテキストを確認
-- 非同期テストの実施
+- 日次: integrated_protection_check.py で保護状態確認
+- .env編集時: 必ずenv_protector.pyでバックアップ→編集→再保護
+- コード大幅修正時: code_impact_analyzer.pyで影響分析
+- プロジェクト開始時: setup_protection_hooks.shでフック設置
+
+【横展開】
+- 他の重要ファイル（requirements.txt、Dockerfileなど）にも適用可能
+- API設定ファイル全般に適用できる保護パターン
+- CI/CDパイプラインにintegrated_protection_check.pyを組み込む
 
 成功率: 95%
 【ナレッジ登録終了】
