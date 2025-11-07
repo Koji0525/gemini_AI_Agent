@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-🤖 AutonomousOrchestrator v1.16.0
-24時間自律稼働システム
+🤖 AutonomousOrchestrator v1.16.1
+24時間自律稼働システム（リトライロジック統合版）
 """
 
 import sys
@@ -34,16 +34,18 @@ from core_agents.pm_agent import PMAgent
 from tools.sheets_flow_orchestrator import SheetsFlowOrchestrator
 from tools.sheets_manager import GoogleSheetsManager
 
+# リトライヘルパー
+from tools.sheets_retry_helper import retry_on_api_error
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-# ログ名を短縮
 logger.name = "Auto"
 
 
 class AutonomousOrchestrator:
-    """24時間自律稼働オーケストレーター"""
+    """24時間自律稼働オーケストレーター（v1.16.1 リトライ統合版）"""
 
     def __init__(self):
         self.sheets_manager = None
@@ -63,10 +65,11 @@ class AutonomousOrchestrator:
             "tasks_executed": 0,
             "errors_recovered": 0,
             "goals_achieved": 0,
+            "api_retries": 0,
             "start_time": None,
         }
 
-        logger.info("✅ Init")
+        logger.info("✅ Init v1.16.1")
 
     async def initialize(self):
         """完全初期化"""
@@ -154,17 +157,27 @@ class AutonomousOrchestrator:
             except Exception as e:
                 logger.warning(f"  ⚠️ {agent_name}: {e}")
 
+    @retry_on_api_error(max_retries=3, base_delay=1.0)
+    async def _load_goal_with_retry(self):
+        """project_goal読み込み（リトライ付き）"""
+        return await self.pm_agent.load_project_goal()
+
+    @retry_on_api_error(max_retries=3, base_delay=1.0)
+    async def _write_tasks_with_retry(self, tasks):
+        """pm_tasks書き込み（リトライ付き）"""
+        return await self.pm_agent.write_tasks_to_sheet(tasks)
+
     async def run_autonomous_cycle(self) -> Dict[str, Any]:
-        """1サイクル実行"""
+        """1サイクル実行（リトライロジック統合版）"""
         cycle_start = datetime.now()
         logger.info("=" * 60)
         logger.info(f"🔄 サイクル #{self.stats['cycles_completed'] + 1}")
         logger.info("=" * 60)
 
         try:
-            # 1. project_goal読み込み
+            # 1. project_goal読み込み（リトライ付き）
             logger.info("📖 Step1: Goal読込...")
-            goal = await self.pm_agent.load_project_goal()
+            goal = await self._load_goal_with_retry()
 
             if not goal:
                 logger.warning("⚠️ ゴールなし")
@@ -190,8 +203,8 @@ class AutonomousOrchestrator:
 
             logger.info(f"  ✅ {len(tasks)}個生成")
 
-            # pm_tasksに書き込み
-            await self.pm_agent.write_tasks_to_sheet(tasks)
+            # pm_tasksに書き込み（リトライ付き）
+            await self._write_tasks_with_retry(tasks)
             logger.info(f"  ✅ {len(tasks)}件書込")
 
             # 3. タスク実行
@@ -214,11 +227,14 @@ class AutonomousOrchestrator:
             cpu_percent = monitoring_result.get("metrics", {}).get("cpu", {}).get("percent", 0)
             logger.info(f"  ✅ CPU {cpu_percent:.1f}%")
 
-            learning_result = await self.learning_optimizer.optimize_from_results(
-                {"tasks": tasks, "results": execution_results, "goal": goal}
-            )
-            improvements = learning_result.get("improvements", 0)
-            logger.info(f"  ✅ 学習: {improvements}件改善")
+            try:
+                learning_result = await self.learning_optimizer.execute(
+                    {"type": "optimize", "tasks": tasks, "results": execution_results, "goal": goal}
+                )
+                improvements = learning_result.get("improvements_count", 0)
+                logger.info(f"  ✅ 学習: {improvements}件改善")
+            except Exception as learn_error:
+                logger.warning(f"  ⚠️ 学習スキップ: {learn_error}")
 
             # 統計更新
             self.stats["cycles_completed"] += 1
@@ -229,6 +245,8 @@ class AutonomousOrchestrator:
             logger.info(
                 f"📊 累計: {self.stats['cycles_completed']}サイクル, {self.stats['tasks_executed']}タスク"
             )
+            if self.stats["api_retries"] > 0:
+                logger.info(f"🔄 APIリトライ: {self.stats['api_retries']}回")
             logger.info("=" * 60)
 
             return {
@@ -243,18 +261,28 @@ class AutonomousOrchestrator:
         except Exception as e:
             logger.error(f"❌ エラー: {e}", exc_info=True)
 
-            # 自動修復
+            # ErrorRecoveryAgent で自動修復
             try:
-                recovery_result = await self.error_recovery_agent.execute(
-                    {"error": e, "context": "autonomous_cycle"}
+                diagnosis = await self.error_recovery_agent.diagnose_error(
+                    error=e, context={"phase": "autonomous_cycle"}
                 )
 
-                if recovery_result.get("status") == "recovered":
+                logger.info(f"🔍 診断: {diagnosis.get('error_type', 'unknown')}")
+
+                recovery_result = await self.error_recovery_agent.apply_fix(
+                    error=e,
+                    strategy=diagnosis.get("strategy", {}),
+                    context={"phase": "autonomous_cycle"},
+                )
+
+                if recovery_result.get("status") == "success":
                     logger.info("✅ 修復成功")
                     self.stats["errors_recovered"] += 1
+                else:
+                    logger.warning(f"⚠️ 修復失敗: {recovery_result.get('message')}")
 
             except Exception as recovery_error:
-                logger.error(f"❌ 修復失敗: {recovery_error}")
+                logger.error(f"❌ 修復処理エラー: {recovery_error}")
 
             return {
                 "status": "error",
@@ -265,7 +293,7 @@ class AutonomousOrchestrator:
     async def run_continuous(self, interval_seconds: int = 300):
         """24時間連続稼働"""
         logger.info("=" * 60)
-        logger.info("�� 24時間稼働開始")
+        logger.info("🚀 24時間稼働開始 (v1.16.1)")
         logger.info(f"⏱️  間隔: {interval_seconds}秒")
         logger.info("=" * 60)
 
@@ -297,6 +325,7 @@ class AutonomousOrchestrator:
             logger.info(f"  サイクル: {self.stats['cycles_completed']}")
             logger.info(f"  タスク: {self.stats['tasks_executed']}")
             logger.info(f"  修復: {self.stats['errors_recovered']}")
+            logger.info(f"  リトライ: {self.stats['api_retries']}")
             logger.info("=" * 60)
 
 
