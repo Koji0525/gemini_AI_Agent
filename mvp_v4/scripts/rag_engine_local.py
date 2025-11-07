@@ -171,8 +171,9 @@ if __name__ == "__main__":
 
     # ナレッジ読み込み
     knowledge_files = [
-        "mvp_v4/knowledge/initial/wordpress_knowledge.json",
-        "mvp_v4/knowledge/initial/design_knowledge.json",
+        "mvp_v4/knowledge/learned/unified_knowledge_base.json",
+        "mvp_v4/knowledge/learned/conversation_knowledge_v4.json",
+        "mvp_v4/knowledge/learned/conversation_knowledge_v3.json",
     ]
     rag.load_knowledge(knowledge_files)
 
