@@ -5,7 +5,7 @@
 """
 
 import inspect
-from typing import List, Dict
+from typing import Dict, List
 
 
 class MethodValidator:
@@ -15,19 +15,10 @@ class MethodValidator:
     def validate_method_call(class_obj, method_name: str, args: List, kwargs: Dict) -> Dict:
         """
         メソッド呼び出しの妥当性を検証
-
-        Args:
-            class_obj: クラスオブジェクト
-            method_name: メソッド名
-            args: 位置引数
-            kwargs: キーワード引数
-
-        Returns:
-            検証結果
         """
         result = {"valid": True, "issues": [], "suggestions": []}
 
-        # 1. メソッドの存在確認
+        # メソッドの存在確認
         if not hasattr(class_obj, method_name):
             result["valid"] = False
             result["issues"].append(f"メソッド '{method_name}' が存在しません")
@@ -41,7 +32,7 @@ class MethodValidator:
 
             return result
 
-        # 2. 引数の検証
+        # 引数の検証
         method = getattr(class_obj, method_name)
         sig = inspect.signature(method)
 
@@ -65,7 +56,7 @@ class MethodValidator:
 
 
 def main():
-    """メイン実行"""
+    """メイン実行 - GoogleSheetsManagerのメソッド一覧表示"""
     import sys
 
     sys.path.insert(0, "/workspaces/gemini_AI_Agent")
@@ -81,10 +72,12 @@ def main():
     # 全メソッドを表示
     methods = [m for m in dir(GoogleSheetsManager) if not m.startswith("_")]
 
-    for method_name in methods:
+    for method_name in sorted(methods):
         sig = validator.get_method_signature(GoogleSheetsManager, method_name)
-        print(f"✅ {sig}")
+        print(f"📌 {sig}")
 
+    print("=" * 60)
+    print(f"📊 総メソッド数: {len(methods)}")
     print("=" * 60)
 
 
