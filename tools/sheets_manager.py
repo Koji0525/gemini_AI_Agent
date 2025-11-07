@@ -38,6 +38,10 @@ class GoogleSheetsManager:
         # 自動認証試行
         self.authenticate()
 
+        # スプレッドシートを自動でオープン
+        if self.authenticated and self.spreadsheet_id:
+            self.open_spreadsheet(self.spreadsheet_id)
+
     def setup_logging(self):
         """ロギング設定"""
         logging.basicConfig(
@@ -185,11 +189,9 @@ class GoogleSheetsManager:
     def write_sheet(self, sheet_name: str, data: List[List[Any]]) -> bool:
         """
         シートにデータを書き込む
-
         Args:
             sheet_name: シート名
             data: 書き込むデータ（2次元配列）
-
         Returns:
             成功時True、失敗時False
         """
@@ -200,7 +202,53 @@ class GoogleSheetsManager:
         try:
             worksheet = self.sheet.worksheet(sheet_name)
             worksheet.clear()
-            worksheet.update("A1", data)
+            worksheet.update(values=data, range_name="A1")
+            self.logger.info(f"✅ {sheet_name}にデータを書き込みました")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ データ書き込みエラー ({sheet_name}): {e}")
+            return False
+
+    def read_range(self, range_spec: str) -> List[List[Any]]:
+        """
+        範囲指定で読み込み
+
+        Args:
+            range_spec: 'sheet_name!A1:Z10' または 'sheet_name' 形式
+
+        Returns:
+            List[List[Any]]: セルデータの2次元配列
+        """
+        try:
+            if "!" in range_spec:
+                sheet_name, cell_range = range_spec.split("!", 1)
+            else:
+                sheet_name = range_spec
+                cell_range = None
+
+            if not self.sheet:
+                self.logger.error("❌ スプレッドシートが開かれていません")
+                return []
+
+            worksheet = self.sheet.worksheet(sheet_name)
+
+            if cell_range:
+                data = worksheet.get(cell_range)
+                self.logger.info(f"✅ {range_spec}: {len(data)}行取得")
+            else:
+                data = worksheet.get_all_values()
+                self.logger.info(f"✅ {sheet_name}: {len(data)}行取得")
+
+            return data
+
+        except Exception as e:
+            self.logger.error(f"❌ 範囲読み込みエラー ({range_spec}): {e}")
+            return []
+
+        try:
+            worksheet = self.sheet.worksheet(sheet_name)
+            worksheet.clear()
+            worksheet.update(values=data, range_name="A1")
             self.logger.info(f"✅ {sheet_name}にデータを書き込みました")
             return True
         except Exception as e:
