@@ -1,14 +1,8 @@
 """
-AutonomousOrchestrator v1.23.0 Complete - SystemObserver完全統合版
+AutonomousOrchestrator v1.24.0 Full Agents - ログ修正版
 
-【Phase 1-5完成版】
-✅ Phase 1: データ収集基盤
-✅ Phase 2: 可視化基盤（Web + CLI）
-✅ Phase 3: 連携強化（実データ統合）
-✅ Phase 4: 分析高度化（パフォーマンス・コスト・予測）
-✅ Phase 5: 運用化（耐久性・ドキュメント）
-
-【統合率】100% + SystemObserver完全統合
+【v1.24.0からの変更】
+✅ INFOログを完全に抑制（WARNING以上のみ表示）
 """
 
 import argparse
@@ -25,8 +19,7 @@ sys.path.insert(0, str(project_root))
 from agents.advanced_analytics.execution_analyzer import ExecutionAnalyzer
 from agents.collaboration.collaboration_agent import CollaborationAgent
 from agents.monitoring.monitoring_agent import MonitoringAgent
-from agents.system_observer.system_observer_complete import \
-    SystemObserverComplete
+from agents.system_observer.system_observer_v3 import SystemObserverV3
 from browser_control.sheets_manager import GoogleSheetsManager
 from core_agents.pm_agent import PMAgent
 from core_agents.review_agent import ReviewAgent
@@ -36,8 +29,37 @@ from tools.safe_sheets_wrapper import SafeSheetsWrapper
 logger = logging.getLogger(__name__)
 
 
+def configure_logging_strict():
+    """ログ設定を厳密に適用（WARNING以上のみ）"""
+    # ルートロガーを設定
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(levelname)s:%(name)s:%(message)s",
+        force=True,  # 既存の設定を上書き
+    )
+
+    # 全ての既存ロガーのレベルを変更
+    for logger_name in logging.root.manager.loggerDict:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+    # 特定のロガーを明示的に設定
+    critical_loggers = [
+        "tools.safe_sheets_wrapper",
+        "core_agents.pm_agent",
+        "task_executor.task_executor_main",
+        "core_agents.review_agent",
+        "agents.monitoring.monitoring_agent",
+        "agents.collaboration.collaboration_agent",
+        "agents.advanced_analytics.execution_analyzer",
+        "agents.system_observer.system_observer_v3",
+    ]
+
+    for logger_name in critical_loggers:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+
 class AutonomousOrchestrator:
-    """自律開発オーケストレーター v1.23.0 Complete"""
+    """自律開発オーケストレーター v1.24.0 Full Agents"""
 
     def __init__(self, debug_mode: bool = False):
         self.debug_mode = debug_mode
@@ -53,30 +75,30 @@ class AutonomousOrchestrator:
         self.collab_agent = None
         self.execution_analyzer = None
 
-        # 🔭 SystemObserver Complete（Phase 1-5統合）
+        # 🔭 SystemObserver v3（全エージェント監視）
         self.system_observer = None
 
         # 統計
         self.stats = {
             "cycles_completed": 0,
-            "tasks_executed": 0,
-            "start_time": None,
-            "version": "1.23.0-complete",
+            "version": "1.24.0-full-agents",
         }
 
-        print(f"✅ AutonomousOrchestrator v1.23.0 Complete 初期化")
-        print(f"🔭 SystemObserver: Phase 1-5完全統合")
+        print(f"✅ AutonomousOrchestrator v1.24.0 Full Agents 初期化")
 
     async def initialize(self):
         """完全初期化"""
         try:
             print("=" * 70)
-            print("🚀 AutonomousOrchestrator v1.23.0 Complete 初期化開始")
+            print("🚀 AutonomousOrchestrator v1.24.0 Full Agents 初期化開始")
             print("=" * 70)
 
             from dotenv import load_dotenv
 
             load_dotenv(override=True)
+
+            # ログ設定を厳密に適用
+            configure_logging_strict()
 
             spreadsheet_id = os.getenv("SPREADSHEET_ID")
             if not spreadsheet_id:
@@ -87,6 +109,9 @@ class AutonomousOrchestrator:
             self.sheets_manager = GoogleSheetsManager(spreadsheet_id=spreadsheet_id)
             self.safe_sheets = SafeSheetsWrapper(self.sheets_manager)
 
+            # 初期化後にもう一度ログレベルを設定
+            configure_logging_strict()
+
             # エージェント
             print("🤖 エージェント初期化")
             self.pm_agent = PMAgent(self.sheets_manager)
@@ -96,21 +121,29 @@ class AutonomousOrchestrator:
             self.collab_agent = CollaborationAgent()
             self.execution_analyzer = ExecutionAnalyzer(self.sheets_manager)
 
-            # 🔭 SystemObserver Complete
-            print("🔭 SystemObserver Complete初期化（Phase 1-5統合）")
-            self.system_observer = SystemObserverComplete(
+            # さらにもう一度ログレベルを設定（各エージェントの初期化後）
+            configure_logging_strict()
+
+            # 🔭 SystemObserver v3
+            print("🔭 SystemObserver v3初期化（全エージェント監視）")
+            self.system_observer = SystemObserverV3(
                 monitoring_agent=self.monitoring_agent,
                 execution_analyzer=self.execution_analyzer,
                 collaboration_agent=self.collab_agent,
                 task_executor=self.task_executor,
             )
 
+            # 全エージェントを登録
+            print("\n📋 全エージェントを登録中...")
+            agent_count = self.system_observer.register_orchestrator_agents(self)
+
             print("=" * 70)
-            print("✅ 全エージェント初期化完了")
-            print("🎯 統合率: 100% + SystemObserver完全統合")
+            print(f"✅ 全エージェント初期化完了（{agent_count}個）")
+            print("🎯 統合率: 100% + 全エージェント監視")
             print("=" * 70)
 
-            logging.getLogger().setLevel(logging.WARNING)
+            # 最終的なログレベル設定
+            configure_logging_strict()
 
             return True
 
@@ -126,22 +159,23 @@ class AutonomousOrchestrator:
             print(f"🔄 サイクル #{self.stats['cycles_completed'] + 1} 開始")
             print("=" * 70)
 
-            # 🔭 包括的分析（Phase 1-5統合）
-            print("\n🔭 SystemObserver: 包括的分析実行")
+            # 🔭 包括的分析
+            print("\n🔭 SystemObserver v3: 全エージェント監視")
             analysis = self.system_observer.collect_comprehensive_analysis()
 
             # 結果表示
             snapshot = analysis["snapshot"]
             print(f"   ✅ CPU: {snapshot['resources'].get('cpu_percent', 0):.1f}%")
             print(f"   ✅ メモリ: {snapshot['resources'].get('memory_percent', 0):.1f}%")
-            print(f"   ✅ ヘルス: {snapshot['health']}")
+
+            # エージェント詳細
+            agents = snapshot["agents"]
+            print(f"   👥 エージェント: {agents['total_agents']}個")
+            print(f"      健全: {agents.get('healthy_agents', 0)}個")
+            print(f"      警告: {agents.get('warning_agents', 0)}個")
 
             if analysis.get("cost"):
                 print(f"   💰 コスト（時間）: ${analysis['cost']['hourly_cost']:.4f}")
-
-            if analysis.get("predictions"):
-                pred = analysis["predictions"]["predictions"]["cpu"]
-                print(f"   🔮 CPU予測: {pred['current']:.1f}% → {pred['predicted']:.1f}%")
 
             # 統計更新
             self.stats["cycles_completed"] += 1
@@ -162,11 +196,8 @@ class AutonomousOrchestrator:
                 logger.error("❌ 初期化失敗。終了します。")
                 return
 
-            self.stats["start_time"] = datetime.now().isoformat()
-
             print("\n" + "=" * 70)
-            print("🚀 自律開発システム起動（v1.23.0 Complete）")
-            print(f"🔭 SystemObserver: Phase 1-5完全統合")
+            print("🚀 自律開発システム起動（v1.24.0 Full Agents）")
             print("=" * 70)
 
             cycle_count = 0
@@ -184,25 +215,23 @@ class AutonomousOrchestrator:
 
         except KeyboardInterrupt:
             print("\n⚠️ ユーザーによる中断")
-        finally:
-            print("\n" + "=" * 70)
-            print("🛑 自律開発システム終了")
-            print("=" * 70)
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="AutonomousOrchestrator v1.23.0")
+    parser = argparse.ArgumentParser(description="AutonomousOrchestrator v1.24.0")
     parser.add_argument("--debug", action="store_true", help="デバッグモード")
     parser.add_argument("--cycles", type=int, default=3, help="実行サイクル数")
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.WARNING, format="%(levelname)s:%(name)s:%(message)s")
+    # ログ設定（WARNING以上のみ）
+    configure_logging_strict()
 
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print("🧪 AutonomousOrchestrator v1.23.0 Complete")
-    print(f"🔭 SystemObserver: Phase 1-5完全統合")
+    print("🧪 AutonomousOrchestrator v1.24.0 Full Agents")
+    print("🔭 SystemObserver v3: 全エージェント監視")
     print(f"🔄 実行サイクル: {args.cycles}回")
+    print("📝 ログレベル: WARNING以上のみ表示")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     orchestrator = AutonomousOrchestrator(debug_mode=args.debug)
