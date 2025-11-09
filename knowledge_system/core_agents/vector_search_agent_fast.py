@@ -9,7 +9,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 
-class FastVectorSearchAgent:
+class VectorSearchAgent:
     """ローカルモデルを使用した高速ベクトル検索"""
 
     def __init__(self, index_path: str, dimension: int = 384):

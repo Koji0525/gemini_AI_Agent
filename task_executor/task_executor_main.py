@@ -3,20 +3,22 @@ TaskExecutor - タスク実行の中核クラス（完全版）
 ナレッジ読み込みエラー修正版
 """
 
-import sys
-import os
-import logging
-from typing import Dict, Any, Optional, List
 import asyncio
 import json
+import logging
+import os
+import sys
+from typing import Any, Dict, List
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
-from tools.sheets_manager import GoogleSheetsManager
+# from mvp_v4.scripts.rag_engine_local import FrugalRAGEngine  # 依存削除
+from agents.observability.intelligence.learning.knowledge_base_adapter import \
+    KnowledgeBaseAdapter
+from configuration.sheets_schema import dict_to_row
 from tools.safe_sheets_wrapper import SafeSheetsWrapper
-from configuration.sheets_schema import get_schema, row_to_dict, dict_to_row
-from mvp_v4.scripts.rag_engine_local import FrugalRAGEngine
+from tools.sheets_manager import GoogleSheetsManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,9 +29,8 @@ class TaskExecutor:
 
     def __init__(self, sheets_manager: GoogleSheetsManager):
         self.sheets = SafeSheetsWrapper(sheets_manager)
-        self.rag_engine = FrugalRAGEngine()
-        self._load_knowledge_base()
-        logger.info("✅ TaskExecutor を初期化しました")
+        self.knowledge_adapter = KnowledgeBaseAdapter()  # 新しいナレッジシステム
+        logger.info("✅ TaskExecutor を初期化しました（新しいナレッジシステム使用）")
 
     def _load_knowledge_base(self):
         """ナレッジベース読み込み（リスト・辞書両対応版）"""
@@ -66,7 +67,7 @@ class TaskExecutor:
                 with open(temp_file, "w", encoding="utf-8") as f:
                     json.dump(merged_data, f, ensure_ascii=False, indent=2)
 
-                self.rag_engine.load_knowledge([temp_file])
+                # 新しいナレッジシステムでは明示的な読み込みは不要
                 logger.info(f"✅ ナレッジベース読み込み: {len(all_knowledge)}件")
             else:
                 logger.warning("⚠️ ナレッジベースが空です")
@@ -101,7 +102,7 @@ class TaskExecutor:
             # ナレッジベース検索
             knowledge = []
             try:
-                knowledge = self.rag_engine.search(description, top_k=3)
+                knowledge = self.knowledge_adapter.search_knowledge(description, top_k=3)
                 if knowledge:
                     logger.info(f"📚 関連ナレッジ: {len(knowledge)}件")
             except Exception as e:

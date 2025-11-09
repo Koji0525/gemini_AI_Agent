@@ -11,7 +11,7 @@ import faiss
 from sentence_transformers import SentenceTransformer
 
 
-class VectorSearchAgent:
+class HybridSearchAgent:
     """FAISSを使ったベクトル検索"""
 
     def __init__(self, index_path: str, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
