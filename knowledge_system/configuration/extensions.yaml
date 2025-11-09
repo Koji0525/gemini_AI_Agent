@@ -1,0 +1,32 @@
+# 拡張機能設定
+extensions:
+  quality_assessment:
+    enabled: true
+    min_quality_score: 60
+    auto_reject_below: 30
+  
+  relation_analysis:
+    enabled: true
+    max_related_items: 5
+    similarity_threshold: 0.3
+  
+  auto_categorization:
+    enabled: false  # 将来的に有効化
+    model: "text-classification"
+  
+  sentiment_analysis:
+    enabled: false  # 将来的に有効化
+    track_positive_negative: true
+
+# API設定
+api:
+  enabled: false  # 将来的に有効化
+  host: "0.0.0.0"
+  port: 8000
+  auth_required: true
+
+# マルチテナント設定
+multitenancy:
+  enabled: false  # 将来的に有効化
+  default_tenant: "main"
+  tenant_isolation: "database"  # database or schema

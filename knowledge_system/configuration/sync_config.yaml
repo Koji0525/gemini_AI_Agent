@@ -1,0 +1,28 @@
+# 高度な同期設定ファイル
+sync:
+  batch_size: 100
+  embedding_model: "all-MiniLM-L6-v2"
+  similarity_threshold: 0.3
+  auto_retry: true
+  max_retries: 3
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+performance:
+  max_concurrent: 2
+  memory_limit_mb: 2048
+
+# カスタムフィールドマッピング（拡張用）
+field_mapping:
+  title: "title"
+  content: "content"
+  tags: "tags"
+  category: "category"
+
+# フィルタ設定（特定の条件のエントリーのみ同期）
+filters:
+  include_categories: []  # 空の場合はすべてを含む
+  exclude_categories: ["temp", "draft"]
+  min_quality_score: 0
