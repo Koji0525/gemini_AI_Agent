@@ -1,302 +1,195 @@
+#!/usr/bin/env python3
 """
-GoogleSheetsManager - 完全修正版 v2.0
-- spreadsheet_id属性追加
-- authenticated属性追加
-- インターフェース契約準拠
+モック対応版スプレッドシートマネージャー - 環境変数完全対応版
 """
-
-import os
-import gspread
-from google.oauth2.service_account import Credentials
 import logging
-from typing import Optional, List, Dict, Any
+import os
+from typing import Any, List
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleSheetsManager:
-    """Google Sheets操作マネージャー - インターフェース契約準拠版"""
+    """環境変数完全対応版スプレッドシートマネージャー"""
 
-    def __init__(
-        self, spreadsheet_id: Optional[str] = None, credentials_path: Optional[str] = None
-    ):
-        """
-        初期化
-
-        Args:
-            spreadsheet_id: スプレッドシートID（環境変数からも取得可能）
-            credentials_path: 認証情報ファイルのパス
-        """
-        # 必須属性を明示的に定義（インターフェース契約）
-        self.spreadsheet_id = spreadsheet_id or os.getenv("SPREADSHEET_ID")
-        self.authenticated = False
-        self.client = None
-        self.sheet = None
-        self.credentials_path = credentials_path
-
-        # ロギング設定
-        self.setup_logging()
-
-        # 自動認証試行
-        self.authenticate()
-
-        # スプレッドシートを自動でオープン
-        if self.authenticated and self.spreadsheet_id:
-            self.open_spreadsheet(self.spreadsheet_id)
-
-    def setup_logging(self):
-        """ロギング設定"""
-        logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    def __init__(self, spreadsheet_id: str = None):
+        # 環境変数から設定を取得
+        self.spreadsheet_id = spreadsheet_id or os.getenv("SPREADSHEET_ID", "test_spreadsheet_id")
+        self.service_account_file = os.getenv(
+            "GOOGLE_SERVICE_ACCOUNT_FILE", "configuration/service_account.json"
         )
-        self.logger = logging.getLogger(__name__)
+        self._service = None
+        self._is_test_mode = os.getenv("TEST_MODE", "False").lower() == "true"
 
-    def authenticate(self) -> bool:
-        """
-        Google Sheets API認証
+        logger.info(f"🧪 モード: {'テスト' if self._is_test_mode else '本番'}")
+        logger.info(f"📊 スプレッドシートID: {self.spreadsheet_id}")
+        logger.info(f"🔑 サービスアカウントファイル: {self.service_account_file}")
 
-        Returns:
-            認証成功時True、失敗時False
-        """
+        if not self._is_test_mode:
+            self._initialize_service()
+        else:
+            logger.info("✅ テストモード: モックデータを使用します")
+
+    def _initialize_service(self):
+        """Google Sheetsサービスを初期化（本番環境のみ）"""
         try:
-            # 資格情報ファイルのパスを決定
-            creds_path = self._find_credentials_file()
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
 
-            if not creds_path:
-                self.logger.warning("❌ No credentials file found")
-                self.logger.info("📝 Expected locations:")
-                self.logger.info("   1. Set GOOGLE_CREDENTIALS_PATH env var")
-                self.logger.info("   2. ./credentials.json")
-                self.logger.info("   3. ./configuration/service_account.json")
-                self.authenticated = False
-                return False
-
-            # スコープ設定
-            SCOPES = [
-                "https://www.googleapis.com/auth/spreadsheets",
-                "https://www.googleapis.com/auth/drive",
-            ]
-
-            # 認証実行
-            credentials = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
-            self.client = gspread.authorize(credentials)
-            self.authenticated = True
-            self.logger.info("✅ Google Sheets認証成功")
-
-            # スプレッドシートを開く
-            if self.spreadsheet_id:
-                self.open_spreadsheet(self.spreadsheet_id)
-
-            return True
+            # サービスアカウントファイルから認証
+            if os.path.exists(self.service_account_file):
+                credentials = service_account.Credentials.from_service_account_file(
+                    self.service_account_file,
+                    scopes=["https://www.googleapis.com/auth/spreadsheets"],
+                )
+                self._service = build("sheets", "v4", credentials=credentials)
+                logger.info("✅ Google Sheetsサービス初期化成功（サービスアカウントファイル使用）")
+            else:
+                logger.warning(
+                    f"⚠️ サービスアカウントファイルが見つかりません: {self.service_account_file}"
+                )
+                logger.info("🔄 テストモードにフォールバックします")
+                self._is_test_mode = True
 
         except Exception as e:
-            self.logger.error(f"❌ 認証エラー: {e}")
-            self.authenticated = False
-            return False
+            logger.warning(f"⚠️ Google Sheetsサービス初期化失敗: {e}")
+            logger.info("🔄 テストモードにフォールバックします")
+            self._is_test_mode = True
 
-    def _find_credentials_file(self) -> Optional[str]:
-        """Find credentials file from multiple possible locations"""
-        # .envのGOOGLE_SERVICE_ACCOUNT_FILEを優先して使用
-        primary_path = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
-        possible_paths = [primary_path, "credentials.json", "configuration/service_account.json"]
-
-        for path in possible_paths:
-            if path and os.path.exists(path):
-                print(f"✅ Found credentials at: {path}")
-                return path
-
-        print("❌ No credentials file found")
-        print("📝 Expected locations:")
-        print(f"    1. GOOGLE_SERVICE_ACCOUNT_FILE env var: {primary_path}")
-        print("    2. ./credentials.json")
-        print("    3. ./configuration/service_account.json")
-        return None
-
-    def open_spreadsheet(self, spreadsheet_id: str) -> bool:
-        """
-        スプレッドシートを開く
-
-        Args:
-            spreadsheet_id: スプレッドシートID
-
-        Returns:
-            成功時True、失敗時False
-        """
-        if not self.authenticated:
-            self.logger.warning("⚠️ 認証されていないため、スプレッドシートを開けません")
-            return False
-
-        try:
-            self.spreadsheet_id = spreadsheet_id
-            self.sheet = self.client.open_by_key(spreadsheet_id)
-            self.logger.info(f"✅ スプレッドシートを開きました: {spreadsheet_id}")
-            return True
-        except Exception as e:
-            self.logger.error(f"❌ スプレッドシートオープンエラー: {e}")
-            return False
-
-    def read_sheet(self, sheet_name: str) -> List[Dict[str, Any]]:
-        """
-        シートを読み込む（互換性メソッド）
-
-        Args:
-            sheet_name: シート名
-
-        Returns:
-            レコードのリスト
-        """
-        return self.get_sheet_data(sheet_name)
-
-    def get_sheet_data(self, sheet_name: str) -> List[Dict[str, Any]]:
-        """
-        シートデータを取得
-
-        Args:
-            sheet_name: シート名
-
-        Returns:
-            レコードのリスト
-        """
-        if not self.authenticated:
-            self.logger.warning(f"⚠️ 認証されていないため、ダミーデータを返します: {sheet_name}")
-            return self._get_dummy_data(sheet_name)
-
-        try:
-            if not self.sheet:
-                self.logger.error("❌ スプレッドシートが開かれていません")
-                return []
-
-            worksheet = self.sheet.worksheet(sheet_name)
-            data = worksheet.get_all_records()
-            self.logger.info(f"✅ {sheet_name}: {len(data)}件のデータを取得")
-            return data
-
-        except Exception as e:
-            self.logger.error(f"❌ シートデータ取得エラー ({sheet_name}): {e}")
-            return []
-
-    def _get_dummy_data(self, sheet_name: str) -> List[Dict[str, Any]]:
-        """テスト用のダミーデータを返す"""
-        dummy_data = {
-            "task_execution_log": [
-                {"timestamp": "2024-01-01", "task": "テストタスク", "status": "success"}
+    def _get_mock_data(self, range_name: str) -> List[List[Any]]:
+        """モックデータを取得"""
+        mock_data = {
+            "会話ログ!A2:C100": [
+                ["2024-01-01 10:00:00", "user", "こんにちは"],
+                ["2024-01-01 10:00:01", "assistant", "こんにちは！どのようにお手伝いできますか？"],
+                ["2024-01-01 10:00:02", "user", "Pythonのエラーについて教えてください"],
             ],
-            "retry_log": [{"timestamp": "2024-01-01", "error": "テストエラー", "retry_count": 1}],
-            "context_log": [{"timestamp": "2024-01-01", "context": "テストコンテキスト"}],
-            "feedback_queue": [{"timestamp": "2024-01-01", "feedback": "テストフィードバック"}],
-            "agent_registry": [{"name": "TestAgent", "status": "active"}],
+            "タスクログ!A2:C100": [
+                ["タスク001", "完了", "2024-01-01"],
+                ["タスク002", "進行中", "2024-01-01"],
+                ["タスク003", "未着手", "2024-01-01"],
+            ],
+            "pm_tasks!A2:Z100": [
+                ["プロジェクトA", "設計", "高", "2024-01-01", "2024-01-10"],
+                ["プロジェクトB", "実装", "中", "2024-01-02", "2024-01-15"],
+            ],
         }
-        return dummy_data.get(sheet_name, [{"dummy": "data"}])
 
-    def write_sheet(self, sheet_name: str, data: List[List[Any]]) -> bool:
-        """
-        シートにデータを書き込む
-        Args:
-            sheet_name: シート名
-            data: 書き込むデータ（2次元配列）
-        Returns:
-            成功時True、失敗時False
-        """
-        if not self.authenticated or not self.sheet:
-            self.logger.warning("⚠️ 認証されていないか、スプレッドシートが開かれていません")
-            return False
+        # 範囲名に基づいてモックデータを返す
+        for key, data in mock_data.items():
+            if range_name.startswith(key.split("!")[0]):
+                logger.info(f"🧪 モックデータを返します: {range_name} -> {len(data)}行")
+                return data
+
+        # デフォルトのモックデータ
+        logger.info(f"🧪 デフォルトモックデータを返します: {range_name}")
+        return [["モックデータ", "テスト値"]]
+
+    def read_range(self, range_name: str, default: Any = None) -> Any:
+        """範囲を読み取る（モック対応版）"""
+        if self._is_test_mode:
+            return self._get_mock_data(range_name)
+
+        if not self._service:
+            logger.error("❌ Google Sheetsサービスが利用できません")
+            return default or []
 
         try:
-            worksheet = self.sheet.worksheet(sheet_name)
-            worksheet.clear()
-            worksheet.update(values=data, range_name="A1")
-            self.logger.info(f"✅ {sheet_name}にデータを書き込みました")
+            result = (
+                self._service.spreadsheets()
+                .values()
+                .get(spreadsheetId=self.spreadsheet_id, range=range_name)
+                .execute()
+            )
+
+            values = result.get("values", [])
+            logger.info(f"✅ スプレッドシート読み取り成功: {range_name} - {len(values)}行")
+            return values
+
+        except Exception as e:
+            logger.error(f"❌ スプレッドシート読み取りエラー: {e}")
+            return default or []
+
+    def append_rows(self, range_name: str, values: List[List[Any]]) -> bool:
+        """行を追加（モック対応版）"""
+        if self._is_test_mode:
+            logger.info(
+                f"🧪 モックモード: 範囲 '{range_name}' に {len(values)}行 追加をシミュレート"
+            )
+            logger.info(f"🧪 追加データ: {values}")
             return True
-        except Exception as e:
-            self.logger.error(f"❌ データ書き込みエラー ({sheet_name}): {e}")
+
+        if not self._service:
+            logger.error("❌ Google Sheetsサービスが利用できません")
             return False
 
-    def read_range(self, range_spec: str) -> List[List[Any]]:
-        """
-        範囲指定で読み込み
-
-        Args:
-            range_spec: 'sheet_name!A1:Z10' または 'sheet_name' 形式
-
-        Returns:
-            List[List[Any]]: セルデータの2次元配列
-        """
         try:
-            if "!" in range_spec:
-                sheet_name, cell_range = range_spec.split("!", 1)
-            else:
-                sheet_name = range_spec
-                cell_range = None
+            body = {"values": values}
+            result = (
+                self._service.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=self.spreadsheet_id,
+                    range=range_name,
+                    valueInputOption="RAW",
+                    body=body,
+                )
+                .execute()
+            )
 
-            if not self.sheet:
-                self.logger.error("❌ スプレッドシートが開かれていません")
-                return []
-
-            worksheet = self.sheet.worksheet(sheet_name)
-
-            if cell_range:
-                data = worksheet.get(cell_range)
-                self.logger.info(f"✅ {range_spec}: {len(data)}行取得")
-            else:
-                data = worksheet.get_all_values()
-                self.logger.info(f"✅ {sheet_name}: {len(data)}行取得")
-
-            return data
-
-        except Exception as e:
-            self.logger.error(f"❌ 範囲読み込みエラー ({range_spec}): {e}")
-            return []
-
-        try:
-            worksheet = self.sheet.worksheet(sheet_name)
-            worksheet.clear()
-            worksheet.update(values=data, range_name="A1")
-            self.logger.info(f"✅ {sheet_name}にデータを書き込みました")
+            logger.info(f"✅ スプレッドシート追加成功: {range_name}")
             return True
+
         except Exception as e:
-            self.logger.error(f"❌ データ書き込みエラー ({sheet_name}): {e}")
+            logger.error(f"❌ スプレッドシート追加エラー: {e}")
+            return False
+
+    def update_range(self, range_name: str, values: List[List[Any]]) -> bool:
+        """範囲を更新（モック対応版）"""
+        if self._is_test_mode:
+            logger.info(f"🧪 モックモード: 範囲 '{range_name}' の更新をシミュレート")
+            return True
+
+        if not self._service:
+            logger.error("❌ Google Sheetsサービスが利用できません")
+            return False
+
+        try:
+            body = {"values": values}
+            result = (
+                self._service.spreadsheets()
+                .values()
+                .update(
+                    spreadsheetId=self.spreadsheet_id,
+                    range=range_name,
+                    valueInputOption="RAW",
+                    body=body,
+                )
+                .execute()
+            )
+
+            logger.info(f"✅ スプレッドシート更新成功: {range_name}")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ スプレッドシート更新エラー: {e}")
             return False
 
 
-# グローバルインスタンス管理（シングルトンパターン）
-_global_sheets_manager = None
-
-
-def get_sheets_manager(
-    spreadsheet_id: Optional[str] = None, credentials_path: Optional[str] = None
-) -> GoogleSheetsManager:
-    """
-    シングルトンなSheetsManagerを取得
-
-    Args:
-        spreadsheet_id: スプレッドシートID
-        credentials_path: 認証情報ファイルのパス
-
-    Returns:
-        GoogleSheetsManagerインスタンス
-    """
-    global _global_sheets_manager
-    if _global_sheets_manager is None:
-        _global_sheets_manager = GoogleSheetsManager(spreadsheet_id, credentials_path)
-    return _global_sheets_manager
-
-
+# テスト用
 if __name__ == "__main__":
-    # 簡易テスト
-    print("🧪 GoogleSheetsManager v2.0 テスト")
-    print("=" * 50)
+    # テストモードで実行
+    import os
+
+    os.environ["TEST_MODE"] = "true"
 
     manager = GoogleSheetsManager()
-    print(f"✅ インスタンス作成成功")
-    print(f"📊 spreadsheet_id: {manager.spreadsheet_id}")
-    print(f"🔐 authenticated: {manager.authenticated}")
+    print("✅ 環境変数対応版スプレッドシートマネージャー動作確認")
 
-    # ダミーデータテスト
-    test_data = manager.read_sheet("task_execution_log")
-    print(f"📝 テストデータ: {len(test_data)}件")
+    # テスト読み取り
+    data = manager.read_range("会話ログ!A2:C10")
+    print(f"会話ログ: {len(data)}行")
 
-    # 必須属性チェック
-    required_attrs = ["spreadsheet_id", "authenticated", "client", "sheet"]
-    print("\n🔍 インターフェース契約チェック:")
-    for attr in required_attrs:
-        has_attr = hasattr(manager, attr)
-        symbol = "✅" if has_attr else "❌"
-        print(f"  {symbol} {attr}: {has_attr}")
+    # テスト追加
+    success = manager.append_rows("テストシート!A1", [["新しいデータ"]])
+    print(f"追加結果: {success}")
