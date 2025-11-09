@@ -1,0 +1,136 @@
+"""データ統合パイプラインテスト"""
+import pytest
+from unittest.mock import Mock, patch, MagicMock
+import os
+import sys
+
+# 親ディレクトリをパスに追加
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tools.data_integration.pipeline import DataIntegrationPipeline
+
+
+class TestDataIntegrationPipeline:
+    def test_pipeline_initialization(self):
+        """パイプライン初期化テスト"""
+        config = {"sources": {}}
+        pipeline = DataIntegrationPipeline(config)
+        
+        # 実際の属性をチェック
+        assert hasattr(pipeline, "sheets_manager")
+        assert hasattr(pipeline, "results")
+        assert hasattr(pipeline, "config")
+        assert hasattr(pipeline, "logger")
+        
+        # 初期状態の確認
+        assert pipeline.results["total_entries"] == 0
+        assert pipeline.results["sources_processed"] == []
+        assert pipeline.results["errors"] == []
+
+    @patch('tools.data_integration.pipeline.GoogleSheetsManager')
+    def test_pipeline_with_mock_sheets(self, mock_sheets_class):
+        """モックを使用したパイプラインテスト"""
+        # モックの設定 - 詳細なモックを作成
+        mock_sheets = MagicMock()
+        
+        # read_rangeメソッドが返すデータを設定
+        mock_sheets.read_range.side_effect = [
+            # knowledge_baseデータ (ヘッダー + 2行)
+            [["タイトル", "内容", "日付"], 
+             ["テスト1", "内容1", "2024-01-01"],
+             ["テスト2", "内容2", "2024-01-02"]],
+            # task_execution_logデータ (ヘッダー + 1行)  
+            [["タスク", "ステータス", "日付"],
+             ["タスク1", "完了", "2024-01-01"]]
+        ]
+        
+        mock_sheets_class.return_value = mock_sheets
+        
+        config = {
+            "sources": {
+                "conversation_logs": {"enabled": True},
+                "spreadsheet_logs": {"enabled": True}
+            }
+        }
+        
+        pipeline = DataIntegrationPipeline(config)
+        metrics = pipeline.run()
+        
+        # 結果の検証
+        assert "total_entries" in metrics
+        assert "sources_processed" in metrics
+        assert "errors" in metrics
+        
+        # 実際の値の確認（2+1=3エントリ）
+        assert metrics["total_entries"] == 3
+        assert "conversation_logs" in metrics["sources_processed"]
+        assert "spreadsheet_logs" in metrics["sources_processed"]
+        assert len(metrics["errors"]) == 0
+
+    @patch('tools.data_integration.pipeline.GoogleSheetsManager')
+    def test_pipeline_with_empty_data(self, mock_sheets_class):
+        """空データのテスト"""
+        mock_sheets = MagicMock()
+        
+        # 空データを返す
+        mock_sheets.read_range.return_value = []
+        
+        mock_sheets_class.return_value = mock_sheets
+        
+        config = {
+            "sources": {
+                "conversation_logs": {"enabled": True},
+                "spreadsheet_logs": {"enabled": True}
+            }
+        }
+        
+        pipeline = DataIntegrationPipeline(config)
+        metrics = pipeline.run()
+        
+        # 空データの場合の結果を検証
+        assert metrics["total_entries"] == 0
+        assert len(metrics["sources_processed"]) == 0
+        assert len(metrics["errors"]) == 0
+
+    @patch('tools.data_integration.pipeline.GoogleSheetsManager')
+    def test_pipeline_with_sheets_error(self, mock_sheets_class):
+        """シートアクセスエラーのテスト"""
+        mock_sheets = MagicMock()
+        
+        # エラーを発生させる
+        mock_sheets.read_range.side_effect = Exception("Sheets API Error")
+        
+        mock_sheets_class.return_value = mock_sheets
+        
+        config = {
+            "sources": {
+                "conversation_logs": {"enabled": True},
+                "spreadsheet_logs": {"enabled": True}
+            }
+        }
+        
+        pipeline = DataIntegrationPipeline(config)
+        metrics = pipeline.run()
+        
+        # エラー処理の検証
+        assert metrics["total_entries"] == 0
+        assert len(metrics["sources_processed"]) == 0
+        assert len(metrics["errors"]) == 2  # 2つのソースでエラー
+        assert "Sheets API Error" in metrics["errors"][0]
+
+    def test_pipeline_with_disabled_sources(self):
+        """無効なソースのテスト"""
+        config = {
+            "sources": {
+                "conversation_logs": {"enabled": False},
+                "spreadsheet_logs": {"enabled": False}
+            }
+        }
+        
+        pipeline = DataIntegrationPipeline(config)
+        metrics = pipeline.run()
+        
+        # ソースが無効な場合の結果を確認
+        assert metrics["total_entries"] == 0
+        assert metrics["sources_processed"] == []
+        assert metrics["errors"] == []
