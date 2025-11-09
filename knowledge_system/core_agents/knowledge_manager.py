@@ -26,6 +26,9 @@ class KnowledgeManager:
     """ナレッジベースの統合管理"""
 
     def __init__(self, db_path: str = None):
+        # db_path が None の場合のデフォルト値を設定
+        if db_path is None:
+            db_path = "knowledge_system/database/knowledge.db"
         self.db_manager = SQLiteKnowledgeManager(db_path)
         self.vector_agent = HybridSearchAgent(
             "knowledge_system/database/faiss_index/knowledge.index"
