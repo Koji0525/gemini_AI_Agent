@@ -1,13 +1,14 @@
+# knowledge_system/configuration/knowledge_config.yaml
 database:
-path: "database/knowledge.db"
-backup_interval: 3600 # 1時間ごと
+  path: "database/knowledge.db"
+  backup_interval: 3600 # 1時間ごと
 
 vector_search:
-index_path: "database/faiss_index/knowledge.index"
-model_name: "all-MiniLM-L6-v2"
-similarity_threshold: 0.3
+  index_path: "database/faiss_index/knowledge.index"
+  model_name: "all-MiniLM-L6-v2"
+  similarity_threshold: 0.3
 
 api:
-host: "0.0.0.0"
-port: 8000
-debug: true
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
