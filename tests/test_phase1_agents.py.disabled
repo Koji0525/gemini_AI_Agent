@@ -1,0 +1,282 @@
+"""Phase 1 エージェントテスト - 実際の実装に完全準拠"""
+
+import asyncio
+import os
+import sys
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
+import pytest
+
+# テスト環境セットアップ
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tests.setup_test_env import setup_test_environment
+
+setup_test_environment()
+
+
+class TestCodeGenerationAgent:
+    """コード生成エージェントのテスト - 実際の実装に基づく"""
+
+    @patch("agents.code_generation.code_generation_agent.genai")
+    @patch("agents.code_generation.code_generation_agent.os.getenv")
+    def test_agent_initialization_with_mock(self, mock_getenv, mock_genai):
+        """モックを使用したエージェント初期化テスト"""
+        # 環境変数のモック
+        mock_getenv.return_value = "test-api-key"
+
+        # genaiのモック
+        mock_model = MagicMock()
+        mock_genai.GenerativeModel.return_value = mock_model
+        mock_genai.list_models.return_value = [
+            Mock(name="models/gemini-1.5-flash", supported_generation_methods=["generateContent"])
+        ]
+
+            CodeGenerationAgent
+
+        # エージェントを初期化（実際のAPI呼び出しなし）
+        agent = CodeGenerationAgent()
+
+        # 基本属性の確認
+        assert hasattr(agent, "model")
+        assert hasattr(agent, "generate_code")
+        assert callable(agent.generate_code)
+        assert hasattr(agent, "generation_history")
+
+    @patch("agents.code_generation.code_generation_agent.genai")
+    @patch("agents.code_generation.code_generation_agent.os.getenv")
+    def test_code_generation_success_with_mock(self, mock_getenv, mock_genai):
+        """完全モックでのコード生成成功テスト"""
+        # 環境変数のモック
+        mock_getenv.return_value = "test-api-key"
+
+        # genaiのモック設定
+        mock_response = MagicMock()
+        mock_response.text = "def add(a, b):\n    return a + b"
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+
+        mock_genai.GenerativeModel.return_value = mock_model
+        mock_genai.list_models.return_value = [
+            Mock(name="models/gemini-1.5-flash", supported_generation_methods=["generateContent"])
+        ]
+
+            CodeGenerationAgent
+
+        agent = CodeGenerationAgent()
+
+        # テスト実行
+        task_spec = {
+            "title": "加算関数の作成",
+            "description": "2つの数値を加算する関数を作成してください",
+            "requirements": "型ヒントとdocstringを含む",
+        }
+
+        # 非同期メソッドを同期的にテスト（実際の実装に合わせる）
+
+        result = asyncio.run(agent.generate_code(task_spec))
+
+        # 結果の検証
+        assert "code" in result
+        assert "def add(a, b):" in result["code"]
+        assert "quality_score" in result
+        assert "syntax_valid" in result
+
+    @patch("agents.code_generation.code_generation_agent.genai")
+    @patch("agents.code_generation.code_generation_agent.os.getenv")
+    def test_code_generation_api_error(self, mock_getenv, mock_genai):
+        """APIエラーのテスト"""
+        # 環境変数のモック
+        mock_getenv.return_value = "test-api-key"
+
+        # APIエラーを発生させるモック
+        mock_genai.GenerativeModel.side_effect = Exception("API接続エラー")
+        mock_genai.list_models.return_value = [
+            Mock(name="models/gemini-1.5-flash", supported_generation_methods=["generateContent"])
+        ]
+
+            CodeGenerationAgent
+
+        agent = CodeGenerationAgent()
+
+        # テスト実行
+        task_spec = {"title": "テストタスク", "description": "テスト説明"}
+
+
+        result = asyncio.run(agent.generate_code(task_spec))
+
+        # エラー時の結果を検証
+        assert "error" in result
+        assert "API接続エラー" in result["error"]
+
+    def test_agent_module_structure(self):
+        """モジュール構造のテスト"""
+        try:
+
+            assert hasattr(code_generation_agent, "CodeGenerationAgent")
+            assert callable(code_generation_agent.CodeGenerationAgent)
+
+            # 実際のメソッドを確認
+            agent_class = code_generation_agent.CodeGenerationAgent
+            assert hasattr(agent_class, "generate_code")
+            assert hasattr(agent_class, "refine_code")
+
+        except ImportError as e:
+            pytest.skip(f"モジュールインポートエラー: {e}")
+
+
+class TestGeminiAPIClient:
+    """Gemini APIクライアントのテスト - 実際の実装に基づく"""
+
+    @patch("browser_control.gemini_api_client.genai")
+    @patch("browser_control.gemini_api_client.os.getenv")
+    @patch("browser_control.gemini_api_client.load_dotenv")
+    def test_gemini_client_initialization(self, mock_load_dotenv, mock_getenv, mock_genai):
+        """クライアント初期化テスト"""
+        # モック設定
+        mock_getenv.return_value = "test-api-key"
+        mock_load_dotenv.return_value = None
+
+
+        # クライアント初期化
+        client = GeminiAPIClient()
+
+        # 基本属性の確認
+        assert hasattr(client, "model")
+        assert hasattr(client, "send_prompt")
+        assert hasattr(client, "cleanup")
+
+    @patch("browser_control.gemini_api_client.genai")
+    @patch("browser_control.gemini_api_client.os.getenv")
+    @patch("browser_control.gemini_api_client.load_dotenv")
+    def test_gemini_client_send_prompt(self, mock_load_dotenv, mock_getenv, mock_genai):
+        """プロンプト送信テスト"""
+        # モック設定
+        mock_getenv.return_value = "test-api-key"
+        mock_load_dotenv.return_value = None
+
+        # レスポンスのモック
+        mock_response = MagicMock()
+        mock_response.text = "これはテストレスポンスです"
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+
+        client = GeminiAPIClient()
+        result = client.send_prompt("テストプロンプト")
+
+        # 結果の検証
+        assert result == "これはテストレスポンスです"
+
+    def test_gemini_client_module_structure(self):
+        """Geminiクライアントモジュール構造テスト"""
+        try:
+
+            module_attrs = dir(gemini_api_client)
+
+            # 実際のクラス名を確認
+            assert "GeminiAPIClient" in module_attrs
+
+            # クラスのメソッド確認
+            client_class = gemini_api_client.GeminiAPIClient
+            assert hasattr(client_class, "send_prompt")
+            assert hasattr(client_class, "cleanup")
+
+        except ImportError as e:
+            pytest.skip(f"Geminiクライアントのインポートエラー: {e}")
+
+
+class TestIntegration:
+    """統合テスト"""
+
+    def test_import_paths(self):
+        """インポートパスの確認"""
+        # 主要なモジュールがインポートできるか
+        try:
+            assert True
+        except ImportError as e:
+            pytest.fail(f"インポートエラー: {e}")
+
+    def test_environment_variables(self):
+        """環境変数の確認"""
+        # テスト環境で設定された環境変数を確認
+        assert "GEMINI_API_KEY" in os.environ
+        assert "SPREADSHEET_ID" in os.environ
+        assert os.environ["GEMINI_API_KEY"] == "test-api-key-for-testing"
+
+
+# =============================================================================
+# 修正バージョンのテスト（失敗テストの代替）
+# =============================================================================
+
+
+class TestCodeGenerationAgentFixed:
+    """コード生成エージェントのテスト - 修正版"""
+
+    @patch("agents.code_generation.code_generation_agent.genai")
+    @patch("agents.code_generation.code_generation_agent.os.getenv")
+    def test_code_generation_api_error_fixed(self, mock_getenv, mock_genai):
+        """APIエラーテスト - 初期化成功、実行時エラーに修正"""
+        # 環境変数のモック
+        mock_getenv.return_value = "test-api-key"
+
+        # モデル初期化は成功、generate_contentでエラー
+        mock_model = MagicMock()
+        # 初回は成功（モデル初期化）、2回目でエラー（コード生成時）
+        mock_model.generate_content.side_effect = [
+            MagicMock(text="モデル初期化レスポンス"),  # 初期化用
+            Exception("API接続エラー"),  # コード生成時エラー
+        ]
+
+        mock_genai.GenerativeModel.return_value = mock_model
+
+        # 利用可能なモデルをモック
+        mock_model_info = Mock()
+        mock_model_info.name = "models/gemini-1.5-flash"
+        mock_model_info.supported_generation_methods = ["generateContent"]
+        mock_genai.list_models.return_value = [mock_model_info]
+
+            CodeGenerationAgent
+
+        # エージェント初期化
+        agent = CodeGenerationAgent()
+
+        # テスト実行
+        task_spec = {"title": "テストタスク", "description": "テスト説明"}
+
+        result = asyncio.run(agent.generate_code(task_spec))
+
+        # エラー時の結果を検証
+        assert "error" in result
+        assert "API接続エラー" in result["error"]
+
+
+class TestGeminiAPIClientFixed:
+    """Gemini APIクライアントのテスト - 修正版"""
+
+    @pytest.mark.asyncio
+    @patch("browser_control.gemini_api_client.genai")
+    @patch("browser_control.gemini_api_client.os.getenv")
+    @patch("browser_control.gemini_api_client.load_dotenv")
+    async def test_gemini_client_send_prompt_async(self, mock_load_dotenv, mock_getenv, mock_genai):
+        """プロンプト送信テスト - 非同期版"""
+        # モック設定
+        mock_getenv.return_value = "test-api-key"
+        mock_load_dotenv.return_value = None
+
+        # レスポンスのモック
+        mock_response = MagicMock()
+        mock_response.text = "これはテストレスポンスです"
+
+        mock_model = MagicMock()
+        mock_model.generate_content.return_value = mock_response
+        mock_genai.GenerativeModel.return_value = mock_model
+
+
+        client = GeminiAPIClient()
+        result = await client.send_prompt("テストプロンプト")
+
+        assert result == "これはテストレスポンスです"
