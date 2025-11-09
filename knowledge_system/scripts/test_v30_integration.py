@@ -4,10 +4,13 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
+
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
+@pytest.mark.asyncio
 async def test_v30():
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print("🧪 IntegratedOrchestrator v30 テスト")

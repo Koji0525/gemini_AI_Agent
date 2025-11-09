@@ -6,6 +6,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 project_root = Path(__file__).parent.parent
@@ -15,6 +16,7 @@ from knowledge_system.core_agents.knowledge_manager import KnowledgeManager
 from task_executor.task_executor import TaskExecutor
 
 
+@pytest.mark.asyncio
 async def test_task_executor():
     """TaskExecutorのテスト"""
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")

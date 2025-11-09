@@ -2,8 +2,10 @@
 """
 WordPress自動操作テスト
 """
-import sys
 import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -11,6 +13,7 @@ from agents.wordpress.wp_auto_config_agent import WPAutoConfigAgent
 from browser_control.browser_controller import BrowserController
 
 
+@pytest.mark.asyncio
 async def test_wordpress_automation():
     """WordPress自動操作のテスト"""
 
@@ -40,7 +43,7 @@ async def test_wordpress_automation():
         print("\n[STEP 3] DD機能コードの自動追加...")
 
         # 既存のfunctions.phpを読み込み
-        current_code = await wp_agent.get_current_functions_php()
+        await wp_agent.get_current_functions_php()
 
         # 新しいコードを追加（Phase 24のDDコード）
         with open("/tmp/functions_dd_ultimate.php", "r") as f:
