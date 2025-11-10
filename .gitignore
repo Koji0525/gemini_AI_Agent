@@ -195,3 +195,6 @@ README_v*.md
 *.backup
 *.bak
 *~
+
+# Backups are tracked
+# backups/ is intentionally tracked
