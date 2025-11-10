@@ -365,3 +365,127 @@ v3.0 改善点:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ==========================================
+# 追加機能: 最新版記録システム
+# 追加日: 2025-11-10
+# ==========================================
+
+import json
+from datetime import datetime
+
+
+class VersionTracker:
+    """
+    最新バージョンを記録・管理するクラス
+    VERSION_STATUS.json と連携
+    """
+
+    def __init__(self, status_file: str = "scripts/VERSION_STATUS.json"):
+        self.status_file = Path(status_file)
+        self.status_file.parent.mkdir(parents=True, exist_ok=True)
+        self.status = self._load_status()
+
+    def _load_status(self) -> dict:
+        """ステータスファイルを読み込み"""
+        if self.status_file.exists():
+            with open(self.status_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        else:
+            return {
+                "last_updated": None,
+                "production": {},
+                "staging": {},
+                "deprecated": [],
+                "history": [],
+            }
+
+    def _save_status(self):
+        """ステータスファイルを保存"""
+        self.status["last_updated"] = datetime.now().isoformat()
+
+        with open(self.status_file, "w", encoding="utf-8") as f:
+            json.dump(self.status, f, indent=2, ensure_ascii=False)
+
+        print(f"✅ {self.status_file} を更新しました")
+
+    def register_version(
+        self,
+        file_path: str,
+        status: str,
+        description: str = "",
+        features: list = None,
+        test_result: str = "not_tested",
+    ):
+        """
+        新しいバージョンを登録
+
+        Args:
+            file_path: ファイルパス
+            status: "production" | "staging" | "development"
+            description: 説明
+            features: 機能リスト
+            test_result: テスト結果
+        """
+        file_path = Path(file_path)
+
+        if not file_path.exists():
+            print(f"⚠️  ファイルが存在しません: {file_path}")
+            return False
+
+        version_info = {
+            "file": file_path.name,
+            "path": str(file_path),
+            "status": test_result,
+            "description": description,
+            "features": features or [],
+            "registered_at": datetime.now().isoformat(),
+            "file_size": file_path.stat().st_size,
+        }
+
+        if status == "production":
+            if self.status["production"]:
+                self.status["history"].append(
+                    {**self.status["production"], "demoted_at": datetime.now().isoformat()}
+                )
+
+            self.status["production"] = version_info
+            print(f"✅ 本番環境版として登録: {file_path.name}")
+
+        elif status == "staging":
+            self.status["staging"] = version_info
+            print(f"✅ ステージング版として登録: {file_path.name}")
+
+        self._save_status()
+        return True
+
+    def get_production_version(self) -> dict:
+        """本番環境版の情報を取得"""
+        return self.status.get("production", {})
+
+    def get_staging_version(self) -> dict:
+        """ステージング版の情報を取得"""
+        return self.status.get("staging", {})
+
+    def print_status(self):
+        """現在のステータスを表示"""
+        print("\n" + "=" * 60)
+        print("📊 バージョンステータス")
+        print("=" * 60)
+
+        prod = self.status.get("production", {})
+        if prod:
+            print(f"\n✅ 本番環境版:")
+            print(f"   ファイル: {prod.get('file', 'N/A')}")
+            print(f"   ステータス: {prod.get('status', 'N/A')}")
+        else:
+            print(f"\n⚠️  本番環境版: 未設定")
+
+        stg = self.status.get("staging", {})
+        if stg:
+            print(f"\n🔧 ステージング版:")
+            print(f"   ファイル: {stg.get('file', 'N/A')}")
+            print(f"   ステータス: {stg.get('status', 'N/A')}")
+
+        print("\n" + "=" * 60)
