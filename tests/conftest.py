@@ -187,3 +187,64 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "e2e: E2Eテスト")
     config.addinivalue_line("markers", "slow: 実行時間が長いテスト")
     config.addinivalue_line("markers", "regression: リグレッションテスト")
+
+
+# ============================================
+# Day 3改善: プロジェクトルートのフィクスチャ化
+# ============================================
+
+@pytest.fixture(scope="session")
+def project_root():
+    """プロジェクトルートパスを提供"""
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture
+def test_data_dir(project_root):
+    """テストデータディレクトリを提供"""
+    return project_root / "tests" / "fixtures"
+
+
+@pytest.fixture
+def mock_environment(monkeypatch):
+    """テスト環境変数を設定"""
+    monkeypatch.setenv("TEST_MODE", "true")
+    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+    return {
+        "TEST_MODE": "true",
+        "LOG_LEVEL": "DEBUG"
+    }
+
+
+# ============================================
+# Day 3改善: エラーケース用のフィクスチャ
+# ============================================
+
+@pytest.fixture
+def mock_api_with_errors():
+    """エラーを含むAPIモック"""
+    mock = Mock()
+    mock.call.side_effect = [
+        {"status": "success"},
+        {"status": "success"},
+        Exception("Network timeout"),
+        {"status": "success"},  # 復旧
+    ]
+    return mock
+
+
+@pytest.fixture
+def mock_database_with_failures():
+    """失敗を含むDBモック"""
+    mock = Mock()
+    mock.query.side_effect = [
+        [{"id": 1, "data": "value1"}],
+        Exception("Connection lost"),
+        [{"id": 2, "data": "value2"}],  # 復旧
+    ]
+    return mock
+
+
+# メタデータ
+__improvement_date__ = "2025-11-09"
+__improvement_focus__ = "グローバル変数削除、エラーケース拡充"

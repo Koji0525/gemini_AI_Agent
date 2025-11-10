@@ -126,7 +126,7 @@ class TestGeminiAPIClientRefactored:
         ):
 
             mock_getenv.return_value = "test-api-key"
-            mock_load_dotenv.return_value = None
+            mock_load_dotenv.return_value = {'status': 'success', 'data': None}
 
             # モデルのモック
             mock_model = MagicMock()

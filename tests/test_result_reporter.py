@@ -7,8 +7,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
 
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from agents.observability.observability_manager import get_observability_manager
 

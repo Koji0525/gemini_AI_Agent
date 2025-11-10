@@ -90,8 +90,7 @@ class TestObservabilityManagerSearch:
     
     def test_search_traces_by_date_range(self, mock_observability_manager):
         """6. 日付範囲検索"""
-        mock_observability_manager.search_traces.return_value = []
-        
+        mock_observability_manager.search_traces.return_value = []  # 意図的な空リスト
         start_date = datetime(2025, 1, 1)
         end_date = datetime(2025, 12, 31)
         

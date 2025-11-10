@@ -64,8 +64,7 @@ class TestCodeGenerationAgentFinalFixed:
         """初期化失敗テスト - 利用可能なモデルなし"""
         with patch("agents.code_generation.code_generation_agent.genai") as mock_genai:
             # 空のモデルリストを返す
-            mock_genai.list_models.return_value = []
-
+            mock_genai.list_models.return_value = []  # 意図的な空リスト
             from agents.code_generation.code_generation_agent import \
                 CodeGenerationAgent
 
@@ -164,7 +163,7 @@ class TestGeminiAPIClientFinalFixed:
                 "GOOGLE_API_KEY": "test-google-key",
             }.get(key)
 
-            mock_load_dotenv.return_value = None
+            mock_load_dotenv.return_value = {'status': 'success', 'data': None}
 
             # モデルのモック
             mock_model = MagicMock()
