@@ -489,3 +489,43 @@ class VersionTracker:
             print(f"   ステータス: {stg.get('status', 'N/A')}")
 
         print("\n" + "=" * 60)
+
+    def mark_as_broken(self, file_name: str, error: str):
+        """バージョンを壊れているとしてマーク"""
+
+        # stagingを確認
+        if self.status["staging"].get("file") == file_name:
+            self.status["staging"]["status"] = "broken"
+            self.status["staging"]["error"] = error
+            self.status["staging"]["marked_at"] = datetime.now().isoformat()
+            self._save_status()
+            print(f"⚠️  {file_name} を壊れているとマーク")
+            return True
+
+        # productionを確認
+        if self.status["production"].get("file") == file_name:
+            self.status["production"]["status"] = "broken"
+            self.status["production"]["error"] = error
+            self.status["production"]["marked_at"] = datetime.now().isoformat()
+            self._save_status()
+            print(f"🚨 警告: 本番環境版 {file_name} が壊れています！")
+            return True
+
+        return False
+
+    def mark_as_broken(self, file_name: str, error: str):
+        """バージョンを壊れているとしてマーク"""
+        if self.status["staging"].get("file") == file_name:
+            self.status["staging"]["status"] = "broken"
+            self.status["staging"]["error"] = error
+            self.status["staging"]["marked_at"] = datetime.now().isoformat()
+            self._save_status()
+            print(f"⚠️  {file_name} を壊れているとマーク")
+            return True
+        if self.status["production"].get("file") == file_name:
+            self.status["production"]["status"] = "broken"
+            self.status["production"]["error"] = error
+            self._save_status()
+            print(f"🚨 警告: 本番環境版 {file_name} が壊れています！")
+            return True
+        return False

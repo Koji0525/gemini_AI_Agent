@@ -1,110 +1,67 @@
 #!/usr/bin/env python3
 """
-24時間自律稼働ランナー v2.0
-VersionTrackerで本番環境版を自動選択
+24時間自律稼働ランナー v2.0 - シンプル版
+VERSION_STATUS.jsonから本番環境版を直接実行
 """
 
 import asyncio
 import sys
+import json
 from pathlib import Path
-import importlib.util
 
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# VersionTrackerを読み込み
-from tools.file_version_manager import VersionTracker
+print("=" * 70)
+print("🚀 24時間自律稼働システム起動（v2.0 - シンプル版）")
+print("=" * 70)
 
+# VERSION_STATUS.jsonを読み込み
+status_file = project_root / "scripts/VERSION_STATUS.json"
 
-def load_production_orchestrator():
-    """VersionTrackerから本番環境版を読み込む"""
+if not status_file.exists():
+    print(f"❌ {status_file} が見つかりません")
+    sys.exit(1)
 
-    print("🔍 本番環境版を検索中...")
+with open(status_file) as f:
+    status = json.load(f)
 
-    tracker = VersionTracker()
-    prod_info = tracker.get_production_version()
+prod_info = status.get("production", {})
+prod_file = prod_info.get("file")
 
-    if not prod_info:
-        print("❌ 本番環境版が登録されていません")
-        print("\n📋 登録方法:")
-        print("   python3 tools/file_version_manager.py track")
-        return None
+if not prod_file:
+    print("❌ 本番環境版が指定されていません")
+    sys.exit(1)
 
-    prod_path = Path(prod_info.get("path", ""))
+prod_path = project_root / "scripts" / prod_file
 
-    if not prod_path.exists():
-        print(f"❌ ファイルが見つかりません: {prod_path}")
-        return None
+print(f"\n📦 本番環境版: {prod_file}")
+print(f"   パス: {prod_path}")
+print(f"   ステータス: {prod_info.get('status', 'unknown')}")
 
-    print(f"✅ 本番環境版発見: {prod_info.get('file')}")
-    print(f"   ステータス: {prod_info.get('status')}")
-    print(f"   説明: {prod_info.get('description', 'N/A')}")
+if not prod_path.exists():
+    print(f"\n❌ ファイルが存在しません: {prod_path}")
+    sys.exit(1)
 
-    # モジュールとして読み込み
-    try:
-        spec = importlib.util.spec_from_file_location("orchestrator", prod_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+print(f"\n✅ ファイル確認OK")
 
-        if hasattr(module, "IntegratedOrchestrator"):
-            print(f"   ✅ IntegratedOrchestrator読み込み成功")
-            return module.IntegratedOrchestrator
-        else:
-            print(f"   ❌ IntegratedOrchestratorが見つかりません")
-            return None
+# Pythonスクリプトとして直接実行
+print("\n" + "=" * 70)
+print("実行開始...")
+print("=" * 70 + "\n")
 
-    except Exception as e:
-        print(f"   ❌ 読み込みエラー: {e}")
+# sys.argvを調整（オプション引数を渡せるように）
+sys.argv = [str(prod_path)]
 
-        # エラーをVersionTrackerに記録
-        tracker.mark_as_broken(file_name=prod_info.get("file"), error=str(e))
+# 直接実行
+try:
+    with open(prod_path) as f:
+        code = compile(f.read(), str(prod_path), "exec")
+        exec(code, {"__name__": "__main__", "__file__": str(prod_path)})
+except KeyboardInterrupt:
+    print("\n⚠️  停止シグナル受信 - 正常終了")
+except Exception as e:
+    print(f"\n❌ 実行エラー: {e}")
+    import traceback
 
-        return None
-
-
-async def main():
-    print("=" * 70)
-    print("🚀 24時間自律稼働システム起動（v2.0）")
-    print("=" * 70)
-    print("")
-
-    # 本番環境版を読み込み
-    OrchestratorClass = load_production_orchestrator()
-
-    if OrchestratorClass is None:
-        print("\n❌ システムを読み込めませんでした")
-        return
-
-    # 初期化
-    print("\n🔧 初期化中...")
-    try:
-        orchestrator = OrchestratorClass()
-        print("   ✅ 初期化完了")
-    except Exception as e:
-        print(f"   ❌ 初期化エラー: {e}")
-        return
-
-    # 実行
-    print("\n" + "=" * 70)
-    print("実行開始...")
-    print("=" * 70 + "\n")
-
-    try:
-        if hasattr(orchestrator, "run_continuous_cycle"):
-            await orchestrator.run_continuous_cycle()
-        elif hasattr(orchestrator, "run"):
-            await orchestrator.run()
-        else:
-            print("❌ 実行メソッドが見つかりません")
-
-    except KeyboardInterrupt:
-        print("\n⚠️  停止シグナル受信 - 正常終了")
-    except Exception as e:
-        print(f"\n❌ 実行エラー: {e}")
-        import traceback
-
-        traceback.print_exc()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    traceback.print_exc()
