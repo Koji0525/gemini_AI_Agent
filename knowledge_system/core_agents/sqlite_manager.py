@@ -26,7 +26,7 @@ class SQLiteKnowledgeManager:
         # ナレッジエントリーテーブル
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS knowledge_entries (
+            CREATE TABLE IF NOT EXISTS knowledge_base (
                 id TEXT PRIMARY KEY,
                 scenario TEXT NOT NULL,
                 cause TEXT,
@@ -53,11 +53,13 @@ class SQLiteKnowledgeManager:
         )
 
         # インデックス作成（検索高速化）
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_scenario ON knowledge_entries(scenario)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_category ON knowledge_entries(category)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_task_type ON knowledge_entries(task_type)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON knowledge_entries(created_at)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_confidence ON knowledge_entries(confidence)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_scenario ON knowledge_base(scenario)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_category ON knowledge_base(category)")
+        # スキーマに合わせたインデックス作成
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_category ON knowledge_base(category)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tags ON knowledge_base(tags)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON knowledge_base(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_confidence ON knowledge_base(confidence)")
 
         # ベクトルマッピングテーブル（FAISS用）
         cursor.execute(
@@ -65,7 +67,7 @@ class SQLiteKnowledgeManager:
             CREATE TABLE IF NOT EXISTS vector_mappings (
                 vector_index INTEGER PRIMARY KEY,
                 knowledge_id TEXT NOT NULL,
-                FOREIGN KEY (knowledge_id) REFERENCES knowledge_entries(id)
+                FOREIGN KEY (knowledge_id) REFERENCES knowledge_base(id)
             )
         """
         )
@@ -89,7 +91,7 @@ class SQLiteKnowledgeManager:
 
         cursor.execute(
             """
-            INSERT OR REPLACE INTO knowledge_entries (
+            INSERT OR REPLACE INTO knowledge_base (
                 id, scenario, cause, solution, learnings, prevention,
                 success_rate, confidence, title, category, priority, task_type,
                 quality_score, tags, source_system
@@ -126,7 +128,7 @@ class SQLiteKnowledgeManager:
 
         cursor.execute(
             """
-            SELECT * FROM knowledge_entries
+            SELECT * FROM knowledge_base
             WHERE scenario LIKE ? OR solution LIKE ? OR cause LIKE ?
             ORDER BY confidence DESC, success_rate DESC
             LIMIT ?
@@ -151,7 +153,7 @@ class SQLiteKnowledgeManager:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        cursor.execute("SELECT * FROM knowledge_entries WHERE id = ?", (knowledge_id,))
+        cursor.execute("SELECT * FROM knowledge_base WHERE id = ?", (knowledge_id,))
         row = cursor.fetchone()
         conn.close()
 
@@ -168,18 +170,16 @@ class SQLiteKnowledgeManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM knowledge_entries")
+        cursor.execute("SELECT COUNT(*) FROM knowledge_base")
         total_count = cursor.fetchone()[0]
 
-        cursor.execute("SELECT AVG(confidence) FROM knowledge_entries")
+        cursor.execute("SELECT AVG(confidence) FROM knowledge_base")
         avg_confidence = cursor.fetchone()[0] or 0.0
 
-        cursor.execute("SELECT AVG(success_rate) FROM knowledge_entries")
+        cursor.execute("SELECT AVG(success_rate) FROM knowledge_base")
         avg_success_rate = cursor.fetchone()[0] or 0.0
 
-        cursor.execute(
-            "SELECT category, COUNT(*) as count FROM knowledge_entries GROUP BY category"
-        )
+        cursor.execute("SELECT category, COUNT(*) as count FROM knowledge_base GROUP BY category")
         categories = {row[0]: row[1] for row in cursor.fetchall()}
 
         conn.close()

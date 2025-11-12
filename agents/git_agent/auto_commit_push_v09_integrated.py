@@ -79,6 +79,8 @@ class IntegratedGitTool:
             "_WIP",
             "_ARCHIVE",
             "_BACKUP",
+            "backups",
+            "backup_files",
             "__pycache__",
             ".git",
             "node_modules",
