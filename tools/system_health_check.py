@@ -1,70 +1,124 @@
 #!/usr/bin/env python3
 """
-システムヘルスチェック
-
-【チェック項目】
-1. 全シートの構造整合性
-2. 空白行の検出
-3. データ範囲の確認
-4. 誤ったデータの検出
+システム健康診断ツール
+既存システムと安全版の両方を検査
 """
 
+import importlib
+import os
 import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from tools.smart_sheets_manager import SmartSheetsManager
 
 
-def health_check():
-    """システムヘルスチェック実行"""
-    print("=" * 60)
-    print("🏥 システムヘルスチェック")
+def check_system_health():
+    """システム健康状態を検査"""
+
+    print("🩺 システム健康診断")
     print("=" * 60)
 
-    manager = SmartSheetsManager()
+    checks = []
 
-    # チェック対象シート
-    sheets = ["project_goal", "pm_tasks", "task_execution_log", "knowledge_base"]
+    # 1. 主要ファイルの存在確認
+    essential_files = [
+        "agents/complete_engine_ultimate.py",
+        "agents/complete_engine_safe_integrated_v2.py",
+        "agents/self_healing/self_healing_agent_safe.py",
+        "tools/base_data_accessor.py",
+    ]
 
-    issues = []
+    print("\n📁 必須ファイル確認:")
+    for file_path in essential_files:
+        exists = os.path.exists(file_path)
+        status = "✅" if exists else "❌"
+        print(f"  {status} {file_path}")
+        checks.append(("ファイル存在", file_path, exists))
 
-    for sheet_name in sheets:
-        print(f"\n📊 {sheet_name}:")
+    # 2. 構文チェック
+    print("\n🔧 構文チェック:")
+    try:
+        import subprocess
 
+        result = subprocess.run(
+            ["python3", "-m", "py_compile", "agents/complete_engine_ultimate.py"],
+            capture_output=True,
+            text=True,
+        )
+        syntax_ok = result.returncode == 0
+        status = "✅" if syntax_ok else "❌"
+        print(f"  {status} complete_engine_ultimate.py")
+        if not syntax_ok:
+            print(f"    エラー: {result.stderr}")
+        checks.append(("構文チェック", "complete_engine_ultimate.py", syntax_ok))
+    except Exception as e:
+        print(f"  ❌ 構文チェック失敗: {e}")
+        checks.append(("構文チェック", "complete_engine_ultimate.py", False))
+
+    # 3. モジュールインポートチェック
+    print("\n📦 モジュールインポートチェック:")
+    modules_to_check = ["tools.base_data_accessor", "agents.self_healing.self_healing_agent_safe"]
+
+    for module_name in modules_to_check:
         try:
-            # 構造確認
-            structure = manager.get_sheet_structure(sheet_name)
-            print(f"   ヘッダー: {structure['headers']}")
-            print(f"   データ行: {structure['data_rows']}")
-
-            # 空白行チェック
-            empty = manager.cleanup_empty_rows(sheet_name, dry_run=True)
-            if empty > 100:
-                issues.append(f"{sheet_name}: {empty}行の空白行")
-                print(f"   ⚠️ 空白行が多い: {empty}行")
-            else:
-                print(f"   ✅ 空白行: {empty}行")
-
+            importlib.import_module(module_name)
+            print(f"  ✅ {module_name}")
+            checks.append(("モジュールインポート", module_name, True))
         except Exception as e:
-            issues.append(f"{sheet_name}: エラー ({e})")
-            print(f"   ❌ エラー: {e}")
+            print(f"  ❌ {module_name}: {e}")
+            checks.append(("モジュールインポート", module_name, False))
 
-    # サマリー
+    # 4. データアクセスチェック
+    print("\n📊 データアクセスチェック:")
+    try:
+        from tools.base_data_accessor import BaseDataAccessor
+
+        BaseDataAccessor()
+        print("  ✅ BaseDataAccessor 初期化成功")
+        checks.append(("データアクセス", "BaseDataAccessor", True))
+    except Exception as e:
+        print(f"  ❌ BaseDataAccessor 初期化失敗: {e}")
+        checks.append(("データアクセス", "BaseDataAccessor", False))
+
+    # 5. 自己修復エージェントチェック
+    print("\n🔧 自己修復エージェントチェック:")
+    try:
+        from agents.self_healing.self_healing_agent_safe import \
+            SelfHealingAgentSafe
+
+        agent = SelfHealingAgentSafe()
+        print("  ✅ SelfHealingAgentSafe 初期化成功")
+
+        # 簡単なテスト
+        test_error = ValueError("テストエラー")
+        result = agent.detect_and_heal(test_error, {})
+        print(f"  ✅ 自己修復テスト: {result['success']}")
+        checks.append(("自己修復", "SelfHealingAgentSafe", True))
+    except Exception as e:
+        print(f"  ❌ 自己修復エージェント失敗: {e}")
+        checks.append(("自己修復", "SelfHealingAgentSafe", False))
+
+    # 総合診断結果
     print("\n" + "=" * 60)
-    print("📋 ヘルスチェック結果")
+    print("📋 総合診断結果")
     print("=" * 60)
 
-    if issues:
-        print(f"\n⚠️ 問題検出: {len(issues)}件\n")
-        for issue in issues:
-            print(f"  - {issue}")
+    total_checks = len(checks)
+    passed_checks = sum(1 for _, _, passed in checks if passed)
+
+    print(
+        f"検査項目: {total_checks} / 合格: {passed_checks} / 不合格: {total_checks - passed_checks}"
+    )
+
+    if passed_checks == total_checks:
+        print("🎉 システムは正常です！")
+        return True
     else:
-        print("\n✅ 問題なし")
-
-    print("=" * 60)
+        print("⚠️ システムに問題があります")
+        print("\n詳細:")
+        for category, item, passed in checks:
+            status = "✅" if passed else "❌"
+            print(f"  {status} {category}: {item}")
+        return False
 
 
 if __name__ == "__main__":
-    health_check()
+    healthy = check_system_health()
+    sys.exit(0 if healthy else 1)
