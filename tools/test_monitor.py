@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
 テスト監視システム
-5回に1回の頻度でテストを実行し、既存システムの破壊を検出
+5回に1回の自動テスト実行でシステム破壊を防止
 """
 
 import subprocess
@@ -9,111 +8,128 @@ from datetime import datetime
 
 
 class TestMonitor:
+    """テスト監視システム"""
+
     def __init__(self):
-        self.monitor_count = 0
-        self.monitor_interval = 5  # 5回に1回監視
-        self.baseline_success_rate = 84.3  # 基準値
+        self.execution_count = 0
+        self.test_results = []
 
-    def should_run_test(self):
-        """テスト実行判定（5回に1回）"""
-        self.monitor_count += 1
-        return self.monitor_count % self.monitor_interval == 0
+    def check_and_run_tests(self, force_run=False):
+        """
+        テスト実行のチェックと実行
 
-    def run_tests(self):
-        """テスト実行と結果分析"""
-        print("🧪 テスト監視実行中...")
+        Args:
+            force_run: 強制実行フラグ
+        """
+        self.execution_count += 1
 
-        try:
-            # pytest実行
-            result = subprocess.run(
-                ["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )  # 5分タイムアウト
+        # 5回に1回、または強制実行
+        if force_run or self.execution_count % 5 == 0:
+            print("🧪 テスト監視: 実行中...")
+            result = self._run_comprehensive_tests()
+            self.test_results.append(result)
 
-            # 結果解析
-            success_rate = self.analyze_test_results(result)
-
-            # レポート生成
-            report = self.generate_report(result, success_rate)
-
-            # 基準値チェック
-            if success_rate < self.baseline_success_rate:
-                print(
-                    f"🚨 警告: テスト成功率が基準値を下回りました ({success_rate:.1f}% < {self.baseline_success_rate}%)"
-                )
-                return False, report
+            if result["success"]:
+                print("✅ テスト監視: すべて正常")
             else:
-                print(f"✅ 正常: テスト成功率 {success_rate:.1f}%")
-                return True, report
+                print(f"⚠️ テスト監視: 警告 - {result['failed_tests']}件失敗")
 
-        except subprocess.TimeoutExpired:
-            print("❌ テストがタイムアウトしました")
-            return False, {"error": "テストタイムアウト"}
-        except Exception as e:
-            print(f"❌ テスト実行エラー: {e}")
-            return False, {"error": str(e)}
+            return result
+        else:
+            print(f"🔍 テスト監視: スキップ (実行カウント: {self.execution_count})")
+            return {"success": True, "skipped": True}
 
-    def analyze_test_results(self, result):
-        """テスト結果分析"""
-        output = result.stdout
+    def _run_comprehensive_tests(self):
+        """包括的なテスト実行"""
+        test_commands = [
+            ["python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+            ["python3", "-m", "pytest", "tests/test_self_healing_agent.py", "-v"],
+            ["python3", "-m", "pytest", "tests/test_integration_healing.py", "-v"],
+            ["python3", "tools/system_diagnostics.py"],
+            ["python3", "agents/health_check/health_check_agent.py", "--quick"],
+        ]
 
-        # パス/失敗数カウント
-        passed = output.count("PASSED")
-        failed = output.count("FAILED")
-        total = passed + failed
+        results = []
+        failed_tests = 0
 
-        if total == 0:
-            return 0.0
+        for cmd in test_commands:
+            try:
+                result = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=600  # 10分タイムアウト
+                )
 
-        return (passed / total) * 100
+                test_result = {
+                    "command": " ".join(cmd),
+                    "returncode": result.returncode,
+                    "success": result.returncode == 0,
+                    "timestamp": datetime.now().isoformat(),
+                }
 
-    def generate_report(self, result, success_rate):
-        """テストレポート生成"""
+                if not test_result["success"]:
+                    failed_tests += 1
+                    test_result["error"] = result.stderr[:500]  # 先頭500文字のみ
+
+                results.append(test_result)
+
+            except subprocess.TimeoutExpired:
+                results.append(
+                    {
+                        "command": " ".join(cmd),
+                        "success": False,
+                        "error": "タイムアウト",
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+                failed_tests += 1
+            except Exception as e:
+                results.append(
+                    {
+                        "command": " ".join(cmd),
+                        "success": False,
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                )
+                failed_tests += 1
+
         return {
+            "success": failed_tests == 0,
+            "total_tests": len(test_commands),
+            "failed_tests": failed_tests,
+            "results": results,
             "timestamp": datetime.now().isoformat(),
-            "success_rate": success_rate,
-            "baseline": self.baseline_success_rate,
-            "passed": result.stdout.count("PASSED"),
-            "failed": result.stdout.count("FAILED"),
-            "return_code": result.returncode,
-            "monitor_count": self.monitor_count,
         }
 
-    def monitor_execution(self, func, *args, **kwargs):
-        """
-        関数実行を監視
-        5回に1回テストを実行してシステム健全性を確認
-        """
-        # メイン関数実行
-        result = func(*args, **kwargs)
+    def get_summary(self):
+        """テスト結果のサマリー"""
+        if not self.test_results:
+            return "テスト未実行"
 
-        # テスト監視判定
-        if self.should_run_test():
-            print(f"\n🔍 テスト監視 ({self.monitor_count}回目) - システム健全性チェック")
-            test_success, report = self.run_tests()
+        total_runs = len(self.test_results)
+        successful_runs = sum(1 for r in self.test_results if r["success"])
+        success_rate = (successful_runs / total_runs) * 100
 
-            if not test_success:
-                print("⚠️ システム健全性に問題があります。開発を継続しますが注意が必要です。")
-            else:
-                print("✅ システム健全性確認完了")
-
-        return result
+        return {
+            "total_monitoring_runs": total_runs,
+            "successful_runs": successful_runs,
+            "success_rate": f"{success_rate:.1f}%",
+            "last_check": self.test_results[-1]["timestamp"] if self.test_results else "N/A",
+        }
 
 
-# 使用例
-def main():
-    monitor = TestMonitor()
+# グローバルインスタンス
+test_monitor = TestMonitor()
 
-    # 監視付きで関数実行
-    def sample_development_task():
-        print("開発タスク実行中...")
-        return "開発完了"
 
-    result = monitor.monitor_execution(sample_development_task)
-    print(f"結果: {result}")
+def monitor_test_execution():
+    """テスト監視の実行（5回に1回）"""
+    return test_monitor.check_and_run_tests()
 
 
 if __name__ == "__main__":
-    main()
+    # テスト実行
+    result = monitor_test_execution()
+    print(f"テスト結果: {result}")
+
+    summary = test_monitor.get_summary()
+    print(f"監視サマリー: {summary}")
