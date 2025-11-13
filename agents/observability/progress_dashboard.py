@@ -13,7 +13,7 @@ project_root = os.path.abspath(os.path.dirname(__file__) + "/../..")
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from knowledge_system.core_agents.knowledge_manager import KnowledgeManager
+from knowledge_system.simple_knowledge_wrapper import SimpleKnowledgeWrapper
 from tools.base_data_accessor import BaseDataAccessor
 
 
@@ -22,7 +22,7 @@ class ProgressDashboard:
 
     def __init__(self):
         self.accessor = BaseDataAccessor()
-        self.km = KnowledgeManager()
+        self.km = SimpleKnowledgeWrapper()
 
         # 要件定義
         self.requirements = {
