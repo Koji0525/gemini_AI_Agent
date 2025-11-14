@@ -196,3 +196,16 @@ if __name__ == "__main__":
     # 未回答確認
     print("\n【テスト2: 未回答確認】")
     agent.check_pending_questions()
+
+    def send_progress_report(self, stats: dict):
+        """進捗レポート送信（スタブ実装）"""
+        print("\n" + "=" * 80)
+        print("📊 進捗レポート")
+        print("=" * 80)
+
+        for key, value in stats.items():
+            print(f"{key}: {value}")
+
+        print("=" * 80)
+
+        # TODO: 実際の通知実装（Slack, メールなど）
