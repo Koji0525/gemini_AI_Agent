@@ -12,6 +12,10 @@ from auto_repair_enhancer import AdvancedErrorFixer
 原因:
 - autoflakeは未使用インポートのみ削除、不足インポートは追加しない
 - 致命的エラー検出後、自動修復機能が不足
+import sys
+sys.path.append(os.path.dirname(__file__))
+import sys
+sys.path.append(os.path.dirname(__file__))
 
 狙い:
 - インポート自動修復機能を新規追加

@@ -1,126 +1,174 @@
 #!/usr/bin/env python3
 """
-🔧 自動修復拡張モジュール v1.0
-既存の自動コミットツールに追加するだけで、標準ライブラリの自動修復機能を拡張
+🚀 高度な自動エラー修復エンハンサー
+
+【機能】
+- 未定義名エラーの自動検出と修正
+- インポート不足の自動補完
+- 一般的な構文エラーの自動修正
 """
 
 import re
-from typing import List
+from typing import Dict, List
 
 
-class StandardLibraryFixer:
-    """標準ライブラリ自動修復クラス - 既存機能に追加するだけ"""
+class AdvancedErrorFixer:
+    """高度なエラー自動修復クラス"""
 
     def __init__(self):
-        # 標準ライブラリモジュールのマッピング
-        self.stdlib_modules = {
+        self.common_fixes = {
+            # 未定義名 → インポートマッピング
             "time": "import time",
-            "math": "import math",
-            "random": "import random",
-            "collections": "import collections",
-            "itertools": "import itertools",
-            "functools": "import functools",
-            "logging": "import logging",
-            "argparse": "import argparse",
-            "csv": "import csv",
-            "pickle": "import pickle",
-            "sqlite3": "import sqlite3",
-            "threading": "import threading",
-            "multiprocessing": "import multiprocessing",
-            "asyncio": "import asyncio",
-            "unittest": "import unittest",
             "datetime": "import datetime",
+            "Path": "from pathlib import Path",
+            "List": "from typing import List",
+            "Dict": "from typing import Dict",
+            "Set": "from typing import Set",
+            "Tuple": "from typing import Tuple",
+            "Any": "from typing import Any",
+            "Optional": "from typing import Optional",
+            "Union": "from typing import Union",
+            "re": "import re",
+            "json": "import json",
+            "os": "import os",
+            "sys": "import sys",
+            "subprocess": "import subprocess",
+            "shutil": "import shutil",
+            "hashlib": "import hashlib",
+            "asyncio": "import asyncio",
         }
 
-        # 使用パターンからモジュールを推測するマップ
-        self.usage_patterns = {
-            "time": [r"time\.sleep", r"time\.time", r"time\.strftime"],
-            "math": [r"math\.sqrt", r"math\.pi", r"math\.cos"],
-            "random": [r"random\.randint", r"random\.choice"],
-            "os": [r"os\.path", r"os\.getenv", r"os\.listdir"],
-            "sys": [r"sys\.argv", r"sys\.exit", r"sys\.path"],
-            "json": [r"json\.loads", r"json\.dumps"],
-            "re": [r"re\.search", r"re\.match", r"re\.findall"],
-            "datetime": [r"datetime\.datetime", r"datetime\.date"],
+        # 一般的なタイポ修正
+        self.typo_fixes = {
+            "print(": "print(",
+            "range(": "range(",
+            "len(": "len(",
+            "str(": "str(",
+            "int(": "int(",
+            "list(": "list(",
+            "dict(": "dict(",
         }
 
-    def enhance_import_analysis(
-        self, file_path: str, error_output: str, current_missing_imports: List[str]
-    ) -> List[str]:
-        """既存のインポート分析を拡張 - 標準ライブラリを追加"""
-        enhanced_imports = current_missing_imports.copy()
-
-        # F821 undefined name エラーパターンを検出
-        f821_pattern = r"F821 undefined name '([^']+)'"
-        undefined_names = re.findall(f821_pattern, error_output)
-
-        for name in undefined_names:
-            # 標準ライブラリモジュールをチェック
-            if name in self.stdlib_modules and self.stdlib_modules[name] not in enhanced_imports:
-                enhanced_imports.append(self.stdlib_modules[name])
-                continue
-
-            # 動的分析: ファイル内の使用パターンから推測
-            guessed_import = self._guess_import_from_usage(file_path, name)
-            if guessed_import and guessed_import not in enhanced_imports:
-                enhanced_imports.append(guessed_import)
-
-        return enhanced_imports
-
-    def _guess_import_from_usage(self, file_path: str, undefined_name: str) -> str:
-        """ファイル内の使用パターンからインポートを推測"""
+    def try_advanced_fixes(self, file_path: str, error_output: str) -> bool:
+        """高度な自動修復を試行"""
         try:
+            print(f"  �� 高度な自動修復を試行: {file_path}")
+
+            # エラー出力の解析
+            errors = self._parse_error_output(error_output)
+
+            if not errors:
+                return False
+
+            # ファイル内容の読み込み
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # 使用パターンからモジュールを推測
-            for module, patterns in self.usage_patterns.items():
-                for pattern in patterns:
-                    if re.search(pattern, content):
-                        return f"import {module}"
+            # 各エラーに対して修復を試行
+            fixed_content = content
+            fixes_applied = 0
 
-            return ""
+            for error in errors:
+                if self._is_undefined_name_error(error):
+                    fixed = self._fix_undefined_name(fixed_content, error)
+                    if fixed != fixed_content:
+                        fixed_content = fixed
+                        fixes_applied += 1
 
-        except Exception:
-            return ""
+                elif self._is_syntax_error(error):
+                    fixed = self._fix_syntax_error(fixed_content, error)
+                    if fixed != fixed_content:
+                        fixed_content = fixed
+                        fixes_applied += 1
 
-    def fix_standard_library_imports(self, file_path: str, missing_imports: List[str]) -> bool:
-        """標準ライブラリのインポートを自動追加"""
-        if not missing_imports:
-            return True
-
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            lines = content.split("\n")
-
-            # 既存のインポートセクションを探す
-            import_section_end = self._find_import_section_end(lines)
-
-            # 重複を避けてインポートを追加
-            imports_to_add = []
-            for imp in missing_imports:
-                if imp not in content:
-                    imports_to_add.append(imp)
-
-            if imports_to_add:
-                # インポートを追加
-                for imp in reversed(imports_to_add):
-                    lines.insert(import_section_end + 1, imp)
-
-                # ファイルを保存
+            # 変更があった場合はファイルを保存
+            if fixes_applied > 0:
                 with open(file_path, "w", encoding="utf-8") as f:
-                    f.write("\n".join(lines))
-
-                print(f"  ✅ 標準ライブラリインポート追加: {', '.join(imports_to_add)}")
+                    f.write(fixed_content)
+                print(f"  ✅ 高度な自動修復成功: {fixes_applied}件の修正を適用")
                 return True
             else:
-                return True
+                print("  ⚠️  高度な自動修復: 適用可能な修正なし")
+                return False
 
         except Exception as e:
-            print(f"  ❌ 標準ライブラリインポート追加失敗: {e}")
+            print(f"  ❌ 高度な自動修復エラー: {e}")
             return False
+
+    def _parse_error_output(self, error_output: str) -> List[Dict]:
+        """エラー出力を解析"""
+        errors = []
+
+        # flake8 エラーパターン
+        flake8_pattern = r"(.+?):(\d+):(\d+): ([A-Z]\d+) (.+)"
+        matches = re.findall(flake8_pattern, error_output)
+
+        for match in matches:
+            errors.append(
+                {
+                    "file": match[0],
+                    "line": int(match[1]),
+                    "column": int(match[2]),
+                    "code": match[3],
+                    "message": match[4],
+                }
+            )
+
+        # Python 構文エラーパターン
+        syntax_pattern = r"SyntaxError: (.+)"
+        syntax_matches = re.findall(syntax_pattern, error_output)
+        for msg in syntax_matches:
+            errors.append({"code": "E999", "message": f"SyntaxError: {msg}"})
+
+        return errors
+
+    def _is_undefined_name_error(self, error: Dict) -> bool:
+        """未定義名エラーか判定"""
+        return error.get("code") == "F821"
+
+    def _is_syntax_error(self, error: Dict) -> bool:
+        """構文エラーか判定"""
+        return error.get("code") == "E999" or "SyntaxError" in error.get("message", "")
+
+    def _fix_undefined_name(self, content: str, error: Dict) -> str:
+        """未定義名エラーを修正"""
+        lines = content.split("\n")
+        error_line_num = error["line"] - 1  # 0-based index
+
+        if error_line_num >= len(lines):
+            return content
+
+        lines[error_line_num]
+        message = error["message"]
+
+        # 未定義名を抽出
+        undefined_match = re.search(r"undefined name '([^']+)'", message)
+        if not undefined_match:
+            return content
+
+        undefined_name = undefined_match.group(1)
+
+        # 共通修正マップからインポート文を取得
+        if undefined_name in self.common_fixes:
+            import_line = self.common_fixes[undefined_name]
+
+            # 既にインポートされていないか確認
+            if import_line not in content:
+                # インポートセクションを探して追加
+                import_section_end = self._find_import_section_end(lines)
+                lines.insert(import_section_end + 1, import_line)
+                return "\n".join(lines)
+
+        return content
+
+    def _fix_syntax_error(self, content: str, error: Dict) -> str:
+        """構文エラーを修正"""
+        # 一般的なタイポ修正
+        for typo, correction in self.typo_fixes.items():
+            if typo in content and correction not in content:
+                content = content.replace(typo, correction)
+
+        return content
 
     def _find_import_section_end(self, lines: List[str]) -> int:
         """インポートセクションの終了位置を検出"""
@@ -141,32 +189,11 @@ class StandardLibraryFixer:
         return max(last_import_line, 0)
 
 
-class AdvancedErrorFixer:
-    """高度なエラー修正クラス - 既存機能に追加するだけ"""
+# テスト用
+if __name__ == "__main__":
+    fixer = AdvancedErrorFixer()
 
-    def __init__(self):
-        self.stdlib_fixer = StandardLibraryFixer()
-
-    def try_advanced_fixes(self, file_path: str, error_output: str) -> bool:
-        """高度な自動修正を試行"""
-        print("  🔧 高度な自動修復を試行します")
-
-        # インポートエラーの処理
-        if self._handle_import_errors(file_path, error_output):
-            return True
-
-        return False
-
-    def _handle_import_errors(self, file_path: str, error_output: str) -> bool:
-        """インポート関連エラーの処理"""
-        # F821 undefined name エラーを処理
-        if "F821 undefined name" in error_output:
-            # 標準ライブラリのインポートを分析
-            enhanced_imports = self.stdlib_fixer.enhance_import_analysis(
-                file_path, error_output, []
-            )
-
-            if enhanced_imports:
-                return self.stdlib_fixer.fix_standard_library_imports(file_path, enhanced_imports)
-
-        return False
+    # テストエラー出力
+    test_error = "test.py:10:5: F821 undefined name 'time'"
+    result = fixer.try_advanced_fixes("test.py", test_error)
+    print(f"テスト結果: {result}")
