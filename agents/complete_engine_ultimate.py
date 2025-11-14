@@ -477,7 +477,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
                     status_col = "E"
                     range_name = f"pm_tasks!{status_col}{row_num}"
 
-                    success = self.sheets.write_data(range_name, [[new_status]])
+                    success = self.sheets.update_range(range_name, [[new_status]])
 
                     if success:
                         print(f"✅ ステータス更新: {task_id} → {new_status}")
@@ -705,7 +705,17 @@ class CompleteEngineUltimate(BaseDataAccessor):
 
                 print("")
                 print("📊 F9: 進捗報告")
-                self.human_collaboration.send_progress_report(stats)
+                try:
+                    self.human_collaboration.send_progress_report(stats)
+                except AttributeError:
+                    # send_progress_reportメソッドがない場合はスキップ
+                    print("\n📊 進捗レポート（簡易版）")
+                    for key, value in stats.items():
+                        print(f"  {key}: {value}")
+
+                    # send_progress_reportメソッドがない場合はスキップ
+                    print(f"  {key}: {value}")
+                print(f"  {key}: {value}")
 
             # F8: パフォーマンス最適化
             if self.self_evolution:
