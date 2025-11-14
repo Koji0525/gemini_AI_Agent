@@ -7,6 +7,8 @@
 import sys
 from pathlib import Path
 
+from agents.goal_concrete_agent import GoalConcreteAgent
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from datetime import datetime
@@ -42,6 +44,10 @@ class CompleteEngineUltimate(BaseDataAccessor):
         self.integrate_health_check()
         self.integrate_self_evolution()
         self.integrate_human_collaboration()
+        # F0: ゴールの具体化
+        self.goal_concrete = GoalConcreteAgent()
+        print("✅ ゴール具体化システム統合完了")
+
         print("✅ CompleteEngineUltimate 初期化完了")
 
     def integrate_knowledge_system(self):

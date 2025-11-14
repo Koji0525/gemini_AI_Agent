@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""
-🚀 Git自動コミット＆プッシュツール v9.1（インポート自動修復版）
+from auto_repair_enhancer import AdvancedErrorFixer
 
-【v9.1 変更の理由】
+"""
+🚀 Git自動コミット＆プッシュツール v10.1（拡張自動修復版）
+
+【v10.1 変更の理由】
 何が起きた:
-- v9.0: Path未定義エラーが発生し手動修正が必要だった
+- v10.0: timeモジュール未定義エラーが発生し手動修正が必要だった
 - 既存の自動修復ではインポート不足を検出・修正できない
 
 原因:
@@ -304,9 +306,16 @@ class IntegratedGitTool:
         return all_passed
 
     def _try_auto_repair(self, file_path: str, error_output: str) -> bool:
-        """自動修復を試行（v9.1新機能追加）"""
+        """自動修復を試行（v10拡張版）"""
         try:
-            # 不足インポートを分析
+            # === 新規追加: 高度な自動修復をまず試行 ===
+            advanced_fixer = AdvancedErrorFixer()
+            if advanced_fixer.try_advanced_fixes(file_path, error_output):
+                print("  ✅ 高度な自動修復成功")
+                return True
+            # === 追加終了 ===
+
+            # 不足インポートを分析（既存機能）
             missing_imports = self.import_fixer.analyze_missing_imports(file_path, error_output)
 
             if missing_imports:

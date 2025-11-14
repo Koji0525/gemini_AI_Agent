@@ -1,110 +1,198 @@
-"""人間連携エージェント（F9）
-
-人間との連携を管理します。
-"""
+"""F9: 人間連携エージェント（会話機能統合版）"""
 
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
+
+from tools.base_data_accessor import BaseDataAccessor
+from tools.human_conversation import HumanConversation
 
 
 class HumanCollaborationAgent:
-    """人間連携エージェント"""
+    """人間連携エージェント（F9）
+
+    機能：
+    - 人間への質問・回答受信
+    - 判断が必要な場面での確認
+    - フィードバック収集
+    """
 
     def __init__(self):
         """初期化"""
-        self.questions = []
-        self.reports = []
+        self.accessor = BaseDataAccessor()
+        self.conversation = HumanConversation()
         print("✅ HumanCollaborationAgent 初期化完了")
 
-    def detect_uncertainty(self, task: Dict[str, Any]) -> bool:
-        """不明点検出
+    def request_decision(
+        self,
+        context: str,
+        options: List[str],
+        priority: str = "normal",
+        timeout: Optional[int] = None,
+    ) -> Optional[str]:
+        """人間に判断を依頼
 
         Args:
-            task: タスク
+            context: 判断が必要な状況
+            options: 選択肢
+            priority: 優先度
+            timeout: タイムアウト秒数
 
         Returns:
-            不明点があればTrue
+            選択された回答
         """
-        # 簡易実装：複雑なタスクは不明点ありと判定
-        description = task.get("description", "")
+        print(f"\n{'='*80}")
+        print(f"🤝 人間への判断依頼")
+        print(f"{'='*80}")
 
-        if len(description) > 200:
-            return True
-        if "?" in description:
-            return True
-
-        return False
-
-    def generate_question(self, task: Dict[str, Any]) -> str:
-        """質問生成
-
-        Args:
-            task: タスク
-
-        Returns:
-            質問文
-        """
-        task_id = task.get("task_id", "UNKNOWN")
-        description = task.get("description", "")[:100]
-
-        question = f"タスク{task_id}について：{description}... の実装方針を確認したいです。"
-
-        self.questions.append(
-            {
-                "task_id": task_id,
-                "question": question,
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "answered": False,
-            }
+        question_id = self.conversation.ask_question(
+            question=f"判断をお願いします: {context}", options=options, priority=priority
         )
 
-        print(f"❓ 質問生成: {question[:80]}...")
-        return question
+        if timeout:
+            print(f"⏳ {timeout}秒間回答を待ちます...")
+            answer = self.conversation.wait_for_answer(question_id, timeout)
+        else:
+            print(f"💡 回答は任意のタイミングで可能です（question_id: {question_id}）")
+            answer = None
 
-    def send_progress_report(self, stats: Dict[str, Any]) -> bool:
-        """進捗報告送信
+        return answer
+
+    def request_feedback(self, task_id: str, result: Dict[str, Any]) -> Optional[str]:
+        """タスク結果へのフィードバックを依頼
 
         Args:
-            stats: 統計情報
+            task_id: タスクID
+            result: タスク実行結果
 
         Returns:
-            送信成功したらTrue
+            フィードバック内容
         """
-        try:
-            report = {
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "total_tasks": stats.get("total_tasks", 0),
-                "completed_tasks": stats.get("completed_tasks", 0),
-                "pending_tasks": stats.get("pending_tasks", 0),
-                "avg_quality": stats.get("avg_quality", 0),
+        print(f"\n{'='*80}")
+        print(f"📝 フィードバック依頼")
+        print(f"{'='*80}")
+
+        question_id = self.conversation.ask_question(
+            question=f"タスク {task_id} の結果についてフィードバックをお願いします",
+            context={
+                "task_id": task_id,
+                "status": result.get("status"),
+                "output_length": len(result.get("output", "")),
+            },
+            options=["良好 - このまま進める", "要改善 - 修正が必要", "不十分 - やり直し"],
+            priority="normal",
+        )
+
+        return question_id
+
+    def request_goal_clarification(self, goal_id: str, goal_description: str) -> Optional[str]:
+        """ゴールの明確化を依頼
+
+        Args:
+            goal_id: ゴールID
+            goal_description: ゴール説明
+
+        Returns:
+            質問ID
+        """
+        print(f"\n{'='*80}")
+        print(f"🎯 ゴール明確化依頼")
+        print(f"{'='*80}")
+
+        question_id = self.conversation.ask_question(
+            question=f"ゴール{goal_id}について、より具体的な要件を教えてください",
+            context={"goal_id": goal_id, "current_description": goal_description},
+            priority="high",
+        )
+
+        return question_id
+
+    def request_priority_setting(self, tasks: List[Dict[str, Any]]) -> Optional[str]:
+        """タスクの優先順位設定を依頼
+
+        Args:
+            tasks: タスクリスト
+
+        Returns:
+            質問ID
+        """
+        print(f"\n{'='*80}")
+        print(f"🔢 優先順位設定依頼")
+        print(f"{'='*80}")
+
+        task_summaries = [
+            f"{t.get('task_id')}: {t.get('description', '')[:50]}..." for t in tasks[:5]
+        ]
+
+        question_id = self.conversation.ask_question(
+            question=f"以下のタスクの優先順位を教えてください:\n" + "\n".join(task_summaries),
+            context={"total_tasks": len(tasks)},
+            priority="normal",
+        )
+
+        return question_id
+
+    def check_pending_questions(self) -> List[Dict[str, Any]]:
+        """未回答の質問を確認
+
+        Returns:
+            未回答の質問リスト
+        """
+        pending = self.conversation.get_pending_questions()
+
+        if pending:
+            print(f"\n⚠️ 未回答の質問: {len(pending)}件")
+            for q in pending:
+                print(f"  - {q['question_id']}: {q['question'][:60]}...")
+
+        return pending
+
+    def collaborate_on_task(self, task: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+        """タスク実行での人間連携
+
+        Args:
+            task: タスク情報
+            result: 実行結果
+
+        Returns:
+            連携結果
+        """
+        # 低品質の場合にフィードバックを依頼
+        quality_score = result.get("quality_score", 0)
+
+        if quality_score < 60:
+            print(f"\n⚠️ 品質スコアが低い（{quality_score}点）")
+
+            feedback_id = self.request_feedback(task_id=task.get("task_id"), result=result)
+
+            return {
+                "collaboration_triggered": True,
+                "reason": "low_quality",
+                "feedback_question_id": feedback_id,
             }
 
-            self.reports.append(report)
-
-            print(f"📊 進捗報告:")
-            print(f"  完了: {report['completed_tasks']}/{report['total_tasks']}タスク")
-            print(f"  平均品質: {report['avg_quality']:.1f}/10")
-
-            return True
-
-        except Exception as e:
-            print(f"❌ 報告送信エラー: {e}")
-            return False
+        return {"collaboration_triggered": False}
 
 
 if __name__ == "__main__":
+    # テスト
     agent = HumanCollaborationAgent()
 
-    # テスト
-    test_task = {"task_id": "test_001", "description": "複雑なタスクの説明が長い" * 20}
+    # 判断依頼テスト
+    print("\n【テスト1: 判断依頼】")
+    question_id = agent.request_decision(
+        context="ゴール6の実装方法",
+        options=[
+            "Python CLIツールとして実装",
+            "Webアプリケーションとして実装",
+            "VS Code拡張として実装",
+        ],
+        priority="high",
+    )
 
-    if agent.detect_uncertainty(test_task):
-        question = agent.generate_question(test_task)
-
-    stats = {"total_tasks": 103, "completed_tasks": 95, "pending_tasks": 8, "avg_quality": 8.5}
-    agent.send_progress_report(stats)
+    # 未回答確認
+    print("\n【テスト2: 未回答確認】")
+    agent.check_pending_questions()

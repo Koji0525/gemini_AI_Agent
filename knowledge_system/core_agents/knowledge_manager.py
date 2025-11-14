@@ -42,3 +42,33 @@ class KnowledgeManager:
     def search_knowledge(self, query: str, limit: int = 5):
         """ナレッジを検索"""
         return self.vector_agent.search(query, limit)
+
+    def get_statistics(self) -> dict:
+        """
+        ナレッジベースの統計情報を取得
+        """
+        try:
+            # 総エントリ数
+            self.cursor.execute("SELECT COUNT(*) FROM knowledge")
+            total_entries = self.cursor.fetchone()[0]
+
+            # カテゴリ別統計
+            self.cursor.execute("SELECT category, COUNT(*) FROM knowledge GROUP BY category")
+            category_stats = dict(self.cursor.fetchall())
+
+            # 最近の追加
+            self.cursor.execute(
+                "SELECT COUNT(*) FROM knowledge WHERE created_at >= datetime('now', '-7 days')"
+            )
+            recent_entries = self.cursor.fetchone()[0]
+
+            return {
+                "total_entries": total_entries,
+                "categories": category_stats,
+                "recent_entries_7days": recent_entries,
+                "vector_index_size": (
+                    len(self.vector_index.ids) if hasattr(self.vector_index, "ids") else 0
+                ),
+            }
+        except Exception as e:
+            return {"error": str(e)}

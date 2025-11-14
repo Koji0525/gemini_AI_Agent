@@ -59,7 +59,7 @@ class QualityEvaluator(BaseDataAccessor):
         }
 
         print(f"✅ 品質評価完了: スコア {final_score:.1f}/10.0")
-        print(f"�� 品質レベル: {evaluation_result['quality_level']}")
+        print(f"📊 品質レベル: {evaluation_result['quality_level']}")
 
         return evaluation_result
 
