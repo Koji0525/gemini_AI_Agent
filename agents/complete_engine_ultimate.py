@@ -441,7 +441,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
                 datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 task.get("required_role", ""),
                 result.get("output", "")[:200],
-                result.get("output", ""),
+                self._get_output_path(task.get("task_id", ""), task.get("description", "")),
                 result.get("status", ""),
                 str(quality_score_10),  # 10点満点に変換
                 result.get("quality_description", "")[:200],
@@ -741,3 +741,31 @@ class CompleteEngineUltimate(BaseDataAccessor):
             import traceback
 
             traceback.print_exc()
+
+    def _get_output_path(self, task_id, description):
+        """タスクの出力ファイルパスを生成"""
+        from datetime import datetime
+        from pathlib import Path
+
+        # 安全なファイル名生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_task_id = task_id.replace("/", "_").replace("\\", "_").replace(":", "_")[:50]
+        filename = f"{safe_task_id}_{timestamp}.txt"
+
+        # 出力ディレクトリ
+        output_dir = Path("agent_outputs") / "auto_logs"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        output_path = output_dir / filename
+
+        # ファイルに実行結果を保存
+        content = f"タスク実行完了: {task_id}\n説明: {description}\n実行日時: {datetime.now().isoformat()}\n\n※このファイルは自動生成されました"
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"✅ 出力ファイル作成: {output_path}")
+        except Exception as e:
+            print(f"❌ ファイル作成エラー: {e}")
+            return f"error_{filename}"
+
+        return str(output_path)
