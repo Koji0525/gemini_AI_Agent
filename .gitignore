@@ -198,3 +198,58 @@ README_v*.md
 
 # Backups are tracked
 # backups/ is intentionally tracked
+
+# === 一時ファイル・バックアップ ===
+*.backup
+*.backup_*
+*_backup_*
+*.before_*
+*.broken
+*.v*_backup
+
+# === 会話ログ・レポート ===
+conversations/
+reports/
+
+# === ナレッジ抽出ファイル ===
+extracted_knowledge_*.txt
+knowledge_*.txt
+
+# === テスト・実験用ファイル ===
+*_poc.py
+*_temp.py
+*_tmp.py
+run_poc_*.py
+
+
+# ===================================================
+# 🛡️ 再発防止策：バックアップ・一時ファイル除外
+# ===================================================
+
+# バックアップファイル（1680個を除外）
+*.backup
+*.backup_*
+*_backup_*
+*.before_*
+*.broken
+*.v*_backup
+*_backup.py
+
+# 一時ファイル
+*_poc.py
+*_temp.py
+*_tmp.py
+run_poc_*.py
+
+# ナレッジ抽出ファイル
+extracted_knowledge_*.txt
+knowledge_*.txt
+
+# 会話ログ・データベース
+conversations/
+database/
+
+# レポート・ドキュメント（82個）- 必要なものは手動で追加
+# reports/
+# *.md は除外しない（重要ドキュメントも含まれる）
+
