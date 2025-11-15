@@ -178,6 +178,7 @@ class IntegratedGitTool:
             "configuration",
             "task_executor",
             "browser_control",
+            ".",  # ルート直下も含める
         }
 
         # ツールの利用可能性チェック（既存機能）
@@ -449,7 +450,8 @@ class IntegratedGitTool:
         commands = [
             ["git", "diff", "--name-only", "--diff-filter=ACMR"],
             ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-            ["git", "ls-files", "--others", "--exclude-standard"],
+            # 未追跡ファイルは除外（高速化のため）
+            # ["git", "ls-files", "--others", "--exclude-standard"],
         ]
 
         for cmd in commands:
