@@ -1,0 +1,62 @@
+name: 週次全体品質チェック
+
+on:
+  schedule:
+    # 毎週日曜日 0:00 (UTC)
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install tools
+        run: |
+          pip install autoflake black isort flake8
+      
+      - name: Run quality checks
+        run: |
+          echo "🔍 全体品質チェック開始"
+          
+          # 全Pythonファイルに対して実行
+          find . -name "*.py" \
+            -not -path "./_WIP/*" \
+            -not -path "./_ARCHIVE/*" \
+            -not -path "./_BACKUP/*" \
+            -not -path "./backups/*" \
+            -print0 | xargs -0 -P 4 -I {} sh -c '
+              echo "Checking: {}"
+              autoflake --in-place --remove-all-unused-imports {}
+              black --config=pyproject.toml {}
+              isort {}
+            '
+          
+          echo "✅ 全体品質チェック完了"
+      
+      - name: Create PR if changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            
+            git checkout -b quality-fix-$(date +%Y%m%d)
+            git add .
+            git commit -m "🔧 週次品質改善: autoflake, Black, isort適用"
+            git push origin quality-fix-$(date +%Y%m%d)
+            
+            gh pr create --title "🔧 週次品質改善" \
+              --body "自動品質チェックによる修正" \
+              --base v1.21.0-phase2_week4
+          else
+            echo "✅ 品質問題なし"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
