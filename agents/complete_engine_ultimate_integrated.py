@@ -1,168 +1,251 @@
-#!/usr/bin/env python3
-"""
-CompleteEngineUltimate + SelfHealingAgent 統合版（修正版）
-既存のCompleteEngineUltimateを継承して自己修復機能を追加
-"""
+"""CompleteEngineUltimate統合版（TaskExecutorEnhanced統合）"""
 
 import sys
 from pathlib import Path
 
-# プロジェクトルートをパスに追加
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# 既存のCompleteEngineUltimateをインポート
-try:
-    from agents.complete_engine_ultimate import CompleteEngineUltimate
-except ImportError:
-    print("❌ CompleteEngineUltimate が見つかりません。既存の実装を確認してください。")
-    sys.exit(1)
+import json
+from datetime import timedelta, timezone
 
-from agents.self_healing.self_healing_agent import SelfHealingAgent
+from agents.complete_engine_ultimate import \
+    CompleteEngineUltimate as BaseEngine
+from agents.task_executor_enhanced import TaskExecutorEnhanced
+
+JST = timezone(timedelta(hours=9))
 
 
-class CompleteEngineUltimateIntegrated(CompleteEngineUltimate):
-    """
-    CompleteEngineUltimate + SelfHealingAgent 統合クラス
-    既存のCompleteEngineUltimateを継承し、自己修復機能を追加
-    """
+class CompleteEngineUltimateIntegrated(BaseEngine):
+    """TaskExecutorEnhancedを統合したCompleteEngineUltimate"""
 
-    def __init__(self, sheets_manager=None):
-        # 既存のCompleteEngineUltimateの初期化を実行
-        super().__init__(sheets_manager)
+    def __init__(self):
+        super().__init__()
+        self.task_executor = TaskExecutorEnhanced()
+        print("✅ TaskExecutorEnhanced統合版初期化")
 
-        # 🆕 新規: 自己修復エージェントの統合
-        self.self_healing_agent = SelfHealingAgent()
+    def _generate_default_task_detail(self, task: dict) -> dict:
+        """タスク情報から詳細定義を動的生成"""
 
-        print("✅ CompleteEngineUltimate + SelfHealingAgent 統合完了")
+        task_id = task.get("task_id", "unknown")
+        description = task.get("description", "")
+        execution_type = task.get("execution_type", "implementation")
 
-    def execute_task_with_healing(self, task):
-        """
-        タスク実行（自己修復機能付き）
-        既存のexecute_taskをラップして修復機能を追加
-        """
-        print(f"\n🔧 タスク実行開始（自己修復モード）: {task.get('description', 'N/A')}")
+        # タスクタイプの判定
+        task_type = execution_type if execution_type else "implementation"
+
+        # デフォルトの詳細定義を生成
+        detailed_task = {
+            "task_id": task_id,
+            "title": description.split(":")[0] if ":" in description else description[:50],
+            "description": description,
+            "purpose": f"{description}を完了させる",
+            "acceptance_criteria": [
+                f"{task_id}の成果物が生成されている",
+                "実行ログにエラーがない",
+                "品質スコアが60以上",
+            ],
+            "expected_outputs": [
+                f"agent_outputs/{task_type}/{task_id}/README.md",
+                f"agent_outputs/{task_type}/{task_id}/output.txt",
+            ],
+            "verification_steps": [
+                f"ls agent_outputs/{task_type}/{task_id}/",
+                f"cat agent_outputs/{task_type}/{task_id}/README.md",
+            ],
+            "role": task.get("required_role", "developer"),
+            "time": task.get("estimated_time", "1h"),
+            "type": task_type,
+        }
+
+        # タスク説明から成功条件を推測
+        if "セットアップ" in description or "setup" in description.lower():
+            detailed_task["acceptance_criteria"] = [
+                "プロジェクトディレクトリが作成されている",
+                "必要なファイル構造が整っている",
+                "README.mdに基本情報が記載されている",
+            ]
+            detailed_task["expected_outputs"] = [
+                f"agent_outputs/setup/{task_id}/project/src/__init__.py",
+                f"agent_outputs/setup/{task_id}/project/requirements.txt",
+                f"agent_outputs/setup/{task_id}/project/README.md",
+            ]
+        elif "CLI" in description or "コマンド" in description:
+            detailed_task["acceptance_criteria"] = [
+                "CLIスクリプトが作成されている",
+                "ヘルプ機能が実装されている",
+                "基本コマンドが動作する",
+            ]
+            detailed_task["expected_outputs"] = [
+                f"agent_outputs/implementation/{task_id}/cli.py",
+                f"agent_outputs/implementation/{task_id}/README.md",
+            ]
+        elif "API" in description or "統合" in description:
+            detailed_task["acceptance_criteria"] = [
+                "APIクライアントが実装されている",
+                "認証処理が動作する",
+                "エラーハンドリングがある",
+            ]
+            detailed_task["expected_outputs"] = [
+                f"agent_outputs/implementation/{task_id}/api_client.py",
+                f"agent_outputs/implementation/{task_id}/config.json",
+                f"agent_outputs/implementation/{task_id}/README.md",
+            ]
+
+        return detailed_task
+
+    def execute_task(self, task: dict) -> dict:
+        """タスクを実行（TaskExecutorEnhanced使用）- 正しいメソッド名"""
+
+        task_id = task.get("task_id", "unknown")
+        description = task.get("description", "")
+
+        print(f"\n{'='*80}")
+        print(f"🚀 タスク実行: {task_id}")
+        print(f"   説明: {description[:70]}...")
+        print(f"{'='*80}")
 
         try:
-            # 既存のexecute_taskを呼び出し（既存機能を維持）
-            result = self.execute_task(task)
+            # 詳細タスク定義の読み込み
+            detail_path = task.get("detail_file_path", "")
+            detailed_task = None
 
-            print("✅ タスク正常完了")
+            if detail_path and Path(detail_path).exists():
+                print(f"📋 詳細タスク定義を読み込み: {Path(detail_path).name}")
+
+                try:
+                    with open(detail_path, "r", encoding="utf-8") as f:
+                        detailed_tasks = json.load(f)
+
+                    # 該当タスクを探す
+                    for dt in detailed_tasks:
+                        if dt.get("task_id") == task_id:
+                            detailed_task = dt
+                            break
+                except Exception as e:
+                    print(f"⚠️ 詳細タスク定義の読み込みエラー: {e}")
+
+            # detail_file_pathがない、または読み込み失敗時は動的生成
+            if not detailed_task:
+                print("📝 タスク情報から詳細定義を動的生成")
+                detailed_task = self._generate_default_task_detail(task)
+
+            # 詳細情報表示
+            print(f"\n📌 目的: {detailed_task.get('purpose', 'N/A')}")
+
+            ac = detailed_task.get("acceptance_criteria", [])
+            if ac:
+                print(f"\n✅ 成功条件 ({len(ac)}個):")
+                for i, criteria in enumerate(ac, 1):
+                    print(f"   {i}. {criteria}")
+
+            outputs = detailed_task.get("expected_outputs", [])
+            if outputs:
+                print(f"\n📦 期待する成果物 ({len(outputs)}個):")
+                for output in outputs[:5]:
+                    if isinstance(output, str):
+                        print(f"   - {output}")
+                    elif isinstance(output, dict):
+                        print(f"   - {output.get('name', output.get('path', 'N/A'))}")
+
+            print(f"\n{'='*80}")
+            print("⚙️ タスク実行中...")
+            print(f"{'='*80}\n")
+
+            # TaskExecutorEnhancedで実行
+            result = self.task_executor.execute_task(detailed_task)
+
+            # 結果表示
+            print(f"\n{'='*80}")
+            print("📊 実行結果")
+            print(f"{'='*80}")
+            print(f"ステータス: {result.get('status', 'unknown')}")
+            print(f"品質スコア: {result.get('quality_score', 0)}/100")
+            print(f"実行時間: {result.get('execution_time', 0):.2f}秒")
+
+            output_path = result.get("output_path", "")
+            if output_path:
+                print(f"\n📂 成果物の場所:")
+                print(f"   {output_path}")
+
+                # 実際のファイル確認
+                full_path = Path("/workspaces/gemini_AI_Agent") / output_path
+                if full_path.exists():
+                    print(f"\n📄 生成ファイル:")
+                    for item in sorted(full_path.rglob("*")):
+                        if item.is_file():
+                            rel_path = item.relative_to(full_path)
+                            size = item.stat().st_size
+                            print(f"   - {rel_path} ({size} bytes)")
+
+                generated = result.get("generated_files", [])
+                if generated and not full_path.exists():
+                    print(f"\n📄 生成予定ファイル ({len(generated)}個):")
+                    for f in generated[:10]:
+                        print(f"   - {f}")
+
+            feedback = result.get("feedback", "")
+            if feedback:
+                print(f"\n💬 フィードバック:")
+                for line in feedback.split("\n"):
+                    if line.strip():
+                        print(f"   {line}")
+
+            verification = result.get("verification", [])
+            if verification:
+                print(f"\n✓ 検証結果:")
+                for v in verification:
+                    print(f"   - {v.get('step', 'N/A')}: {v.get('status', 'N/A')}")
+
+            print(f"\n{'='*80}")
+            print("✅ タスク実行完了")
+            print(f"{'='*80}\n")
+
             return result
 
         except Exception as e:
-            print(f"⚠️ タスク実行エラー: {type(e).__name__}: {e}")
+            print(f"\n❌ タスク実行エラー: {e}")
+            import traceback
 
-            # 🆕 新規: 自己修復の実行
-            healing_context = {
-                "task": task,
-                "func": self.execute_task,  # 再実行する関数
-                "args": [task],  # 関数の引数
-                "kwargs": {},  # キーワード引数
+            traceback.print_exc()
+
+            return {
+                "status": "failed",
+                "quality_score": 0,
+                "execution_time": 0,
+                "error": str(e),
+                "feedback": f"エラー: {e}",
             }
-
-            healing_result = self.self_healing_agent.detect_and_heal(e, healing_context)
-
-            if healing_result["success"]:
-                print("🎉 自己修復成功！タスクを完了しました")
-                return healing_result.get("result", {"status": "healed"})
-            else:
-                print("💥 自己修復失敗。タスクを中断します")
-                # 既存のエラーハンドリングに委譲
-                raise
-
-    def run_with_healing(self, count=1):
-        """
-        メイン実行ループ（自己修復機能付き）
-        既存のrunメソッドを拡張
-        """
-        print("=" * 80)
-        print("🚀 CompleteEngine Ultimate - 自己修復モード起動")
-        print("=" * 80)
-
-        try:
-            # 既存のゴール選択ロジックを使用
-            goal_id = self.select_goal()
-            if not goal_id:
-                print("❌ 実行対象のゴールが見つかりません")
-                return
-
-            print(f"🎯 対象ゴール: {goal_id}")
-
-            # タスク実行ループ
-            for i in range(count):
-                print(f"\n--- 実行 {i+1}/{count} ---")
-
-                # タスク取得（既存ロジック）
-                task = self.get_next_pending_task(goal_id)
-                if not task:
-                    print("⏸️ 実行対象のタスクがありません")
-                    break
-
-                # 🆕 新規: 自己修復付きタスク実行
-                result = self.execute_task_with_healing(task)
-
-                # 既存の結果処理ロジック
-                self.process_execution_result(task, result)
-
-            # 🆕 新規: 修復統計の表示
-            self.show_healing_stats()
-
-        except Exception as e:
-            print(f"💥 システムエラー: {e}")
-            # 🆕 新規: システムレベルの自己修復を試行
-            self.try_system_level_healing(e)
-
-    def show_healing_stats(self):
-        """修復統計の表示"""
-        stats = self.self_healing_agent.get_statistics()
-
-        print("\n" + "=" * 80)
-        print("📊 自己修復統計")
-        print("=" * 80)
-        print(f"総エラー数: {stats['total_errors']}")
-        print(f"修復成功: {stats['healed_errors']}")
-        print(f"修復失敗: {stats['failed_heals']}")
-        print(f"修復成功率: {stats['healing_rate']:.1f}%")
-
-        if stats["by_type"]:
-            print("\nエラータイプ別:")
-            for error_type, count in stats["by_type"].items():
-                print(f"  {error_type}: {count}件")
-
-    def try_system_level_healing(self, error):
-        """システムレベルの修復試行"""
-        print(f"\n🛠️ システムレベル修復を試行: {error}")
-
-        # 簡易的なシステム修復ロジック
-        system_context = {"error": str(error), "component": "CompleteEngine", "timestamp": "now"}
-
-        # システムエラーとして修復試行
-        healing_result = self.self_healing_agent.detect_and_heal(error, system_context)
-
-        if healing_result["success"]:
-            print("✅ システムレベル修復成功")
-        else:
-            print("❌ システムレベル修復失敗 - 要人間介入")
-
-
-def main():
-    """統合版のメイン実行"""
-    try:
-        engine = CompleteEngineUltimateIntegrated()
-
-        # テスト実行
-        print("🧪 統合テスト実行")
-        engine.run_with_healing(count=1)
-
-    except Exception as e:
-        print(f"❌ 統合テスト失敗: {e}")
-        print("\n💡 トラブルシューティング:")
-        print("1. 既存のCompleteEngineUltimateが動作するか確認:")
-        print("   python3 agents/complete_engine_ultimate.py --count 1")
-        print("2. SelfHealingAgent単体テスト:")
-        print("   python3 agents/self_healing/self_healing_agent.py")
 
 
 if __name__ == "__main__":
-    main()
+    # テスト
+    from tools.base_data_accessor import BaseDataAccessor
+
+    print("\n" + "=" * 80)
+    print("🧪 統合版エンジンのテスト")
+    print("=" * 80)
+
+    accessor = BaseDataAccessor()
+    tasks = accessor.read_sheet_as_dicts(
+        "pm_tasks", filter_func=lambda t: t.get("status") == "pending"
+    )
+
+    if tasks:
+        print(f"\n{len(tasks)}個のpendingタスクが見つかりました")
+        print(f"\n最初のタスクを実行:")
+        print(f"  {tasks[0].get('task_id')}: {tasks[0].get('description', '')[:50]}")
+
+        engine = CompleteEngineUltimateIntegrated()
+
+        # 最初のタスクを実行
+        result = engine.execute_task(tasks[0])
+
+        print("\n" + "=" * 80)
+        print("✅ テスト完了")
+        print("=" * 80)
+        print(f"\n結果:")
+        print(f"  ステータス: {result.get('status')}")
+        print(f"  品質: {result.get('quality_score')}")
+        print(f"  出力: {result.get('output_path', 'N/A')}")
+    else:
+        print("\n⚠️ pendingタスクが見つかりません")
