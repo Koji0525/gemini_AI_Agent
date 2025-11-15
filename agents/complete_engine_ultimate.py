@@ -54,8 +54,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
         """ナレッジシステム統合（F4: ナレッジ自動蓄積）"""
         try:
             # autonomous_engineと同じSimpleKnowledgeWrapperを使用
-            from knowledge_system.simple_knowledge_wrapper import \
-                SimpleKnowledgeWrapper
+            from knowledge_system.simple_knowledge_wrapper import SimpleKnowledgeWrapper
 
             self.knowledge_wrapper = SimpleKnowledgeWrapper()
             print("✅ ナレッジシステム統合完了（SimpleKnowledgeWrapper）")
@@ -572,8 +571,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
     def integrate_human_collaboration(self):
         """人間連携システム統合（F9）"""
         try:
-            from agents.human_collaboration_agent import \
-                HumanCollaborationAgent
+            from agents.human_collaboration_agent import HumanCollaborationAgent
 
             self.human_collaboration = HumanCollaborationAgent()
             return True
@@ -779,7 +777,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
             matching_dirs = sorted(
                 [d for d in output_base.iterdir() if d.is_dir() and d.name.startswith(task_id)],
                 key=lambda d: d.stat().st_mtime,
-                reverse=True
+                reverse=True,
             )
             if matching_dirs:
                 output_dir_path = str(matching_dirs[0])
@@ -789,7 +787,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
                 exec_log = matching_dirs[0] / "execution.log"
                 if exec_log.exists():
                     try:
-                        execution_log_content = exec_log.read_text(encoding='utf-8')
+                        execution_log_content = exec_log.read_text(encoding="utf-8")
                         print(f"  �� execution.log読み込み ({exec_log.stat().st_size} bytes)")
                     except Exception as e:
                         print(f"  ⚠️ execution.log読み込みエラー: {e}")
@@ -811,22 +809,18 @@ class CompleteEngineUltimate(BaseDataAccessor):
         ]
 
         if execution_log_content:
-            content_parts.extend([
-                "",
-                "="*80,
-                "📊 実行結果",
-                "="*80,
-                execution_log_content
-            ])
+            content_parts.extend(["", "=" * 80, "📊 実行結果", "=" * 80, execution_log_content])
 
         if generated_files:
-            content_parts.extend([
-                "",
-                f"📂 成果物の場所:",
-                f"   {output_dir_path}",
-                f"📄 生成ファイル ({len(generated_files)}個):",
-                *generated_files
-            ])
+            content_parts.extend(
+                [
+                    "",
+                    f"📂 成果物の場所:",
+                    f"   {output_dir_path}",
+                    f"📄 生成ファイル ({len(generated_files)}個):",
+                    *generated_files,
+                ]
+            )
 
         detailed_content = "\n".join(content_parts)
 
@@ -839,3 +833,31 @@ class CompleteEngineUltimate(BaseDataAccessor):
             return f"error_{filename}"
 
         return str(output_path)
+
+    def _update_task_status(self, task_id: str, new_status: str) -> bool:
+        """タスクステータスを更新する"""
+        try:
+            print(f"🔄 ステータス更新: {task_id} -> {new_status}")
+
+            # pm_tasksシートから対象タスクを検索
+            tasks = self.safe_sheets.safe_read("pm_tasks!A2:Z1000", default=[])
+
+            for i, task in enumerate(tasks):
+                if task[0] == task_id:
+                    # ステータス列（E列）を更新
+                    range_name = f"pm_tasks!E{i+2}"
+                    success = self.safe_sheets.safe_update(range_name, [[new_status]])
+
+                    if success:
+                        print(f"✅ ステータス更新成功: {task_id} -> {new_status}")
+                        return True
+                    else:
+                        print(f"❌ ステータス更新失敗: {task_id}")
+                        return False
+
+            print(f"⚠️ タスクが見つかりません: {task_id}")
+            return False
+
+        except Exception as e:
+            print(f"❌ ステータス更新エラー: {e}")
+            return False
