@@ -117,7 +117,7 @@ if __name__ == '__main__':
         cli_file.write_text(cli_file)
         
         # requirements.txt
-        requirements = "click>=8.0.0
+        requirements = "click>=8.0.0\npathlib2>=2.3.0\n"
 pathlib2>=2.3.0
 "
         (output_dir / "cli" / "requirements.txt").write_text(requirements)
