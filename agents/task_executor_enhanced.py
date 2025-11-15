@@ -207,6 +207,9 @@ github-dev = "github_dev_tools.cli:main"
         log_file = output_dir / "execution.log"
         log_file.write_text(execution_log)
         print(f"  ✅ execution.log ({log_file.stat().st_size} bytes)")
+        
+        # 【追加】詳細版auto_logsも生成
+        self._create_auto_log(task_id, execution_log, output_dir)
 
         # 生成ファイル一覧
         generated_files = [
@@ -377,3 +380,53 @@ python cli.py commit -m "Initial commit"
             "execution_time": 0.5,
             "feedback": "⚠️ 詳細タスク定義なし - 基本実行のみ",
         }
+
+    def _create_auto_log(self, task_id: str, execution_log: str, output_dir: Path):
+        """詳細版auto_logsを生成"""
+        from datetime import datetime
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_task_id = task_id.replace("/", "_").replace("\\", "_").replace(":", "_")[:50]
+        filename = f"{safe_task_id}_{timestamp}.txt"
+        
+        auto_logs_dir = Path("agent_outputs") / "auto_logs"
+        auto_logs_dir.mkdir(parents=True, exist_ok=True)
+        auto_log_path = auto_logs_dir / filename
+        
+        # 成果物リスト
+        generated_files = []
+        for item in sorted(output_dir.rglob("*")):
+            if item.is_file() and item.name != "execution.log":
+                rel_path = item.relative_to(output_dir)
+                size = item.stat().st_size
+                generated_files.append(f"   - {rel_path} ({size} bytes)")
+        
+        # 詳細コンテンツ生成
+        content_parts = [
+            f"タスク実行完了: {task_id}",
+            f"実行日時: {datetime.now().isoformat()}",
+            "",
+            "※このファイルは自動生成されました",
+            "",
+            "="*80,
+            "📊 実行結果",
+            "="*80,
+            execution_log,
+        ]
+        
+        if generated_files:
+            content_parts.extend([
+                "",
+                f"📂 成果物の場所:",
+                f"   {output_dir.relative_to(Path.cwd())}",
+                f"📄 生成ファイル ({len(generated_files)}個):",
+                *generated_files
+            ])
+        
+        detailed_content = "\n".join(content_parts)
+        
+        try:
+            auto_log_path.write_text(detailed_content, encoding='utf-8')
+            print(f"  ✅ 詳細auto_log作成: {auto_log_path.name} ({len(detailed_content)} bytes)")
+        except Exception as e:
+            print(f"  ❌ auto_log作成エラー: {e}")

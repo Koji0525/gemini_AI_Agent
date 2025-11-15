@@ -249,3 +249,123 @@ if __name__ == "__main__":
         print(f"  出力: {result.get('output_path', 'N/A')}")
     else:
         print("\n⚠️ pendingタスクが見つかりません")
+
+
+
+    def _get_output_path(self, task_id, description):
+        """親クラスのメソッドをオーバーライド - 詳細版auto_logsを生成"""
+        print("🔍 DEBUG: 子クラスの_get_output_pathが呼ばれました！")
+        print(f"  task_id: {task_id}")
+        print(f"  description: {description[:50]}...")
+        # TaskExecutorEnhancedの実行結果から出力パスを推測
+        task_type = "implementation"  # デフォルト
+        
+        # task_idからタスクタイプを推測
+        if "_setup_" in task_id:
+            task_type = "setup"
+        elif "_test_" in task_id:
+            task_type = "test"
+        elif "_documentation_" in task_id:
+            task_type = "documentation"
+        elif "_implementation_" in task_id:
+            task_type = "implementation"
+        
+        # TaskExecutorEnhancedが生成した成果物ディレクトリを探す
+        from datetime import datetime
+        output_base = Path("agent_outputs") / task_type
+        
+        # 最新のタスクIDに一致するディレクトリを探す
+        output_path = ""
+        if output_base.exists():
+            matching_dirs = sorted(
+                [d for d in output_base.iterdir() if d.is_dir() and d.name.startswith(task_id)],
+                key=lambda d: d.stat().st_mtime,
+                reverse=True
+            )
+            if matching_dirs:
+                output_path = str(matching_dirs[0].relative_to(Path(".")))
+                print(f"  📂 成果物ディレクトリ発見: {output_path}")
+        
+        # 詳細版auto_logsを生成
+        return self._create_detailed_auto_log(task_id, description, output_path)
+
+    def _create_detailed_auto_log(self, task_id: str, description: str, output_path: str) -> str:
+        """詳細版auto_logsを生成（execution.logの内容を統合）"""
+        
+        from datetime import datetime
+        
+        # 安全なファイル名生成
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_task_id = task_id.replace("/", "_").replace("\\", "_").replace(":", "_")[:50]
+        filename = f"{safe_task_id}_{timestamp}.txt"
+        
+        # 出力ディレクトリ
+        auto_logs_dir = Path("agent_outputs") / "auto_logs"
+        auto_logs_dir.mkdir(parents=True, exist_ok=True)
+        auto_log_path = auto_logs_dir / filename
+        
+        # execution.logを読み込み
+        execution_log_content = ""
+        generated_files = []
+        
+        if output_path:
+            # output_pathからexecution.logを探す
+            output_dir = Path("/workspaces/gemini_AI_Agent") / output_path
+            execution_log = output_dir / "execution.log"
+            
+            if execution_log.exists():
+                try:
+                    execution_log_content = execution_log.read_text(encoding='utf-8')
+                    print(f"  📄 execution.log読み込み成功 ({execution_log.stat().st_size} bytes)")
+                except Exception as e:
+                    print(f"  ⚠️ execution.log読み込みエラー: {e}")
+            
+            # 成果物リストを生成
+            if output_dir.exists():
+                for item in sorted(output_dir.rglob("*")):
+                    if item.is_file() and item.name != "execution.log":
+                        rel_path = item.relative_to(output_dir)
+                        size = item.stat().st_size
+                        generated_files.append(f"   - {rel_path} ({size} bytes)")
+        
+        # 詳細コンテンツ生成
+        content_parts = [
+            f"タスク実行完了: {task_id}",
+            f"説明: {description}",
+            f"実行日時: {datetime.now().isoformat()}",
+            "",
+            "※このファイルは自動生成されました",
+        ]
+        
+        # execution.logの内容を統合
+        if execution_log_content:
+            content_parts.extend([
+                "",
+                "="*80,
+                "📊 実行結果",
+                "="*80,
+                execution_log_content
+            ])
+        
+        # 成果物リストを追加
+        if generated_files:
+            content_parts.extend([
+                "",
+                f"📂 成果物の場所:",
+                f"   {output_path}",
+                f"📄 生成ファイル:",
+                *generated_files
+            ])
+        
+        # ファイルに書き込み
+        detailed_content = "\n".join(content_parts)
+        
+        try:
+            with open(auto_log_path, "w", encoding="utf-8") as f:
+                f.write(detailed_content)
+            print(f"✅ 詳細auto_log作成: {auto_log_path.name} ({len(detailed_content)} bytes)")
+            return str(auto_log_path)
+        except Exception as e:
+            print(f"❌ auto_log作成エラー: {e}")
+            return f"error_{filename}"
+

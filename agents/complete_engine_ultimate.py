@@ -743,9 +743,11 @@ class CompleteEngineUltimate(BaseDataAccessor):
             traceback.print_exc()
 
     def _get_output_path(self, task_id, description):
-        """タスクの出力ファイルパスを生成"""
+        """タスクの出力ファイルパスを生成（詳細版）"""
         from datetime import datetime
         from pathlib import Path
+
+        print("🔍 _get_output_path 実行中（詳細版）")
 
         # 安全なファイル名生成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -753,17 +755,85 @@ class CompleteEngineUltimate(BaseDataAccessor):
         filename = f"{safe_task_id}_{timestamp}.txt"
 
         # 出力ディレクトリ
-        output_dir = Path("agent_outputs") / "auto_logs"
-        output_dir.mkdir(parents=True, exist_ok=True)
+        auto_logs_dir = Path("agent_outputs") / "auto_logs"
+        auto_logs_dir.mkdir(parents=True, exist_ok=True)
+        output_path = auto_logs_dir / filename
 
-        output_path = output_dir / filename
+        # TaskExecutorが生成した成果物を探す
+        execution_log_content = ""
+        generated_files = []
+        output_dir_path = ""
 
-        # ファイルに実行結果を保存
-        content = f"タスク実行完了: {task_id}\n説明: {description}\n実行日時: {datetime.now().isoformat()}\n\n※このファイルは自動生成されました"
+        # タスクタイプを推測
+        task_type = "implementation"
+        if "_setup_" in task_id:
+            task_type = "setup"
+        elif "_test_" in task_id:
+            task_type = "test"
+        elif "_documentation_" in task_id:
+            task_type = "documentation"
+
+        # 成果物ディレクトリを探す
+        output_base = Path("agent_outputs") / task_type
+        if output_base.exists():
+            matching_dirs = sorted(
+                [d for d in output_base.iterdir() if d.is_dir() and d.name.startswith(task_id)],
+                key=lambda d: d.stat().st_mtime,
+                reverse=True
+            )
+            if matching_dirs:
+                output_dir_path = str(matching_dirs[0])
+                print(f"  📂 成果物ディレクトリ発見: {output_dir_path}")
+
+                # execution.logを読み込み
+                exec_log = matching_dirs[0] / "execution.log"
+                if exec_log.exists():
+                    try:
+                        execution_log_content = exec_log.read_text(encoding='utf-8')
+                        print(f"  �� execution.log読み込み ({exec_log.stat().st_size} bytes)")
+                    except Exception as e:
+                        print(f"  ⚠️ execution.log読み込みエラー: {e}")
+
+                # 成果物リスト
+                for item in sorted(matching_dirs[0].rglob("*")):
+                    if item.is_file() and item.name != "execution.log":
+                        rel_path = item.relative_to(matching_dirs[0])
+                        size = item.stat().st_size
+                        generated_files.append(f"   - {rel_path} ({size} bytes)")
+
+        # 詳細コンテンツ生成
+        content_parts = [
+            f"タスク実行完了: {task_id}",
+            f"説明: {description}",
+            f"実行日時: {datetime.now().isoformat()}",
+            "",
+            "※このファイルは自動生成されました",
+        ]
+
+        if execution_log_content:
+            content_parts.extend([
+                "",
+                "="*80,
+                "📊 実行結果",
+                "="*80,
+                execution_log_content
+            ])
+
+        if generated_files:
+            content_parts.extend([
+                "",
+                f"📂 成果物の場所:",
+                f"   {output_dir_path}",
+                f"📄 生成ファイル ({len(generated_files)}個):",
+                *generated_files
+            ])
+
+        detailed_content = "\n".join(content_parts)
+
         try:
             with open(output_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"✅ 出力ファイル作成: {output_path}")
+                f.write(detailed_content)
+            print(f"✅ 詳細auto_log作成: {output_path.name} ({len(detailed_content)} bytes)")
         except Exception as e:
             print(f"❌ ファイル作成エラー: {e}")
             return f"error_{filename}"
