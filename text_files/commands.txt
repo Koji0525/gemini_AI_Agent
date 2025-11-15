@@ -1,3 +1,0 @@
-ls -la
-python autonomous_system.py --test-only
-git status

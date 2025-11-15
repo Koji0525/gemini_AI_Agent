@@ -36,10 +36,25 @@ class TaskExecutorEnhanced:
             print(f"  ❌ テンプレート読み込みエラー: {e}")
             return ""
 
+    
     def _render_template(self, template: str, **kwargs) -> str:
-        """テンプレートに値を埋め込み"""
+        """安全なテンプレートレンダリング - フォーマットエラーを防止"""
         try:
-            return template.format(**kwargs)
+            # まず単一の {} をエスケープ
+            safe_template = template
+            safe_template = safe_template.replace('{', '{{').replace('}', '}}')
+            # 次に必要な変数を元に戻す
+            for key, value in kwargs.items():
+                placeholder = '{{' + key + '}}'
+                safe_template = safe_template.replace('{{{{' + key + '}}}}', placeholder)
+            
+            return safe_template.format(**kwargs)
+        except Exception as e:
+            print(f"❌ テンプレートレンダリングエラー: {e}")
+            print(f"   テンプレート: {template[:100]}...")
+            print(f"   引数: {list(kwargs.keys())}")
+            return template  # エラー時は元のテンプレートを返す
+
         except KeyError as e:
             print(f"  ⚠️ テンプレート変数エラー: {e}")
             return template
@@ -104,7 +119,7 @@ class TaskExecutorEnhanced:
             print(f"  └─ {d}/")
 
         # __init__.py
-        init_content = f'''"""GitHub開発効率化ツール
+        init_content = '''"""GitHub開発効率化ツール
 
 タスクID: {task_id}
 生成日時: {datetime.now(JST).isoformat()}
@@ -132,7 +147,7 @@ python-dotenv>=1.0.0
         print(f"  ✅ requirements.txt ({req_file.stat().st_size} bytes)")
 
         # README.md
-        readme_content = f"""# GitHub開発効率化ツール
+        readme_content = """# GitHub開発効率化ツール
 
 **生成日時**: {datetime.now(JST).strftime('%Y-%m-%d %H:%M:%S')}  
 **タスクID**: {task_id}
@@ -183,7 +198,7 @@ pip install -e .
         print(f"  ✅ README.md ({readme_file.stat().st_size} bytes)")
 
         # pyproject.toml
-        pyproject = f"""[build-system]
+        pyproject = """[build-system]
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -209,7 +224,7 @@ github-dev = "github_dev_tools.cli:main"
         print(f"  ✅ pyproject.toml ({pyproject_file.stat().st_size} bytes)")
 
         # 実行ログ
-        execution_log = f"""タスク実行ログ
+        execution_log = """タスク実行ログ
 ================
 
 タスクID: {task_id}
@@ -266,7 +281,7 @@ github-dev = "github_dev_tools.cli:main"
             "output_path": str(output_dir.relative_to(self.output_base.parent)),
             "generated_files": generated_files,
             "verification": verification_results,
-            "feedback": f"""✅ プロジェクトセットアップ完了
+            "feedback": """✅ プロジェクトセットアップ完了
 
 📂 リポジトリ作成:
   {project_dir}
@@ -363,7 +378,7 @@ github-dev = "github_dev_tools.cli:main"
         print(f"\n📦 生成完了: {file_count}個のファイル")
 
         # execution.log生成
-        execution_log = f"""タスク実行ログ
+        execution_log = """タスク実行ログ
 ================
 
 タスクID: {task_id}
@@ -378,7 +393,7 @@ github-dev = "github_dev_tools.cli:main"
             rel_path = file.relative_to(code_dir)
             execution_log += f"- {rel_path} ({file.stat().st_size} bytes)\n"
 
-        execution_log += f"""
+        execution_log += """
 検証:
 ✓ タスクタイプ: {task_type}
 ✓ テンプレート適用済み
@@ -404,7 +419,7 @@ github-dev = "github_dev_tools.cli:main"
             "generated_files": [
                 str(f.relative_to(output_dir)) for f in generated_files if f.is_file()
             ],
-            "feedback": f"""✅ {task_type.upper()}タスク実装完了
+            "feedback": """✅ {task_type.upper()}タスク実装完了
 🔍 自動検出タイプ: {task_type}
 📂 コード作成: {code_dir}
 📄 生成ファイル: {file_count}個

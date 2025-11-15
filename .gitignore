@@ -253,3 +253,16 @@ database/
 # reports/
 # *.md は除外しない（重要ドキュメントも含まれる）
 
+
+# 非Pythonリソース
+_PROMPT/
+*.log
+*.backup
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
