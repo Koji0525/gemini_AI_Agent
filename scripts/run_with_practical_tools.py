@@ -3,7 +3,7 @@
 import sys
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
-from agents.task_execution.enhanced_executor_v2_practical import PracticalToolExecutor
+from agents.task_execution.smart_executor import SmartExecutor
 from tools.sheets_manager import GoogleSheetsManager
 
 def main():
@@ -28,7 +28,7 @@ def main():
         sys.exit(1)
     
     # 実用ツール生成版で実行
-    executor = PracticalToolExecutor()
+    executor = SmartExecutor()
     result = executor.execute_task_with_details(target_task)
     
     print(f"\n✅ 実行完了")

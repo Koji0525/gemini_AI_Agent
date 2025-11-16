@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
 from tools.sheets_manager import GoogleSheetsManager
-from agents.task_execution.enhanced_executor_v2 import EnhancedTaskExecutorV2
+from agents.task_execution.smart_executor import SmartExecutor
 
 @click.group()
 @click.version_option(version='1.0.0')
@@ -128,7 +128,7 @@ def run_task(task_id: str, dry_run: bool):
             return
         
         # 実行
-        executor = EnhancedTaskExecutorV2()
+        executor = SmartExecutor()
         result = executor.execute_task_with_details(target_task)
         
         if result['status'] == 'completed':
