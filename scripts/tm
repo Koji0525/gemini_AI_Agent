@@ -1,0 +1,39 @@
+#!/bin/bash
+# タスクマネージャーショートカット
+# 使用例: ./scripts/tm list, ./scripts/tm run 469
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CLI_TOOL="$SCRIPT_DIR/task_manager_cli.py"
+
+case "$1" in
+    list|ls)
+        python3 "$CLI_TOOL" list-tasks "${@:2}"
+        ;;
+    run|exec)
+        python3 "$CLI_TOOL" run-task "${@:2}"
+        ;;
+    status|st)
+        python3 "$CLI_TOOL" update-status "${@:2}"
+        ;;
+    stats)
+        python3 "$CLI_TOOL" stats
+        ;;
+    logs)
+        python3 "$CLI_TOOL" show-logs "${@:2}"
+        ;;
+    *)
+        echo "タスクマネージャー (tm) - ショートカット"
+        echo ""
+        echo "使用法:"
+        echo "  tm list [OPTIONS]     - タスク一覧"
+        echo "  tm run TASK_ID        - タスク実行"
+        echo "  tm status TASK_ID ST  - ステータス変更"
+        echo "  tm stats              - 統計表示"
+        echo "  tm logs               - ログ表示"
+        echo ""
+        echo "例:"
+        echo "  tm list"
+        echo "  tm run 469"
+        echo "  tm stats"
+        ;;
+esac
