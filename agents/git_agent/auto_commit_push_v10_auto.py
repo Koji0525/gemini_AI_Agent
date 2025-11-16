@@ -657,18 +657,17 @@ class IntegratedGitTool:
         return all_passed
 
     def _step9_commit_and_push(self, files: List[str]) -> bool:
-        """STEP 9: コミット & プッシュ（既存機能 - 変更なし）"""
+        """STEP 9: コミット & プッシュ（アップストリーム対応版）"""
         print("\n📤 STEP 9: コミット & プッシュ")
         print("=" * 50)
 
         try:
-            # ステージング
+            # ステージング（既存）
             for file_path in files:
                 subprocess.run(["git", "add", file_path], check=True)
-
             subprocess.run(["git", "add", ".flake8", "pyproject.toml"], check=False)
 
-            # コミット
+            # コミット（既存）
             result = subprocess.run(
                 ["git", "commit", "-m", self.commit_message],
                 capture_output=True,
@@ -685,9 +684,27 @@ class IntegratedGitTool:
 
             print("✅ コミット成功")
 
-            # プッシュ
-            subprocess.run(["git", "push"], check=True)
-            print("✅ プッシュ成功")
+            # プッシュ（修正：--set-upstream 対応）
+            push_result = subprocess.run(["git", "push"], capture_output=True, text=True)
+
+            if push_result.returncode != 0:
+                if "no upstream branch" in push_result.stderr:
+                    # アップストリームが未設定の場合、設定して再プッシュ
+                    print("🔧 アップストリームを設定中...")
+                    branch_result = subprocess.run(
+                        ["git", "branch", "--show-current"], capture_output=True, text=True
+                    )
+                    current_branch = branch_result.stdout.strip()
+
+                    subprocess.run(
+                        ["git", "push", "--set-upstream", "origin", current_branch], check=True
+                    )
+                    print("✅ アップストリーム設定 & プッシュ成功")
+                else:
+                    print(f"❌ プッシュエラー: {push_result.stderr}")
+                    return False
+            else:
+                print("✅ プッシュ成功")
 
             return True
 
