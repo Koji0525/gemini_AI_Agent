@@ -171,14 +171,22 @@ class IntegratedGitTool:
             "wordpress-core",
         }
         self.production_dirs = {
-            "scripts",
-            "agents",
-            "core_agents",
-            "tools",
-            "configuration",
-            "task_executor",
-            "browser_control",
             ".",  # ルート直下も含める
+            "agent_outputs",
+            "agents",
+            "automation",
+            "browser_control",
+            "core_agents",
+            "configuration",
+            "configs",
+            "data_models",
+            "docs",
+            "fix_agents",
+            "knowledge_system",
+            "scripts",
+            "sh",
+            "task_executor",
+            "tools",
         }
 
         # ツールの利用可能性チェック（既存機能）
@@ -469,7 +477,7 @@ class IntegratedGitTool:
 
             if (
                 any(prod_dir in str(path) for prod_dir in self.production_dirs)
-                and path.suffix == ".py"
+                and path.suffix in {".py", ".sh", ".md", ".yaml", ".txt", ".json", ".html"}
                 and path.exists()
             ):
                 production_files.append(str(path))
