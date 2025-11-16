@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: コードをチェックアウト
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Python環境セットアップ（キャッシュ付き）
         uses: actions/setup-python@v5

@@ -29,6 +29,8 @@ jobs:
       - name: 📥 リポジトリチェックアウト
         uses: actions/checkout@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        with:
           submodules: false
       
       - name: 🐍 Python環境構築

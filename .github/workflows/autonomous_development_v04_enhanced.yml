@@ -36,6 +36,8 @@ jobs:
       - name: 📥 チェックアウト
         uses: actions/checkout@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+        with:
           fetch-depth: 0  # 全履歴取得（バージョン管理用）
       
       - name: 🐍 Python環境セットアップ

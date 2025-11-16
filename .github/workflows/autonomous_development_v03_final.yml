@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: 📥 チェックアウト
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: 🐍 Python環境
         uses: actions/setup-python@v4

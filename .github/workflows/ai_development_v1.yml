@@ -24,6 +24,8 @@ jobs:
     steps:
     - name: 🛎️ リポジトリチェックアウト
       uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: 🎯 目標設定
       run: |
