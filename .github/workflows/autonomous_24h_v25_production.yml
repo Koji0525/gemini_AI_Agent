@@ -24,6 +24,8 @@ jobs:
       - name: 📥 チェックアウト
         uses: actions/checkout@v3
         with:
+          token: \${{ secrets.GITHUB_TOKEN }}
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: 🐍 Python環境セットアップ
