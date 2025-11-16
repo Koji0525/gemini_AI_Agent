@@ -156,7 +156,7 @@ echo "🧪 テスト実行開始"
 echo "目標: {test_count}テスト、カバレッジ{coverage_target}%以上、{time_limit}分以内"
 
 # テスト実行
-pytest {' '.join(context['directories'])} -v --cov --cov-report=html --cov-report=xml
+pytest {' '.join(context['directories']) if context['directories'] else 'tests/'} -v --cov --cov-report=html --cov-report=xml
 
 # 結果確認
 if [ $? -eq 0 ]; then
