@@ -118,9 +118,11 @@ class EnhancedTaskExecutorV2:
     
     def _execute_by_detected_types(self, task: Dict, task_types: List[str], task_dir: Path) -> Dict:
         """検出されたタスクタイプに基づいて実行"""
-        if 'ui_ux' in task_types:
+        if 'dependency_management' in task_types:  # 🆕 依存関係管理を最優先
+            return self._execute_dependency_task(task, task_dir)
+        elif 'ui_ux' in task_types:
             return self._execute_ui_ux_task(task, task_dir)
-        elif 'cli' in task_types:  # 🆕 CLI対応
+        elif 'cli' in task_types:
             return self._execute_cli_task(task, task_dir)
         elif 'api' in task_types:
             return self._execute_api_task(task, task_dir)
@@ -224,6 +226,28 @@ class EnhancedTaskExecutorV2:
             'output_files': output_files
         }
     
+    def _execute_dependency_task(self, task: Dict, task_dir: Path) -> Dict:
+        """依存関係管理タスク"""
+        from agents.task_execution.templates.template_library import generate_dependency_template
+        
+        task_id = task.get('task_id')
+        description = task.get('description')
+        
+        template = generate_dependency_template(task_id, description)
+        output_files = []
+        
+        for filename, content in template['files'].items():
+            file_path = task_dir / filename
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            output_files.append(str(file_path))
+        
+        return {
+            'summary': f'依存関係ファイル（{len(template["files"])}ファイル）を作成',
+            'output_files': output_files,
+            'execution_log': f'requirements.txt と README.md を生成しました'
+        }
+
     def _execute_generic_task_improved(self, task: Dict, task_dir: Path) -> Dict:
         """汎用タスク実行（品質改善版）"""
         task_id = task.get('task_id')

@@ -24,7 +24,8 @@ class TemplateLibrary:
             'performance': ['パフォーマンス', 'performance', '最適化', 'optimize', '高速化', 'チューニング', 'キャッシュ', 'レイテンシ', 'スループット', 'メモリ', 'cpu', 'profiling'],
             'refactoring': ['リファクタリング', 'refactor', '改善', 'クリーンアップ', 'コード整理', 'リストラクチャリング', 'モダナイゼーション', '技術的負債', 'clean code', 'solid'],
             'data_processing': ['データ処理', 'etl', 'pipeline', 'batch', 'pandas', 'numpy', 'spark', 'hadoop', '集計', '分析', 'csv', 'excel', 'json処理', 'xml'],
-            'ai_ml': ['ai', 'ml', '機械学習', 'deep learning', 'neural network', 'tensorflow', 'pytorch', 'scikit-learn', 'モデル', '学習', '推論', 'training', 'inference']
+            'ai_ml': ['ai', 'ml', '機械学習', 'deep learning', 'neural network', 'tensorflow', 'pytorch', 'scikit-learn', 'モデル', '学習', '推論', 'training', 'inference'],
+            'dependency_management': ['requirements.txt', '依存関係', 'dependency', 'package', 'パッケージ', 'pip', 'venv', '仮想環境', 'ビルド', 'build']
         }
     
     @staticmethod
@@ -488,3 +489,68 @@ pytest test_suite.py --cov
 '''
     
     return {'type': 'testing', 'files': {'test_suite.py': code, 'README.md': readme}}
+
+def generate_dependency_template(task_id: str, description: str) -> Dict[str, Any]:
+    """依存関係管理用テンプレート"""
+    
+    requirements = f"""# プロジェクト依存パッケージ
+# タスクID: {task_id}
+# 生成日時: {datetime.now().isoformat()}
+
+# Core Framework
+Flask>=2.3.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# API
+anthropic>=0.25.0
+requests>=2.31.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Google Sheets
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+"""
+    
+    readme = f"""# 依存関係管理
+
+## 📋 タスク: {task_id}
+
+## 🚀 セットアップ
+```bash
+# パッケージインストール
+pip install -r requirements.txt --break-system-packages
+
+# または仮想環境で
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 📦 主要パッケージ
+- Flask: Webフレームワーク
+- pytest: テストフレームワーク
+- anthropic: Claude API
+- pandas: データ処理
+
+---
+生成日時: {datetime.now().isoformat()}
+"""
+    
+    return {
+        'type': 'dependency_management',
+        'files': {
+            'requirements.txt': requirements,
+            'README.md': readme
+        }
+    }
+
