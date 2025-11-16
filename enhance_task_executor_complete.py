@@ -18,7 +18,7 @@ def enhance_implementation_method():
             task_id = task.get("task_id", "")
             description = task.get("description", "")
             
-            print(f"🚀 高品質実装タスク実行: {task_id}")
+            print(f"[ロケット] 高品質実装タスク実行: {task_id}")
             print(f"📝 詳細: {description}")
             
             # 出力ディレクトリ作成
@@ -199,7 +199,7 @@ def analyze(path, ext):
         except Exception as e:
             click.echo(f'⚠️  読み取りエラー: {file_path} - {e}')
     
-    click.echo(f'📊 分析結果:')
+    click.echo(f'[グラフ] 分析結果:')
     click.echo(f'   ファイル数: {total_files}')
     click.echo(f'   総コード行数: {total_lines}')
     click.echo(f'   平均行数/ファイル: {total_lines//total_files if total_files > 0 else 0}')
@@ -208,7 +208,7 @@ def analyze(path, ext):
 def info():
     """CLIツールの情報を表示"""
     info_text = '''
-🤖 高機能CLIツール
+[ロボット] 高機能CLIツール
 
 📋 機能:
   • プロジェクト設定管理
@@ -228,7 +228,7 @@ def info():
   • 繰り返し作業の自動化
   • プロジェクトの一貫性確保
 
-🚀 使い方:
+[ロケット] 使い方:
   cli --help で全コマンドを表示
   cli <コマンド> --help で詳細なヘルプを表示
 '''
@@ -268,7 +268,7 @@ if __name__ == '__main__':
 - **挨拶コマンド**: テスト用のシンプルな機能
 - **情報表示**: ツールの機能説明を表示
 
-## 🚀 使用方法
+## [ロケット] 使用方法
 
 ### インストール
 \`\`\`bash

@@ -19,7 +19,7 @@ new_knowledge = {
         "4. 構文チェックで即時検証 (python3 -m py_compile)"
     ],
     "best_practice": "シンタックスエラー発生時は部分修正をせず、問題のコードブロックを完全に再作成する。バックアップを必ず作成し、修正後は即時構文チェックで検証する。",
-    "code_example": """# ✅ 確実な修正方法
+    "code_example": """,,# ✅ 確実な修正方法
 # 1. バックアップ作成
 cp file.py file_backup.py
 
