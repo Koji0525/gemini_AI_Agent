@@ -33,7 +33,10 @@ class SmartExecutor(EnhancedTaskExecutorV3):
             return self._execute_directory_creation(task, details, task_dir)
         
         elif '.py' in overview and ('実装' in overview or '作成' in overview):
-            return self._execute_python_file_creation(task, details, task_dir)
+            # Pythonファイル作成 → 汎用テンプレートは不要
+            result = self._execute_python_file_creation(task, details, task_dir)
+            result['skip_generic_templates'] = True  # 🆕 フラグ追加
+            return result
         
         elif 'requirements.txt' in overview:
             return self._execute_dependency_task(task, task_dir)
