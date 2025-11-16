@@ -25,6 +25,8 @@ on:
 jobs:
   autonomous_development:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 300  # 5時間
     
     steps:

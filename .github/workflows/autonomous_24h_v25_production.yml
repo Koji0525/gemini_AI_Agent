@@ -17,6 +17,8 @@ permissions:
 jobs:
   autonomous_development:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: 📥 チェックアウト
