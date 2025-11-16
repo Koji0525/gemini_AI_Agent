@@ -477,7 +477,8 @@ class IntegratedGitTool:
 
             if (
                 any(prod_dir in str(path) for prod_dir in self.production_dirs)
-                and path.suffix in {".py", ".sh", ".md", ".yaml", ".txt", ".json", ".html"}
+                and path.suffix
+                in {".py", ".sh", ".md", ".yaml", ".txt", ".json", ".html", ".js", ".php"}
                 and path.exists()
             ):
                 production_files.append(str(path))
