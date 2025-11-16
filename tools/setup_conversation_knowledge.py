@@ -56,7 +56,7 @@ class ConversationKnowledgeExtractorV2:
         
         # 何が起きた
         what_patterns = [
-            r'何が起きた[：:]\\\s*(.+?)(?=\\\n|原因|狙い|###|$)',
+            r'何が起きた[：:]\\\\\s*(.+?)(?=\\\n|原因|狙い|###|$)',
             r'### 何が起きた\\\n(.+?)(?=\\\n###|$)',
         ]
         
@@ -68,7 +68,7 @@ class ConversationKnowledgeExtractorV2:
         
         # 原因
         cause_patterns = [
-            r'原因[：:]\\\s*(.+?)(?=\\\n|狙い|###|$)',
+            r'原因[：:]\\\\\s*(.+?)(?=\\\n|狙い|###|$)',
             r'### 原因\\\n(.+?)(?=\\\n###|$)',
         ]
         
@@ -80,7 +80,7 @@ class ConversationKnowledgeExtractorV2:
         
         # 狙い
         goal_patterns = [
-            r'狙い[：:]\\\s*(.+?)(?=\\\n###|$)',
+            r'狙い[：:]\\\\\s*(.+?)(?=\\\n###|$)',
             r'### 狙い.*?\\\n(.+?)(?=\\\n###|$)',
         ]
         
@@ -96,7 +96,7 @@ class ConversationKnowledgeExtractorV2:
             knowledge["code_example"] = code_match.group(1).strip()
         
         # 成功率
-        success_match = re.search(r'成功率[：:]\\\s*(\\\d+)%', text)
+        success_match = re.search(r'成功率[：:]\\\\\s*(\\\d+)%', text)
         if success_match:
             knowledge["success_rate"] = float(success_match.group(1)) / 100
         

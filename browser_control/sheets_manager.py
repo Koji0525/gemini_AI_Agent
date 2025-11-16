@@ -217,3 +217,105 @@ class GoogleSheetsManager:
         except Exception as e:
             print(f"❌ 行追加エラー: {e}")
             raise
+
+    def ensure_sheet(self, sheet_name, headers=None):
+        """新しいシートを作成"""
+        try:
+            from googleapiclient.discovery import build
+            from google.oauth2 import service_account
+            import time
+
+            # サービス構築
+            credentials = service_account.Credentials.from_service_account_file(
+                self.service_account_file, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+            )
+            service = build("sheets", "v4", credentials=credentials)
+
+            # シート追加リクエスト
+            batch_update_request = {
+                "requests": [{"addSheet": {"properties": {"title": sheet_name}}}]
+            }
+
+            # シート作成実行
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=self.spreadsheet_id, body=batch_update_request
+            ).execute()
+
+            print(f"✅ シート作成成功: {sheet_name}")
+
+            # 作成後の待機
+            time.sleep(2)
+
+            # ヘッダーを追加（指定されている場合）
+            if headers:
+                time.sleep(1)
+                success = self.append_rows(sheet_name, [headers])
+                if success:
+                    print(f"✅ ヘッダー追加成功: {sheet_name}")
+                else:
+                    print(f"⚠️  ヘッダー追加失敗: {sheet_name}")
+
+            return True
+
+        except Exception as e:
+            print(f"❌ シート作成エラー: {e}")
+            return False
+
+    def ensure_sheet(self, sheet_name, headers=None):
+        """シートが存在することを保証し、必要なら作成する"""
+        try:
+            # まず読み取りを試みて存在確認
+            test_range = f"{sheet_name}!A1"
+            self.read_range(test_range)
+            print(f"✅ シート確認: {sheet_name} は既に存在します")
+            return True
+        except Exception as e:
+            if "Unable to parse range" in str(e):
+                print(f"📝 シート作成: {sheet_name} が存在しないため作成します")
+                return self._create_sheet(sheet_name, headers)
+            else:
+                print(f"❌ シート確認エラー: {e}")
+                return False
+
+    def _create_sheet(self, sheet_name, headers=None):
+        """新しいシートを作成"""
+        try:
+            from googleapiclient.discovery import build
+            from google.oauth2 import service_account
+            import time
+
+            # サービス構築
+            credentials = service_account.Credentials.from_service_account_file(
+                self.service_account_file, scopes=["https://www.googleapis.com/auth/spreadsheets"]
+            )
+            service = build("sheets", "v4", credentials=credentials)
+
+            # シート追加リクエスト
+            batch_update_request = {
+                "requests": [{"addSheet": {"properties": {"title": sheet_name}}}]
+            }
+
+            # シート作成実行
+            service.spreadsheets().batchUpdate(
+                spreadsheetId=self.spreadsheet_id, body=batch_update_request
+            ).execute()
+
+            print(f"✅ シート作成成功: {sheet_name}")
+
+            # 作成後の待機
+            time.sleep(2)
+
+            # ヘッダーを追加（指定されている場合）
+            if headers:
+                time.sleep(1)
+                success = self.append_rows(sheet_name, [headers])
+                if success:
+                    print(f"✅ ヘッダー追加成功: {sheet_name}")
+                else:
+                    print(f"⚠️  ヘッダー追加失敗: {sheet_name}")
+
+            return True
+
+        except Exception as e:
+            print(f"❌ シート作成エラー: {e}")
+            return False

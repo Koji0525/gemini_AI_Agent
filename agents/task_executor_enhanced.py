@@ -1,4 +1,43 @@
-"""タスク実行エンジン拡張版（実質的な成果物生成）- 完全修正版"""
+# フェーズ2を小さなステップに分割
+
+# ステップ1: 基本設計のみ
+#!/usr/bin/env python3
+"""
+フェーズ2 - ステップ1: AI駆動生成の基本設計
+最小限の実装でコンセプトを検証
+"""
+
+
+class AICodeGeneratorDesign:
+    """AIコード生成の基本設計クラス"""
+
+    def __init__(self):
+        self.required_methods = [
+            "generate_from_description",
+            "validate_generated_code",
+            "integrate_with_knowledge",
+            "fallback_to_templates",
+        ]
+
+    def design_overview(self):
+        """設計概要"""
+        return {
+            "目的": "テンプレートに依存しないAIコード生成",
+            "核心機能": "自然言語記述から直接コード生成",
+            "品質保証": "自動検証とテンプレートフォールバック",
+            "学習機能": "ナレッジベースからの継続的改善",
+        }
+
+
+# 設計確認
+design = AICodeGeneratorDesign()
+print("🎯 AIコード生成器の基本設計:")
+for key, value in design.design_overview().items():
+    print(f"  {key}: {value}")
+
+print("✅ ステップ1完了: 基本設計確定")
+'"STEP1"'
+
 
 import sys
 from pathlib import Path
@@ -36,18 +75,17 @@ class TaskExecutorEnhanced:
             print(f"  ❌ テンプレート読み込みエラー: {e}")
             return ""
 
-    
     def _render_template(self, template: str, **kwargs) -> str:
         """安全なテンプレートレンダリング - フォーマットエラーを防止"""
         try:
             # まず単一の {} をエスケープ
             safe_template = template
-            safe_template = safe_template.replace('{', '{{').replace('}', '}}')
+            safe_template = safe_template.replace("{", "{{").replace("}", "}}")
             # 次に必要な変数を元に戻す
             for key, value in kwargs.items():
-                placeholder = '{{' + key + '}}'
-                safe_template = safe_template.replace('{{{{' + key + '}}}}', placeholder)
-            
+                placeholder = "{{" + key + "}}"
+                safe_template = safe_template.replace("{{{{" + key + "}}}}", placeholder)
+
             return safe_template.format(**kwargs)
         except Exception as e:
             print(f"❌ テンプレートレンダリングエラー: {e}")
