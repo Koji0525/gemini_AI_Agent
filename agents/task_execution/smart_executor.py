@@ -195,6 +195,12 @@ from {Path(created_files[0]).stem} import ...
         with open(readme_path, 'w') as f:
             f.write(readme)
         
+        # スクリプトファイルに実行権限を付与
+        for file_path in created_files:
+            if file_path.endswith('.sh') or file_path.endswith('.py'):
+                import os
+                os.chmod(file_path, 0o755)
+        
         return {
             'summary': f'Pythonファイル{len(created_files)}個を作成',
             'output_files': created_files + [str(readme_path)],
