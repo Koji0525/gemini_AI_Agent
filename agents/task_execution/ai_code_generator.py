@@ -7,8 +7,15 @@ import sys
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
 import os
+from pathlib import Path
 from anthropic import Anthropic
 from typing import Dict, Any
+from dotenv import load_dotenv
+
+# .envファイルを読み込み
+env_path = Path('/workspaces/gemini_AI_Agent') / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
 
 
 class AICodeGenerator:
