@@ -20,6 +20,27 @@ class SmartExecutor(EnhancedTaskExecutorV3):
     """詳細情報から実際に必要なコードを生成"""
     
     def _execute_with_details(self, task: Dict, details: Dict, task_types: list, task_dir: Path) -> Dict:
+    
+    def __init__(self, knowledge_manager=None):
+        """初期化"""
+        super().__init__(knowledge_manager)
+        self.parser = TaskDetailParser()
+        
+        # AI生成機能の初期化
+        self.use_ai = False
+        self.ai_generator = None
+        
+        try:
+            from agents.task_execution.ai_code_generator import AICodeGenerator
+            self.ai_generator = AICodeGenerator()
+            self.use_ai = True
+            print("  🤖 AI生成: 有効")
+        except Exception as e:
+            print(f"  ⚠️ AI生成: 無効 ({e})")
+            print("  💡 テンプレートベースにフォールバック")
+            self.use_ai = False
+            self.ai_generator = None
+    
         """詳細情報を深く解析して実行"""
         
         if not details['has_details']:
