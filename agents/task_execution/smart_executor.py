@@ -13,13 +13,10 @@ from typing import Dict, Any, List
 
 from agents.task_execution.enhanced_executor_v3 import EnhancedTaskExecutorV3
 from agents.task_execution.task_detail_parser import TaskDetailParser
-from agents.task_execution.ai_code_generator import AICodeGenerator
 
 
 class SmartExecutor(EnhancedTaskExecutorV3):
     """詳細情報から実際に必要なコードを生成"""
-    
-    def _execute_with_details(self, task: Dict, details: Dict, task_types: list, task_dir: Path) -> Dict:
     
     def __init__(self, knowledge_manager=None):
         """初期化"""
@@ -41,6 +38,7 @@ class SmartExecutor(EnhancedTaskExecutorV3):
             self.use_ai = False
             self.ai_generator = None
     
+    def _execute_with_details(self, task: Dict, details: Dict, task_types: list, task_dir: Path) -> Dict:
         """詳細情報を深く解析して実行"""
         
         if not details['has_details']:
@@ -57,7 +55,7 @@ class SmartExecutor(EnhancedTaskExecutorV3):
         elif '.py' in overview and ('実装' in overview or '作成' in overview):
             # Pythonファイル作成 → 汎用テンプレートは不要
             result = self._execute_python_file_creation(task, details, task_dir)
-            result['skip_generic_templates'] = True  # 🆕 フラグ追加
+            result['skip_generic_templates'] = True
             return result
         
         elif 'requirements.txt' in overview:
@@ -76,46 +74,37 @@ class SmartExecutor(EnhancedTaskExecutorV3):
         overview = details['overview']
         
         # ディレクトリパスを抽出
-        # 例: "agents/self_evolution/ディレクトリを作成"
         dir_matches = re.findall(r'([a-zA-Z_][a-zA-Z0-9_/]*)/?\s*ディレクトリ', overview)
         
         if not dir_matches:
-            # フォールバック: スラッシュを含むパスを抽出
             dir_matches = re.findall(r'([a-zA-Z_][a-zA-Z0-9_/]+/)', overview)
         
         created_dirs = []
         created_files = []
         
         for dir_path in dir_matches:
-            # プロジェクトルートに作成
             target_dir = Path('/workspaces/gemini_AI_Agent') / dir_path
             target_dir.mkdir(parents=True, exist_ok=True)
             created_dirs.append(str(target_dir))
             
-            # __init__.py を自動作成
             init_file = target_dir / '__init__.py'
             if not init_file.exists():
                 with open(init_file, 'w') as f:
                     f.write(f'"""\n{dir_path} パッケージ\nタスクID: {task_id}\n"""\n')
                 created_files.append(str(init_file))
         
-        # ファイル名を抽出（.pyファイル）
-        # 例: "__init__.pyとbase_evolver.pyを実装"
+        # ファイル名を抽出
         file_matches = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*\.py)', overview)
         
         for filename in file_matches:
             if filename == '__init__.py':
-                continue  # 既に作成済み
+                continue
             
-            # 最初に見つかったディレクトリに作成
             if dir_matches:
                 target_dir = Path('/workspaces/gemini_AI_Agent') / dir_matches[0]
                 file_path = target_dir / filename
                 
-                # ファイル内容を生成
-                content = self._generate_python_file_content(
-                    task_id, filename, details
-                )
+                content = self._generate_python_file_content(task_id, filename, details)
                 
                 with open(file_path, 'w') as f:
                     f.write(content)
@@ -146,7 +135,6 @@ class SmartExecutor(EnhancedTaskExecutorV3):
 
 ✅ ディレクトリ作成: 完了
 ✅ ファイル作成: 完了
-✅ import確認: 可能
 
 ---
 生成日時: {datetime.now().isoformat()}
@@ -168,26 +156,20 @@ class SmartExecutor(EnhancedTaskExecutorV3):
         task_id = task.get('task_id')
         overview = details['overview']
         
-        # ファイル名を抽出
         file_matches = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*\.py)', overview)
         
         created_files = []
         
         for filename in file_matches:
-            # タスクディレクトリに作成
             file_path = task_dir / filename
             
-            # ファイル内容を生成
-            content = self._generate_python_file_content(
-                task_id, filename, details
-            )
+            content = self._generate_python_file_content(task_id, filename, details)
             
             with open(file_path, 'w') as f:
                 f.write(content)
             
             created_files.append(str(file_path))
         
-        # README生成
         readme_path = task_dir / 'README.md'
         readme = f'''# {task_id}: Pythonファイル作成
 
@@ -229,14 +211,12 @@ from {Path(created_files[0]).stem} import ...
             except Exception as e:
                 print(f"⚠️ AI生成失敗、テンプレートにフォールバック: {e}")
         
-        
-        # ファイル名からクラス名を推測
+        # フォールバック: テンプレート生成
         class_name = ''.join(word.capitalize() for word in filename.replace('.py', '').split('_'))
         
         # 詳細情報から必要なメソッドを推測
         methods = self._extract_methods_from_details(details)
         
-        # メソッド定義を生成
         methods_code = ""
         for method_name, method_desc in methods:
             methods_code += f'''
@@ -301,8 +281,6 @@ if __name__ == '__main__':
         overview = details.get('overview', '')
         criteria = details.get('success_criteria', '')
         
-        # 成功基準から機能を抽出
-        # 例: "3つのメトリクス収集機能" → collect_metrics
         if 'メトリクス' in criteria or 'メトリクス' in overview:
             methods.append(('collect_metrics', 'メトリクスを収集'))
         
@@ -333,7 +311,6 @@ if __name__ == '__main__':
         if '影響分析' in overview:
             methods.append(('analyze_impact', '変更影響を分析'))
         
-        # デフォルト: 少なくとも1つのメソッド
         if not methods:
             methods.append(('run', '主要処理を実行'))
         
@@ -345,36 +322,28 @@ if __name__ == '__main__':
         context = details.get('context', '').lower()
         overview = details.get('overview', '').lower()
         
-        # データベース関連
         if 'db' in context or 'database' in context or 'sqlite' in context:
             imports.append('import sqlite3')
         
-        # KnowledgeManager
         if 'knowledgemanager' in context or 'knowledge_manager' in context:
             imports.append('from knowledge_system.core_agents.knowledge_manager import KnowledgeManager')
         
-        # Google Sheets
         if 'スプレッドシート' in context or 'sheets' in context:
             imports.append('from tools.sheets_manager import GoogleSheetsManager')
         
-        # 日付・時刻
         if '時間' in overview or '日時' in overview:
             imports.append('from datetime import datetime, timedelta')
         
-        # ログ
         if 'ログ' in context or 'log' in context:
             imports.append('import logging')
         
-        # JSON
         if 'json' in context or 'メトリクス' in overview:
             imports.append('import json')
         
-        # Path操作
         if 'ファイル' in overview or 'パス' in context:
             imports.append('from pathlib import Path')
         
-        # typing
-        if imports:  # importがあればtypingも追加
+        if imports:
             imports.insert(0, 'from typing import Dict, List, Optional, Any')
         
         return imports
