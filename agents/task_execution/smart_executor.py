@@ -13,6 +13,7 @@ from typing import Dict, Any, List
 
 from agents.task_execution.enhanced_executor_v3 import EnhancedTaskExecutorV3
 from agents.task_execution.task_detail_parser import TaskDetailParser
+from agents.task_execution.ai_code_generator import AICodeGenerator
 
 
 class SmartExecutor(EnhancedTaskExecutorV3):
@@ -198,7 +199,15 @@ from {Path(created_files[0]).stem} import ...
         }
     
     def _generate_python_file_content(self, task_id: str, filename: str, details: Dict) -> str:
-        """Pythonファイルの内容を生成（実装充実版）"""
+        """Pythonファイルの内容を生成（AI優先版）"""
+        
+        # AI生成を優先
+        if self.use_ai and self.ai_generator:
+            try:
+                return self.ai_generator.generate_code(task_id, filename, details)
+            except Exception as e:
+                print(f"⚠️ AI生成失敗、テンプレートにフォールバック: {e}")
+        
         
         # ファイル名からクラス名を推測
         class_name = ''.join(word.capitalize() for word in filename.replace('.py', '').split('_'))
