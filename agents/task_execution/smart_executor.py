@@ -52,7 +52,7 @@ class SmartExecutor(EnhancedTaskExecutorV3):
         if 'ディレクトリを作成' in overview or 'ディレクトリ作成' in overview:
             return self._execute_directory_creation(task, details, task_dir)
         
-        elif '.py' in overview and ('実装' in overview or '作成' in overview):
+        elif '.py' in overview and ('実装' in overview or '作成' in overview or '追加' in overview):
             # Pythonファイル作成 → 汎用テンプレートは不要
             result = self._execute_python_file_creation(task, details, task_dir)
             result['skip_generic_templates'] = True

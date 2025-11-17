@@ -23,7 +23,10 @@ class CodeQualityChecker:
         path = Path(filepath)
         
         if not path.exists():
-            return {'error': 'ファイルが見つかりません'}
+            return {'error': 'ファイルが見つかりません', 'filename': filepath}
+        
+        if not filepath.endswith('.py'):
+            return {'error': 'Pythonファイルではありません', 'filename': path.name, 'score': 0, 'grade': 'N/A'}
         
         results = {
             'filepath': str(path),
