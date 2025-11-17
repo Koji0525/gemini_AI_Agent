@@ -1,145 +1,107 @@
 """
-PMAgent v2 - TaskExecutorパターン完全適用版
-ヘッダー行から列構造を自動検出
+PMAgent v2 - Project Management Agent
+GeminiTaskBreakdownAgentV2統合版
 """
 
-import asyncio
-import logging
-import os
 import sys
-from typing import Any, Dict, List, Optional
+import os
+import logging
+from typing import Dict, Any, Optional, List
+import asyncio
 
-project_root = os.path.abspath(os.path.dirname(__file__) + "/..")
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, project_root)
 
-from tools.safe_sheets_wrapper import SafeSheetsWrapper
 from tools.sheets_manager import GoogleSheetsManager
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+from configuration.sheets_schema import (
+    PROJECT_GOAL_SCHEMA,
+    PM_TASKS_SCHEMA,
+    get_schema,
+    row_to_dict,
+    dict_to_row,
+)
 
+# GeminiTaskBreakdownAgentV2をインポート
+from agents.pm_agent.task_breakdown_gemini_enhanced_v2 import GeminiTaskBreakdownAgentV2
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class PMAgentV2:
-    """PMAgent v2 - TaskExecutorの成功パターンを完全適用"""
+    """
+    Project Management Agent v2（GeminiTaskBreakdown統合版）
 
-    def __init__(self, sheets_manager: GoogleSheetsManager):
-        self.sheets = GoogleSheetsManager()
-        self.safe_sheets = SafeSheetsWrapper(self.sheets)
+    【主な機能】
+    1. project_goalから目標を読み込み
+    2. GeminiでAIによるタスク分解
+    3. pm_tasksに書き込み
+    """
 
-        # ✅ TaskExecutorパターン: ヘッダー行から列構造を検出
-        self.column_map = {}
-        self._initialize_column_map()
-
-        logger.info("✅ PMAgentV2 初期化完了")
-
-    def _initialize_column_map(self):
+    def __init__(self, sheets_manager: GoogleSheetsManager, knowledge_manager=None):
         """
-        列構造の初期化（TaskExecutorパターン）
-        ヘッダー行から列名→インデックスのマッピングを作成
-        """
-        try:
-            # ヘッダー行を読み取り
-            headers_data = self.safe_sheets.safe_read("project_goal!A1:Z1", default=[])
-
-            if not headers_data or len(headers_data) == 0:
-                logger.error("❌ ヘッダー行が取得できません")
-                return
-
-            headers = headers_data[0]
-
-            # 列名→インデックスのマッピング作成
-            self.column_map = {header: idx for idx, header in enumerate(headers)}
-
-            logger.info(f"✅ 列構造検出成功: {list(self.column_map.keys())}")
-
-        except Exception as e:
-            logger.error(f"❌ 列構造初期化エラー: {e}")
-
-    def _convert_row_to_dict(self, row: List[Any]) -> Dict[str, Any]:
-        """
-        行データを辞書に変換（TaskExecutorパターン）
-        column_mapを使って正しい列にアクセス
-
         Args:
-            row: データ行
-
-        Returns:
-            辞書形式のデータ
+            sheets_manager: GoogleSheetsManager（外部から注入）
+            knowledge_manager: KnowledgeBaseManager（オプション）
         """
-        result = {}
+        self.sheets = SafeSheetsWrapper(sheets_manager)
+        self.sheets_manager = sheets_manager
+        self.current_goal = None
 
-        for col_name, col_idx in self.column_map.items():
-            if col_idx < len(row):
-                result[col_name] = row[col_idx]
-            else:
-                result[col_name] = ""
+        # GeminiTaskBreakdownAgentの初期化
+        try:
+            self.task_breakdown_agent = GeminiTaskBreakdownAgentV2(knowledge_manager)
+            logger.info("✅ GeminiTaskBreakdownAgentV2 初期化成功")
+        except Exception as e:
+            logger.error(f"❌ GeminiTaskBreakdownAgentV2 初期化失敗: {e}")
+            self.task_breakdown_agent = None
 
-        return result
+        logger.info("✅ PMAgentV2 を初期化しました（GeminiTaskBreakdown統合版）")
 
     async def load_project_goal(self) -> Optional[Dict]:
         """
-        project_goalから最新のアクティブな目標を読み込み（v2）
+        project_goalから最新のアクティブな目標を読み込み
 
         Returns:
             目標情報（辞書形式）
         """
         try:
-            logger.info("📋 project_goal読み込み中...")
+            # schemas定義を参照
+            schema = get_schema("project_goal")
+            expected_headers = schema["headers"]
 
-            if not self.column_map:
-                logger.error("❌ 列構造が初期化されていません")
-                return None
+            logger.info(f"📋 project_goalを読み込み中（期待ヘッダー: {expected_headers}）")
 
-            # status列のインデックス取得
-            status_idx = self.column_map.get("status")
-            if status_idx is None:
-                logger.error("❌ status列が見つかりません")
-                logger.info(f"利用可能な列: {list(self.column_map.keys())}")
-                return None
+            # SafeSheetsWrapperで安全に読み取り
+            all_goals = self.sheets.safe_read("project_goal", default=[])
 
-            logger.info(f"✅ status列: インデックス{status_idx}（列{chr(65+status_idx)}）")
-
-            # データ行を読み取り
-            all_goals_list = self.safe_sheets.safe_read("project_goal!A2:Z100", default=[])
-
-            if not all_goals_list:
+            if not all_goals:
                 logger.warning("⚠️ project_goalにデータがありません")
                 return None
 
-            logger.info(f"📥 取得: {len(all_goals_list)}行")
+            # データをrow_to_dictで辞書形式に変換
+            goals_dict = [row_to_dict("project_goal", row) for row in all_goals]
 
-            # ✅ リスト→辞書変換（TaskExecutorパターン）
-            all_goals = [self._convert_row_to_dict(row) for row in all_goals_list]
-
-            # デバッグ: 最初の3件の内容を表示
-            logger.info("📊 取得したゴール（最初の3件）:")
-            for i, goal in enumerate(all_goals[:3], 1):
-                goal_id = goal.get("goal_id", "N/A")
-                status = goal.get("status", "N/A")
-                desc = goal.get("goal_description", goal.get("description", "N/A"))
-                logger.info(f"  {i}. ID={goal_id}, status={status}, desc={desc[:50]}...")
-
-            # active/pending のゴールをフィルタ
+            # activeまたはpendingステータスの目標を検索
             active_goals = [
                 goal
-                for goal in all_goals
-                if goal.get("status", "").strip().lower() in ["active", "pending"]
+                for goal in goals_dict
+                if goal.get("status", "").lower() in ["active", "pending"]
             ]
 
-            logger.info(f"🎯 active/pending ゴール: {len(active_goals)}件")
-
             if not active_goals:
-                logger.warning("⚠️ 処理可能な目標がありません")
+                logger.warning("⚠️ アクティブな目標が見つかりません")
                 return None
 
-            # 最初のゴールを返す
-            selected_goal = active_goals[0]
-            logger.info(f"✅ ゴール選択: {selected_goal.get('goal_id')}")
-            desc_col = selected_goal.get("goal_description", selected_goal.get("description", ""))
-            logger.info(f"   内容: {desc_col[:80]}...")
-            logger.info(f"   ステータス: {selected_goal.get('status')}")
+            # 最新の目標を取得
+            latest_goal = active_goals[0]
 
-            return selected_goal
+            logger.info(f"✅ 目標を読み込みました: {latest_goal.get('goal_id', 'unknown')}")
+            logger.info(f"   説明: {latest_goal.get('goal_description', '')[:50]}...")
+
+            self.current_goal = latest_goal
+            return latest_goal
 
         except Exception as e:
             logger.error(f"❌ 目標読み込みエラー: {e}")
@@ -148,48 +110,147 @@ class PMAgentV2:
             traceback.print_exc()
             return None
 
-    async def run_pm_cycle(self):
-        """PMサイクル実行（v2）"""
+    async def break_down_goal_to_tasks(self, goal: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        目標をタスクに分解（GeminiTaskBreakdownAgentV2使用）
+
+        Args:
+            goal: 目標情報
+
+        Returns:
+            タスクのリスト（pm_tasksスキーマ形式）
+        """
+        goal_id = goal.get("goal_id", "unknown")
+        goal_desc = goal.get("goal_description", "")
+
+        logger.info(f"🔧 目標をAIでタスクに分解中: {goal_id}")
+        logger.info(f"   説明: {goal_desc[:100]}...")
+
+        if not self.task_breakdown_agent:
+            logger.error("❌ GeminiTaskBreakdownAgent が初期化されていません")
+            return []
+
         try:
-            logger.info("🔄 PMサイクル開始")
+            # Geminiでタスク生成
+            tasks_detailed = await self.task_breakdown_agent.generate_tasks_for_goal(
+                goal_id=goal_id,
+                goal_description=goal_desc,
+                use_knowledge=True,  # ナレッジベース参照を有効化
+            )
 
-            # ゴール読み込み
-            goal = await self.load_project_goal()
+            if not tasks_detailed:
+                logger.warning("⚠️ タスクが生成されませんでした")
+                return []
 
-            if goal:
-                logger.info("✅ PMサイクル完了")
-                logger.info(f"   処理ゴール: {goal.get('goal_id')}")
-                logger.info(f"   ステータス: {goal.get('status')}")
-            else:
-                logger.warning("⚠️ 処理可能なゴールなし")
+            # pm_tasksスキーマ形式に変換
+            pm_tasks = self.task_breakdown_agent.convert_to_pm_tasks_format(tasks_detailed)
+
+            logger.info(f"✅ {len(pm_tasks)}個のタスクを生成しました")
+
+            # タスク一覧を表示
+            for i, task in enumerate(pm_tasks, 1):
+                logger.info(f"   {i}. {task['task_id']}: {task['description'][:60]}...")
+
+            return pm_tasks
 
         except Exception as e:
-            logger.error(f"❌ PMサイクルエラー: {e}")
+            logger.error(f"❌ タスク分解エラー: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return []
+
+    async def write_tasks_to_sheet(self, tasks: List[Dict[str, Any]]):
+        """
+        タスクをpm_tasksに書き込み
+
+        Args:
+            tasks: タスクのリスト（pm_tasksスキーマ形式）
+        """
+        try:
+            logger.info(f"📝 {len(tasks)}個のタスクをpm_tasksに書き込み中...")
+
+            # schemas定義に従って行データに変換
+            task_rows = [dict_to_row("pm_tasks", task) for task in tasks]
+
+            # SafeSheetsWrapperで安全に追記
+            for i, task_row in enumerate(task_rows, 1):
+                success = self.sheets.safe_append("pm_tasks", [task_row])
+
+                if success:
+                    logger.info(f"  ✅ タスク {i}/{len(task_rows)} 書き込み完了")
+                else:
+                    logger.warning(f"  ⚠️ タスク {i}/{len(task_rows)} 書き込み失敗")
+
+            logger.info("✅ すべてのタスク書き込み完了")
+
+        except Exception as e:
+            logger.error(f"❌ タスク書き込みエラー: {e}")
+            import traceback
+
+            traceback.print_exc()
+
+    async def run_pm_cycle(self):
+        """
+        PMサイクルを1回実行
+
+        1. 目標読み込み
+        2. タスク分解（AI使用）
+        3. タスク書き込み
+        """
+        logger.info("=" * 60)
+        logger.info("🔄 PMサイクル開始（GeminiTaskBreakdown統合版）")
+        logger.info("=" * 60)
+
+        # 目標読み込み
+        goal = await self.load_project_goal()
+
+        if not goal:
+            logger.warning("ℹ️ 処理可能な目標がありません")
+            return
+
+        # タスク分解（AI使用）
+        tasks = await self.break_down_goal_to_tasks(goal)
+
+        if not tasks:
+            logger.warning("⚠️ タスクが生成されませんでした")
+            return
+
+        # タスク書き込み
+        await self.write_tasks_to_sheet(tasks)
+
+        logger.info("=" * 60)
+        logger.info("✅ PMサイクル完了")
+        logger.info("=" * 60)
 
 
-# テスト
+# テスト用のメイン関数
 async def test_pm_agent_v2():
-    print("🧪 PMAgent v2 テスト\n")
+    """PMAgentV2のテスト実行"""
+    print("=" * 60)
+    print("PMAgentV2 テスト実行")
+    print("=" * 60)
 
-    pm = PMAgentV2(None)
+    try:
+        # GoogleSheetsManagerの初期化
+        sheets_manager = GoogleSheetsManager()
+        print("✅ GoogleSheetsManager 初期化成功")
 
-    # テスト1: ゴール読み込み
-    print("テスト1: ゴール読み込み")
-    goal = await pm.load_project_goal()
+        # PMAgentV2の初期化
+        pm_agent = PMAgentV2(sheets_manager)
+        print("✅ PMAgentV2 初期化成功")
 
-    if goal:
-        print("✅ 成功！")
-        print(f"   goal_id: {goal.get('goal_id')}")
-        print(f"   status: {goal.get('status')}")
-        desc = goal.get("goal_description", goal.get("description", ""))
-        print(f"   description: {desc[:80]}...")
-    else:
-        print("❌ ゴールが見つかりません")
+        # PMサイクル実行
+        await pm_agent.run_pm_cycle()
 
-    # テスト2: PMサイクル
-    print("\nテスト2: PMサイクル実行")
-    await pm.run_pm_cycle()
+    except Exception as e:
+        print(f"❌ テスト実行エラー: {e}")
+        import traceback
+
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
+    import asyncio
+
     asyncio.run(test_pm_agent_v2())
