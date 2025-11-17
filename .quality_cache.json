@@ -148,6 +148,9 @@
   "tools/sheets_flow_orchestrator.py": "2392b99c92229d7c97bacc202067e709",
   "tools/sheets_validators/quick_diagnosis.py": "089df8337994b2836bf6e96b2586ca7a",
   "agents/git_agent/auto_commit_push_v10_auto.py": "1066aac5f2a473446f0c45d280cd2395",
-  ".quality_cache.json": "5628254ab348417842f23a0e9fe8dab5",
-  "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624"
+  ".quality_cache.json": "8aae8a05ac5ee6e24f7995038f30ed01",
+  "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624",
+  "core_agents/pm_agent_v2.py": "816b3df423f129ab18d87034e7a15af6",
+  "core_agents/pm_agent_v31.py": "d37071a6a7d359cf797c5d2b2550b6c3",
+  "core_agents/{base_name}_v{next_version:02d}{suffix}.py": "1002928e8493fb8711f0f3b535674437"
 }

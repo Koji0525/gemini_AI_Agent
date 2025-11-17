@@ -15,7 +15,6 @@ GeminiTaskBreakdownAgentV2統合版（完全AI自動分解）
 - v30: 従来版
 """
 
-
 import sys
 import os
 import logging
@@ -266,4 +265,4 @@ async def test_pm_agent_v31():
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(test_pm_agent_v2())
+    asyncio.run(test_pm_agent_v31())
