@@ -198,10 +198,29 @@ from {Path(created_files[0]).stem} import ...
         }
     
     def _generate_python_file_content(self, task_id: str, filename: str, details: Dict) -> str:
-        """Pythonファイルの内容を生成"""
+        """Pythonファイルの内容を生成（実装充実版）"""
         
         # ファイル名からクラス名を推測
         class_name = ''.join(word.capitalize() for word in filename.replace('.py', '').split('_'))
+        
+        # 詳細情報から必要なメソッドを推測
+        methods = self._extract_methods_from_details(details)
+        
+        # メソッド定義を生成
+        methods_code = ""
+        for method_name, method_desc in methods:
+            methods_code += f'''
+    def {method_name}(self):
+        """
+        {method_desc}
+        """
+        # TODO: {method_desc}
+        pass
+'''
+        
+        # 必要なimportを推測
+        imports = self._extract_imports_from_details(details)
+        imports_code = "\n".join(imports)
         
         content = f'''#!/usr/bin/env python3
 """
@@ -209,9 +228,17 @@ from {Path(created_files[0]).stem} import ...
 タスクID: {task_id}
 
 目的: {details['purpose']}
+
+実装内容:
+{details['overview']}
+
+成功基準:
+{details['success_criteria']}
 """
 import sys
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
+
+{imports_code}
 
 
 class {class_name}:
@@ -221,11 +248,13 @@ class {class_name}:
     
     def __init__(self):
         """初期化"""
+        # TODO: 必要な初期化処理を追加
         pass
+{methods_code}
     
     def execute(self):
         """メイン処理"""
-        # TODO: 実装
+        # TODO: 各メソッドを呼び出して処理を実行
         pass
 
 
@@ -235,3 +264,87 @@ if __name__ == '__main__':
 '''
         
         return content
+    
+    def _extract_methods_from_details(self, details: Dict) -> list:
+        """詳細情報からメソッドを抽出"""
+        methods = []
+        overview = details.get('overview', '')
+        criteria = details.get('success_criteria', '')
+        
+        # 成功基準から機能を抽出
+        # 例: "3つのメトリクス収集機能" → collect_metrics
+        if 'メトリクス' in criteria or 'メトリクス' in overview:
+            methods.append(('collect_metrics', 'メトリクスを収集'))
+        
+        if '使用率' in overview:
+            methods.append(('calculate_usage_rate', '使用率を計算'))
+        
+        if '解決率' in overview:
+            methods.append(('calculate_resolution_rate', '解決率を計算'))
+        
+        if '新鮮度' in overview:
+            methods.append(('calculate_freshness', '新鮮度を計算'))
+        
+        if '評価' in overview:
+            methods.append(('evaluate', '評価を実行'))
+        
+        if 'レポート' in criteria or 'レポート' in overview:
+            methods.append(('generate_report', 'レポートを生成'))
+        
+        if '分析' in overview:
+            methods.append(('analyze', '分析を実行'))
+        
+        if '監視' in overview:
+            methods.append(('monitor', '監視を実行'))
+        
+        if '状態監視' in overview:
+            methods.append(('monitor_components', 'コンポーネントの状態を監視'))
+        
+        if '影響分析' in overview:
+            methods.append(('analyze_impact', '変更影響を分析'))
+        
+        # デフォルト: 少なくとも1つのメソッド
+        if not methods:
+            methods.append(('run', '主要処理を実行'))
+        
+        return methods
+    
+    def _extract_imports_from_details(self, details: Dict) -> list:
+        """詳細情報から必要なimportを推測"""
+        imports = []
+        context = details.get('context', '').lower()
+        overview = details.get('overview', '').lower()
+        
+        # データベース関連
+        if 'db' in context or 'database' in context or 'sqlite' in context:
+            imports.append('import sqlite3')
+        
+        # KnowledgeManager
+        if 'knowledgemanager' in context or 'knowledge_manager' in context:
+            imports.append('from knowledge_system.core_agents.knowledge_manager import KnowledgeManager')
+        
+        # Google Sheets
+        if 'スプレッドシート' in context or 'sheets' in context:
+            imports.append('from tools.sheets_manager import GoogleSheetsManager')
+        
+        # 日付・時刻
+        if '時間' in overview or '日時' in overview:
+            imports.append('from datetime import datetime, timedelta')
+        
+        # ログ
+        if 'ログ' in context or 'log' in context:
+            imports.append('import logging')
+        
+        # JSON
+        if 'json' in context or 'メトリクス' in overview:
+            imports.append('import json')
+        
+        # Path操作
+        if 'ファイル' in overview or 'パス' in context:
+            imports.append('from pathlib import Path')
+        
+        # typing
+        if imports:  # importがあればtypingも追加
+            imports.insert(0, 'from typing import Dict, List, Optional, Any')
+        
+        return imports
