@@ -183,6 +183,8 @@ class IntegratedGitTool:
             "docs",
             "fix_agents",
             "knowledge_system",
+            "md",
+            "MD",
             "scripts",
             "sh",
             "task_executor",
@@ -478,7 +480,7 @@ class IntegratedGitTool:
             if (
                 any(prod_dir in str(path) for prod_dir in self.production_dirs)
                 and path.suffix
-                in {".py", ".sh", ".md", ".yaml", ".txt", ".json", ".html", ".js", ".php"}
+                in {".py", ".php", ".sh", ".md", ".yaml", ".txt", ".json", ".html", ".js", ".json"}
                 and path.exists()
             ):
                 production_files.append(str(path))

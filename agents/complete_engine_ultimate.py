@@ -53,11 +53,15 @@ class CompleteEngineUltimate(BaseDataAccessor):
     def integrate_knowledge_system(self):
         """ナレッジシステム統合（F4: ナレッジ自動蓄積）"""
         try:
-            # autonomous_engineと同じSimpleKnowledgeWrapperを使用
-            from knowledge_system.simple_knowledge_wrapper import \
-                SimpleKnowledgeWrapper
+            # SimpleKnowledgeWrapper削除のため、KnowledgeManagerを使用
+            # from knowledge_system.simple_knowledge_wrapper import SimpleKnowledgeWrapper
+            from knowledge_system.core_agents.knowledge_manager import KnowledgeManager
 
-            self.knowledge_wrapper = SimpleKnowledgeWrapper()
+            # 互換性のためにSimpleKnowledgeWrapperとして参照
+            self.knowledge_manager = KnowledgeManager()
+            # self.knowledge_wrapper = SimpleKnowledgeWrapper()  # 旧版
+
+            self.knowledge_wrapper = self.knowledge_manager  # KnowledgeManagerを使用（互換性維持）
             print("✅ ナレッジシステム統合完了（SimpleKnowledgeWrapper）")
             return True
         except Exception as e:
@@ -572,8 +576,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
     def integrate_human_collaboration(self):
         """人間連携システム統合（F9）"""
         try:
-            from agents.human_collaboration_agent import \
-                HumanCollaborationAgent
+            from agents.human_collaboration_agent import HumanCollaborationAgent
 
             self.human_collaboration = HumanCollaborationAgent()
             return True
@@ -779,7 +782,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
             matching_dirs = sorted(
                 [d for d in output_base.iterdir() if d.is_dir() and d.name.startswith(task_id)],
                 key=lambda d: d.stat().st_mtime,
-                reverse=True
+                reverse=True,
             )
             if matching_dirs:
                 output_dir_path = str(matching_dirs[0])
@@ -789,7 +792,7 @@ class CompleteEngineUltimate(BaseDataAccessor):
                 exec_log = matching_dirs[0] / "execution.log"
                 if exec_log.exists():
                     try:
-                        execution_log_content = exec_log.read_text(encoding='utf-8')
+                        execution_log_content = exec_log.read_text(encoding="utf-8")
                         print(f"  �� execution.log読み込み ({exec_log.stat().st_size} bytes)")
                     except Exception as e:
                         print(f"  ⚠️ execution.log読み込みエラー: {e}")
@@ -811,22 +814,18 @@ class CompleteEngineUltimate(BaseDataAccessor):
         ]
 
         if execution_log_content:
-            content_parts.extend([
-                "",
-                "="*80,
-                "📊 実行結果",
-                "="*80,
-                execution_log_content
-            ])
+            content_parts.extend(["", "=" * 80, "📊 実行結果", "=" * 80, execution_log_content])
 
         if generated_files:
-            content_parts.extend([
-                "",
-                f"📂 成果物の場所:",
-                f"   {output_dir_path}",
-                f"📄 生成ファイル ({len(generated_files)}個):",
-                *generated_files
-            ])
+            content_parts.extend(
+                [
+                    "",
+                    f"📂 成果物の場所:",
+                    f"   {output_dir_path}",
+                    f"📄 生成ファイル ({len(generated_files)}個):",
+                    *generated_files,
+                ]
+            )
 
         detailed_content = "\n".join(content_parts)
 
