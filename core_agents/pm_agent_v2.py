@@ -23,7 +23,9 @@ from configuration.sheets_schema import (
 )
 
 # GeminiTaskBreakdownAgentV2をインポート
-from agents.pm_agent.task_breakdown_gemini_enhanced_v2 import GeminiTaskBreakdownAgentV2
+from agents.pm_agent.task_breakdown_gemini_enhanced import (
+    GeminiTaskBreakdownAgent as GeminiTaskBreakdownAgentV2,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
