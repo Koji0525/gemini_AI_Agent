@@ -1,3 +1,10 @@
+import sys
+import os
+
+# プロジェクトルートをパスに追加
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 """Complete Engine Ultimate - 統合エンジン最終版
 
 # このモジュールは24時間自律型AIエージェントシステムの中核エンジンです。
@@ -149,9 +156,206 @@ class CompleteEngineUltimate(BaseDataAccessor):
             print(f"❌ タスク追加判定エラー: {e}")
             return (False, "error")
 
+    def generate_additional_tasks_with_gemini(self, goal_id: str) -> List[Dict[str, Any]]:
+        """高品質なタスク生成（Gemini API使用）"""
+        try:
+            # ゴール情報取得
+            goals = self.read_sheet_as_dicts("project_goal")
+            goal_info = next((g for g in goals if g["goal_id"] == goal_id), None)
+
+            if not goal_info:
+                print(f"⚠️ ゴール{goal_id}が見つかりません")
+                return []
+
+            goal_desc = goal_info.get("goal_description", "")
+
+            # 既存タスクを取得
+            existing = self.read_sheet_as_dicts(
+                "pm_tasks", filter_func=lambda t: t.get("parent_goal_id") == goal_id
+            )
+
+            # 進捗確認
+            completed = len([t for t in existing if t.get("status") == "completed"])
+            total = len(existing)
+            progress = (completed / total * 100) if total > 0 else 0
+
+            print(f"📋 高品質タスク生成開始")
+            print(f"   ゴールID: {goal_id}")
+            print(f"   進捗: {progress:.1f}%")
+            print(f"   既存タスク: {total}件")
+
+            # Gemini APIを使ってタスク生成
+            try:
+                import google.generativeai as genai
+                import os
+
+                api_key = os.environ.get("GEMINI_API_KEY")
+                if not api_key:
+                    print("⚠️ GEMINI_API_KEY が設定されていません")
+                    return self._generate_fallback_tasks(goal_id, goal_desc, progress)
+
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel("gemini-pro")
+
+                # 既存タスクの概要を作成
+                existing_summary = []
+                for t in existing[-10:]:  # 最新10件
+                    existing_summary.append(
+                        f"- {t.get('task_id')}: {t.get('description', '')[:50]}"
+                    )
+
+                existing_text = (
+                    "\n".join(existing_summary) if existing_summary else "（初回タスク生成）"
+                )
+
+                # プロンプト作成
+                prompt = f"""あなたは優秀なプロジェクトマネージャーです。以下のゴールに対して、次に実行すべき具体的なタスクを3-5個生成してください。
+
+【ゴールの詳細】
+{goal_desc[:3000]}
+
+【現在の進捗】
+- 進捗率: {progress:.1f}%
+- 完了タスク数: {completed}/{total}件
+
+【最近の完了タスク】
+{existing_text}
+
+【タスク生成の要件】
+1. ゴールの内容を深く理解し、具体的なタスクを生成すること
+2. 各タスクには以下を明記：
+   - 目的（なぜこのタスクが必要か）
+   - 作業内容（何をするのか）
+   - 成功基準（どうなれば完了か）
+   - 期待される成果物
+3. 既存タスクと重複しないこと
+4. 実行可能な粒度にすること（1タスク2-8時間程度）
+5. タスク間の依存関係を考慮すること
+
+【出力形式】
+以下のJSON形式で出力してください：
+
+{{
+  "tasks": [
+    {{
+      "task_id_suffix": "implement_f6_dynamic_tasks",
+      "description": "F6動的タスク追加機能の実装：進捗に応じた追加タスク生成ロジックの実装",
+      "purpose": "F6機能を実現し、システムの自律性を向上させる",
+      "success_criteria": "進捗50%以上で自動的に次フェーズのタスクが生成される",
+      "expected_outputs": "動的タスク追加機能のコード、ユニットテスト、動作確認結果",
+      "required_role": "developer",
+      "priority": "high",
+      "estimated_time": "6h",
+      "execution_type": "implementation"
+    }}
+  ]
+}}
+
+必ずJSON形式のみを出力してください。説明文は不要です。"""
+
+                print(f"   🤖 Gemini APIでタスク生成中...")
+
+                response = model.generate_content(prompt)
+                response_text = response.text
+
+                # JSONを抽出
+                import json
+                import re
+
+                # マークダウンのコードブロックを除去
+                response_text = re.sub(r"```json\s*", "", response_text)
+                response_text = re.sub(r"```\s*", "", response_text)
+                response_text = response_text.strip()
+
+                result = json.loads(response_text)
+
+                # タスク形式に変換
+                from datetime import datetime
+
+                tasks = []
+                base_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+                for task_data in result.get("tasks", []):
+                    task = {
+                        "task_id": f"{goal_id}_{task_data['task_id_suffix']}",
+                        "parent_goal_id": goal_id,
+                        "description": task_data["description"],
+                        "required_role": task_data.get("required_role", "developer"),
+                        "status": "pending",
+                        "priority": task_data.get("priority", "medium"),
+                        "estimated_time": task_data.get("estimated_time", "4h"),
+                        "dependencies": "",
+                        "created_at": base_time,
+                        "batch_id": batch_id,
+                        "detail_file_path": "",
+                        "blank": "",
+                        "execution_type": task_data.get("execution_type", "implementation"),
+                        "purpose": task_data.get("purpose", ""),
+                        "success_criteria": task_data.get("success_criteria", ""),
+                        "expected_outputs": task_data.get("expected_outputs", ""),
+                    }
+                    tasks.append(task)
+
+                print(f"   ✅ {len(tasks)}個の高品質タスクを生成")
+                return tasks
+
+            except Exception as e:
+                print(f"   ⚠️ Gemini API エラー: {e}")
+                print(f"   → フォールバックタスク生成を使用")
+                return self._generate_fallback_tasks(goal_id, goal_desc, progress)
+
+        except Exception as e:
+            print(f"❌ タスク生成エラー: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return []
+
+    def _generate_fallback_tasks(
+        self, goal_id: str, goal_desc: str, progress: float
+    ) -> List[Dict[str, Any]]:
+        """フォールバックタスク生成（Gemini API使用不可時）"""
+        from datetime import datetime
+
+        tasks = []
+        base_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        # 進捗に応じたタスク
+        if progress >= 90:
+            # 最終フェーズ
+            tasks.extend(
+                [
+                    {
+                        "task_id": f"{goal_id}_final_quality_check",
+                        "parent_goal_id": goal_id,
+                        "description": "最終品質確認：全機能の動作確認・性能チェック・セキュリティレビュー",
+                        "required_role": "quality_engineer",
+                        "status": "pending",
+                        "priority": "high",
+                        "estimated_time": "3h",
+                        "dependencies": "",
+                        "created_at": base_time,
+                        "batch_id": batch_id,
+                        "detail_file_path": "",
+                        "blank": "",
+                        "execution_type": "quality_check",
+                        "purpose": "システム全体の品質を最終確認",
+                        "success_criteria": "全機能が要件を満たし、性能基準をクリア",
+                        "expected_outputs": "品質確認レポート、テスト結果",
+                    },
+                ]
+            )
+
+        return tasks
+
     def generate_additional_tasks(self, goal_id: str) -> List[Dict[str, Any]]:
         """追加タスク生成（F1: ゴール自動分解）"""
         try:
+            # 高品質タスク生成（Gemini API使用）
+            return self.generate_additional_tasks_with_gemini(goal_id)
+
             # ゴール情報取得
             goals = self.read_sheet_as_dicts("project_goal")
             goal_info = next((g for g in goals if g["goal_id"] == goal_id), None)
@@ -341,6 +545,173 @@ class CompleteEngineUltimate(BaseDataAccessor):
                     )
 
             print(f"✅ {len(tasks)}個の具体的タスク生成")
+
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 既存タスクがある場合：次フェーズまたは最終タスクを生成
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            if existing:
+                print(f"📋 次フェーズのタスク生成（既存: {len(existing)}件）")
+
+                completed = len([t for t in existing if t.get("status") == "completed"])
+                total = len(existing)
+                progress = (completed / total * 100) if total > 0 else 0
+
+                print(f"   進捗: {completed}/{total} ({progress:.1f}%)")
+
+                # execution_type の正規化マッピング
+                type_mapping = {
+                    "test": "testing",
+                    "gemini": "implementation",
+                    "validation": "testing",
+                    "setup": "research",
+                    "wordpress": "implementation",
+                }
+
+                # 既存フェーズを正規化
+                normalized_types = set()
+                for t in existing:
+                    exec_type = t.get("execution_type", "")
+                    if exec_type:
+                        normalized = type_mapping.get(exec_type, exec_type)
+                        normalized_types.add(normalized)
+
+                print(f"   既存フェーズ: {normalized_types}")
+
+                next_tasks = []
+
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                # 進捗90%以上：最終フェーズのタスクを生成
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                if progress >= 90:
+                    print("   ✅ 進捗90%以上 → 最終確認・品質改善タスクを生成")
+
+                    # 最終確認タスク
+                    if "quality_check" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_quality_final_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "最終品質確認：全機能の動作確認・性能チェック・セキュリティレビュー",
+                                "required_role": "quality_engineer",
+                                "status": "pending",
+                                "priority": "high",
+                                "estimated_time": "3h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "quality_check",
+                            }
+                        )
+
+                    # デプロイ準備タスク
+                    if "deployment_prep" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_deploy_prep_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "デプロイ準備：本番環境設定・デプロイ手順書作成・ロールバック計画",
+                                "required_role": "devops",
+                                "status": "pending",
+                                "priority": "high",
+                                "estimated_time": "2h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "deployment_prep",
+                            }
+                        )
+
+                    # 最終レビュータスク
+                    if "final_review" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_final_review_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "プロジェクト最終レビュー：目標達成確認・成果物確認・振り返り実施",
+                                "required_role": "project_manager",
+                                "status": "pending",
+                                "priority": "medium",
+                                "estimated_time": "2h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "final_review",
+                            }
+                        )
+
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                # 進捗50-90%：通常の次フェーズタスク
+                # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                elif progress >= 50:
+                    # Design フェーズ
+                    if ("research" in normalized_types) and "design" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_design_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "システム設計：アーキテクチャ・データモデル・API設計",
+                                "required_role": "architect",
+                                "status": "pending",
+                                "priority": "high",
+                                "estimated_time": "4h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "design",
+                            }
+                        )
+
+                    # Implementation フェーズ
+                    if "design" in normalized_types and "implementation" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_implement_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "コア機能実装：主要機能の実装・ユニットテスト",
+                                "required_role": "developer",
+                                "status": "pending",
+                                "priority": "high",
+                                "estimated_time": "8h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "implementation",
+                            }
+                        )
+
+                    # Testing フェーズ
+                    if "implementation" in normalized_types and "testing" not in normalized_types:
+                        next_tasks.append(
+                            {
+                                "task_id": f"{goal_id}_test_{datetime.now().strftime('%H%M%S')}",
+                                "parent_goal_id": goal_id,
+                                "description": "統合テスト：E2Eテスト・性能テスト",
+                                "required_role": "tester",
+                                "status": "pending",
+                                "priority": "high",
+                                "estimated_time": "4h",
+                                "dependencies": "",
+                                "created_at": base_time,
+                                "batch_id": batch_id,
+                                "detail_file_path": "",
+                                "blank": "",
+                                "execution_type": "testing",
+                            }
+                        )
+
+                tasks.extend(next_tasks)
+                print(f"✅ {len(next_tasks)}個のタスクを生成")
+
             return tasks
 
         except Exception as e:

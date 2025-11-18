@@ -11,7 +11,7 @@ from typing import Dict, List, Any
 class GeminiTaskBreakdownAgent:
     """Gemini APIでタスク分解"""
 
-    def __init__(self):
+    def __init__(self, api_key=None):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY環境変数が必要です")
