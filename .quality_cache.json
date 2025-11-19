@@ -148,10 +148,11 @@
   "tools/sheets_flow_orchestrator.py": "2392b99c92229d7c97bacc202067e709",
   "tools/sheets_validators/quick_diagnosis.py": "089df8337994b2836bf6e96b2586ca7a",
   "agents/git_agent/auto_commit_push_v10_auto.py": "866b74cad4bfcc969e5eb49fe03bafea",
-  ".quality_cache.json": "3c560ef5dfeca589ace09d3a02ef50e5",
+  ".quality_cache.json": "2cb21fd93453ad01789316c16c643267",
   "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624",
   "agents/complete_engine_ultimate.py": "bce74b246768edab2c44857392abd957",
   "core_agents/{base_name}_v{next_version:02d}{suffix}.py": "ae8eb9b3629a0ecd252ace7b38332170",
   "core_agents/pm_agent_v2.py": "ae8eb9b3629a0ecd252ace7b38332170",
-  "agents/pm_agent/task_breakdown_gemini.py": "dc6bca45582fd0152aaf9923a98200ea"
+  "agents/pm_agent/task_breakdown_gemini.py": "dc6bca45582fd0152aaf9923a98200ea",
+  "knowledge_system/core_agents/knowledge_manager.py": "80ba64e16946b624c064470a8c32efe0"
 }
