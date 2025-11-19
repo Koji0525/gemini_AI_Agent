@@ -36,8 +36,9 @@ class KnowledgeManager:
 
     def add_knowledge(self, title: str, content: str, category: str = "general", tags: str = ""):
         """ナレッジを追加"""
-        # 簡易実装
-        return self.db_manager.add_knowledge_entry(title, content, category, tags)
+        # 辞書形式でデータを整形
+        knowledge_data = {"title": title, "content": content, "category": category, "tags": tags}
+        return self.db_manager.insert_knowledge(knowledge_data)
 
     def search_knowledge(self, query: str, limit: int = 5):
         """ナレッジを検索"""
