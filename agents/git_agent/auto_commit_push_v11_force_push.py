@@ -169,6 +169,10 @@ class IntegratedGitTool:
             ".git",
             "node_modules",
             "wordpress-core",
+            "exports",  # JSONエクスポートファイル
+            "logs",  # ログファイル
+            "mvp_v4",  # MVP v4プロジェクト（JSONファイル含む）
+            "MD",  # マークダウンドキュメント
         }
         self.production_dirs = {
             ".",  # ルート直下も含める
@@ -220,7 +224,7 @@ class IntegratedGitTool:
 
         # STEP 2: 差分ベースファイル列挙
         commit_files = self._step2_list_changed_files()
-        
+
         # 変更なしでも続行（空コミット可能）
         if not commit_files:
             print("\n✅ 変更ファイルなし（空コミットで続行）")
