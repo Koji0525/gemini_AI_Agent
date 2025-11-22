@@ -191,23 +191,21 @@ async def root():
     return HTMLResponse(content=html_content)
 
 
-
-
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     """
     簡易Webダッシュボード
-    
+
     リアルタイムでシステム状態を可視化
     """
     template_path = Path(__file__).parent / "templates" / "dashboard_simple.html"
-    
+
     if not template_path.exists():
         raise HTTPException(status_code=404, detail="Dashboard template not found")
-    
-    with open(template_path, 'r', encoding='utf-8') as f:
+
+    with open(template_path, "r", encoding="utf-8") as f:
         html_content = f.read()
-    
+
     return HTMLResponse(content=html_content)
 
 
@@ -387,6 +385,139 @@ def start_server(host: str = "0.0.0.0", port: int = 5000):
     uvicorn.run(app, host=host, port=port)
 
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Phase 4: メトリクスAPI（P4-001, P4-002）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+@app.get("/api/metrics/current")
+async def get_current_metrics():
+    """
+    現在のシステムメトリクスを取得
+
+    CPU、メモリ、ディスク、ネットワークなどのリアルタイムメトリクス
+    """
+    try:
+        from agents.observer_enhanced.metrics_collector import \
+            get_metrics_collector
+
+        collector = get_metrics_collector()
+        metrics = collector.collect_system_metrics()
+
+        return {"status": "ok", "timestamp": datetime.now().isoformat(), "metrics": metrics}
+    except Exception as e:
+        logger.error(f"Error in get_current_metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/metrics/history")
+async def get_metrics_history(minutes: int = 10, limit: int = 100):
+    """
+    メトリクス履歴を取得
+
+    Args:
+        minutes: サマリーの時間範囲（分）
+        limit: 取得する最大件数
+    """
+    try:
+        from agents.observer_enhanced.metrics_collector import \
+            get_metrics_collector
+
+        collector = get_metrics_collector()
+
+        return {
+            "status": "ok",
+            "summary": collector.get_metrics_summary(minutes=minutes),
+            "history": collector.get_all_metrics(limit=limit),
+        }
+    except Exception as e:
+        logger.error(f"Error in get_metrics_history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/performance/status")
+async def get_performance_status():
+    """
+    現在のパフォーマンスステータスを取得
+
+    メトリクスを分析してパフォーマンス評価
+    """
+    try:
+        from agents.observer_enhanced.metrics_collector import \
+            get_metrics_collector
+        from agents.observer_enhanced.performance_monitor import \
+            get_performance_monitor
+
+        collector = get_metrics_collector()
+        monitor = get_performance_monitor()
+
+        # 現在のメトリクスを収集
+        metrics = collector.collect_system_metrics()
+
+        # パフォーマンス分析
+        analysis = monitor.analyze_metrics(metrics)
+
+        return {"status": "ok", "timestamp": datetime.now().isoformat(), "performance": analysis}
+    except Exception as e:
+        logger.error(f"Error in get_performance_status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/performance/trends")
+async def get_performance_trends(minutes: int = 60):
+    """
+    パフォーマンストレンドを取得
+
+    Args:
+        minutes: 分析期間（分）
+    """
+    try:
+        from agents.observer_enhanced.metrics_collector import \
+            get_metrics_collector
+        from agents.observer_enhanced.performance_monitor import \
+            get_performance_monitor
+
+        collector = get_metrics_collector()
+        monitor = get_performance_monitor()
+
+        # メトリクス履歴を取得
+        history = collector.get_all_metrics(limit=1000)
+
+        # トレンド分析
+        trends = monitor.get_performance_trends(history, minutes=minutes)
+
+        return {"status": "ok", "timestamp": datetime.now().isoformat(), "trends": trends}
+    except Exception as e:
+        logger.error(f"Error in get_performance_trends: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/performance/alerts")
+async def get_performance_alerts(limit: int = 20, hours: int = 24):
+    """
+    パフォーマンスアラートを取得
+
+    Args:
+        limit: 取得する最大件数
+        hours: サマリーの集計期間（時間）
+    """
+    try:
+        from agents.observer_enhanced.performance_monitor import \
+            get_performance_monitor
+
+        monitor = get_performance_monitor()
+
+        return {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "alerts": monitor.get_recent_alerts(limit=limit),
+            "summary": monitor.get_alert_summary(hours=hours),
+        }
+    except Exception as e:
+        logger.error(f"Error in get_performance_alerts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -398,3 +529,149 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     start_server(host=args.host, port=args.port)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# エクスポート機能（P4-006）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+from fastapi.responses import FileResponse
+
+from agents.observer_enhanced.data_exporter import DataExporter
+
+# エクスポーター初期化
+data_exporter = DataExporter()
+
+
+@app.get("/api/export/traces")
+async def export_traces(format: str = "json", hours: int = 24):
+    """トレースログをエクスポート"""
+    try:
+        filepath = data_exporter.export_traces(format=format, hours=hours)
+        if filepath:
+            return FileResponse(
+                filepath,
+                media_type="application/json" if format == "json" else "text/csv",
+                filename=Path(filepath).name,
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Export failed")
+    except Exception as e:
+        logger.error(f"Export traces error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/graph")
+async def export_graph(format: str = "json"):
+    """依存関係グラフをエクスポート"""
+    try:
+        filepath = data_exporter.export_graph(format=format)
+        if filepath:
+            return FileResponse(
+                filepath, media_type="application/json", filename=Path(filepath).name
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Export failed")
+    except Exception as e:
+        logger.error(f"Export graph error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/alerts")
+async def export_alerts(format: str = "json", days: int = 7):
+    """アラート履歴をエクスポート"""
+    try:
+        filepath = data_exporter.export_alerts(format=format, days=days)
+        if filepath:
+            return FileResponse(
+                filepath,
+                media_type="application/json" if format == "json" else "text/csv",
+                filename=Path(filepath).name,
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Export failed")
+    except Exception as e:
+        logger.error(f"Export alerts error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export/list")
+async def list_exports():
+    """エクスポートファイル一覧"""
+    try:
+        exports = data_exporter.list_exports()
+        return {"exports": exports, "count": len(exports)}
+    except Exception as e:
+        logger.error(f"List exports error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 通知システム（P4-007）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+from agents.observer_enhanced.notification_manager import (
+    NotificationManager, NotificationPriority)
+
+# 通知マネージャー初期化
+notification_manager = NotificationManager()
+
+
+@app.post("/api/notifications/send")
+async def send_notification(title: str, message: str, priority: str = "medium"):
+    """通知送信"""
+    try:
+        priority_map = {
+            "low": NotificationPriority.LOW,
+            "medium": NotificationPriority.MEDIUM,
+            "high": NotificationPriority.HIGH,
+            "critical": NotificationPriority.CRITICAL,
+        }
+
+        priority_enum = priority_map.get(priority, NotificationPriority.MEDIUM)
+
+        success = notification_manager.send_notification(
+            title=title, message=message, priority=priority_enum
+        )
+
+        return {"success": success, "title": title, "priority": priority}
+    except Exception as e:
+        logger.error(f"Send notification error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notifications/history")
+async def get_notification_history(limit: int = 50, priority: Optional[str] = None):
+    """通知履歴取得"""
+    try:
+        priority_enum = None
+        if priority:
+            priority_map = {
+                "low": NotificationPriority.LOW,
+                "medium": NotificationPriority.MEDIUM,
+                "high": NotificationPriority.HIGH,
+                "critical": NotificationPriority.CRITICAL,
+            }
+            priority_enum = priority_map.get(priority)
+
+        history = notification_manager.get_history(limit=limit, priority=priority_enum)
+
+        return {"history": history, "count": len(history)}
+    except Exception as e:
+        logger.error(f"Get notification history error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/notifications/test")
+async def test_notification():
+    """通知テスト"""
+    try:
+        success = notification_manager.send_notification(
+            title="テスト通知",
+            message=f"通知システムのテストです（{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}）",
+            priority=NotificationPriority.LOW,
+        )
+
+        return {"success": success, "message": "Test notification sent"}
+    except Exception as e:
+        logger.error(f"Test notification error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

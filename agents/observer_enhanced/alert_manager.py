@@ -17,6 +17,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from agents.observer_enhanced.notification_manager import NotificationManager
 
 # ロガー設定
 logging.basicConfig(
@@ -59,6 +60,15 @@ class AlertManager:
         # 既存アラートを読み込み
         self.alerts = self._load_alerts()
 
+        
+        # 通知マネージャー初期化
+        try:
+            from agents.observer_enhanced.notification_manager import NotificationManager
+            self.notification_manager = NotificationManager()
+        except Exception as e:
+            logger.warning(f"Failed to initialize NotificationManager: {e}")
+            self.notification_manager = None
+        
         logger.info(f"Initialized AlertManager with {len(self.alerts)} existing alerts")
 
     def create_alert(
@@ -88,6 +98,13 @@ class AlertManager:
 
         self.alerts.append(alert)
         self._save_alerts()
+        
+        # 通知送信
+        if hasattr(self, 'notification_manager') and self.notification_manager:
+            try:
+                self.notification_manager.send_alert_notification(alert)
+            except Exception as e:
+                logger.error(f"Failed to send alert notification: {e}")
 
         # ログ出力
         log_level = {
@@ -149,6 +166,13 @@ class AlertManager:
                 alert["resolved"] = True
                 alert["resolved_at"] = datetime.now().isoformat()
                 self._save_alerts()
+        
+        # 通知送信
+        if hasattr(self, 'notification_manager') and self.notification_manager:
+            try:
+                self.notification_manager.send_alert_notification(alert)
+            except Exception as e:
+                logger.error(f"Failed to send alert notification: {e}")
                 logger.info(f"Alert resolved: {alert_id}")
                 return True
 

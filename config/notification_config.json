@@ -1,0 +1,42 @@
+{
+  "channels": {
+    "slack": {
+      "enabled": false,
+      "webhook_url": "",
+      "default_channel": "#alerts"
+    },
+    "email": {
+      "enabled": false,
+      "smtp_server": "",
+      "smtp_port": 587,
+      "from_address": "",
+      "to_addresses": []
+    },
+    "log": {
+      "enabled": true,
+      "level": "INFO"
+    }
+  },
+  "rules": {
+    "critical": [
+      "slack",
+      "email",
+      "log"
+    ],
+    "high": [
+      "slack",
+      "log"
+    ],
+    "medium": [
+      "log"
+    ],
+    "low": [
+      "log"
+    ]
+  },
+  "rate_limit": {
+    "enabled": true,
+    "max_per_hour": 10,
+    "max_per_day": 50
+  }
+}
