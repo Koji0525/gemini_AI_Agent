@@ -1,407 +1,330 @@
+#!/usr/bin/env python3
 """
-Import文抽出エンジン
-AST（抽象構文木）を使用してPythonファイルのimport関係を抽出
-
-実装ファイル: agents/observer_enhanced/import_extractor.py
-行数目標: 500行
-依存: ast (標準ライブラリ)
+Import Extractor for Enhanced Observer System
+Extracts import relationships from Python files using AST parsing.
 """
 
 import ast
-import sys
-from pathlib import Path
-from typing import List, Dict, Set, Optional
 from dataclasses import dataclass
-import logging
-
-# ログ設定
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from pathlib import Path
+from typing import Dict, List, Optional, Set
 
 
 @dataclass
 class ImportRelation:
-    """Import関係を表すデータクラス"""
-    source_file: str        # インポート元ファイル
-    module: str             # インポートされるモジュール
-    names: List[str]        # インポートされる名前のリスト
-    import_type: str        # 'import' or 'from'
-    line_number: int        # インポート文の行番号
-    alias: Optional[str]    # エイリアス（as XXX）
-    
+    """Represents a single import relationship"""
+
+    module: str
+    alias: Optional[str] = None
+    imported_names: List[str] = None
+    import_type: str = "import"  # "import", "from", "relative"
+    level: int = 0  # For relative imports
+    line_number: int = 0
+    file_path: str = ""
+
+    def __post_init__(self):
+        if self.imported_names is None:
+            self.imported_names = []
+
     def __repr__(self):
-        if self.import_type == 'import':
-            return f"{self.source_file}:{self.line_number} import {self.module}"
+        if self.import_type == "from":
+            return f"from {self.module} import {', '.join(self.imported_names)}"
         else:
-            names_str = ', '.join(self.names)
-            return f"{self.source_file}:{self.line_number} from {self.module} import {names_str}"
-    
+            alias_str = f" as {self.alias}" if self.alias else ""
+            return f"import {self.module}{alias_str}"
+
     def to_dict(self) -> Dict:
-        """辞書形式に変換"""
+        """Convert to dictionary for JSON serialization"""
         return {
-            'source_file': self.source_file,
-            'module': self.module,
-            'names': self.names,
-            'import_type': self.import_type,
-            'line_number': self.line_number,
-            'alias': self.alias
+            "module": self.module,
+            "alias": self.alias,
+            "imported_names": self.imported_names,
+            "import_type": self.import_type,
+            "level": self.level,
+            "line_number": self.line_number,
+            "file_path": self.file_path,
         }
 
 
 class ImportExtractor:
     """
-    Import文抽出エンジン
-    
-    使用例:
-```python
-    extractor = ImportExtractor()
-    imports = extractor.extract_from_file('agents/pm_agent.py')
-    
-    for imp in imports:
-        print(f"{imp.source_file} imports {imp.module}")
-```
+    Extracts import relationships from Python files using AST parsing.
     """
-    
+
     def __init__(self, project_root: Optional[Path] = None):
-        """
-        初期化
-        
-        Args:
-            project_root: プロジェクトルートパス（デフォルト: 自動検出）
-        """
-        if project_root is None:
-            self.project_root = Path('/workspaces/gemini_AI_Agent')
-        else:
-            self.project_root = Path(project_root)
-        
-        self.cache: Dict[str, List[ImportRelation]] = {}
-        
-        logger.info(f"ImportExtractor initialized: {self.project_root}")
-    
+        self.project_root = project_root or Path.cwd()
+        self._cache: Dict[Path, List[ImportRelation]] = {}
+
     def extract_from_file(self, file_path: Path) -> List[ImportRelation]:
         """
-        1つのファイルからimport文を抽出
-        
+        Extract all import statements from a Python file.
+
         Args:
-            file_path: Pythonファイルのパス
-        
+            file_path: Path to the Python file
+
         Returns:
-            ImportRelationのリスト
-        
-        処理時間目標: <50ms/file
+            List of ImportRelation objects
         """
-        file_path = Path(file_path)
-        
-        # キャッシュチェック
-        cache_key = str(file_path)
-        if cache_key in self.cache:
-            logger.debug(f"Cache hit: {file_path}")
-            return self.cache[cache_key]
-        
-        # ファイル存在確認
-        if not file_path.exists():
-            logger.warning(f"File not found: {file_path}")
-            return []
-        
-        # ファイル読み込み
+        if file_path in self._cache:
+            return self._cache[file_path]
+
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 source_code = f.read()
-        except Exception as e:
-            logger.error(f"Failed to read {file_path}: {e}")
+
+            imports = self._parse_imports(source_code, str(file_path))
+            self._cache[file_path] = imports
+            return imports
+
+        except (SyntaxError, UnicodeDecodeError, IOError) as e:
+            print(f"Warning: Could not parse {file_path}: {e}")
             return []
-        
-        # AST解析
-        imports = self._parse_imports(source_code, str(file_path))
-        
-        # キャッシュ保存
-        self.cache[cache_key] = imports
-        
-        logger.debug(f"Extracted {len(imports)} imports from {file_path}")
-        
-        return imports
-    
+
+    def extract_imports(self, file_path: Path) -> List[ImportRelation]:
+        """
+        extract_from_fileのエイリアスメソッド
+        static_analyzer.pyとの互換性のため
+        """
+        return self.extract_from_file(file_path)
+
     def _parse_imports(self, source_code: str, source_file: str) -> List[ImportRelation]:
-        """
-        ソースコードをASTで解析してimport文を抽出
-        
-        Args:
-            source_code: Pythonソースコード
-            source_file: ファイルパス（エラー表示用）
-        
-        Returns:
-            ImportRelationのリスト
-        """
+        """Parse imports from source code using AST"""
         imports = []
-        
+
         try:
             tree = ast.parse(source_code)
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        imports.append(
+                            ImportRelation(
+                                module=alias.name,
+                                alias=alias.asname,
+                                import_type="import",
+                                line_number=node.lineno,
+                                file_path=source_file,
+                            )
+                        )
+
+                elif isinstance(node, ast.ImportFrom):
+                    imported_names = [name.name for name in node.names]
+                    imports.append(
+                        ImportRelation(
+                            module=node.module or "",
+                            imported_names=imported_names,
+                            import_type="from",
+                            level=node.level or 0,
+                            line_number=node.lineno,
+                            file_path=source_file,
+                        )
+                    )
+
         except SyntaxError as e:
-            logger.error(f"Syntax error in {source_file}: {e}")
-            return []
-        
-        for node in ast.walk(tree):
-            # import XXX
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports.append(ImportRelation(
-                        source_file=source_file,
-                        module=alias.name,
-                        names=[alias.name],
-                        import_type='import',
-                        line_number=node.lineno,
-                        alias=alias.asname
-                    ))
-            
-            # from XXX import YYY
-            elif isinstance(node, ast.ImportFrom):
-                module = node.module if node.module else ''
-                names = [alias.name for alias in node.names]
-                
-                imports.append(ImportRelation(
-                    source_file=source_file,
-                    module=module,
-                    names=names,
-                    import_type='from',
-                    line_number=node.lineno,
-                    alias=None
-                ))
-        
+            print(f"Syntax error in {source_file}: {e}")
+
         return imports
-    
+
     def extract_from_directory(
-        self, 
-        directory: Path, 
-        pattern: str = '**/*.py',
-        exclude_patterns: Optional[List[str]] = None
-    ) -> List[ImportRelation]:
+        self, directory: Path, exclude_dirs: Optional[List[str]] = None
+    ) -> Dict[Path, List[ImportRelation]]:
         """
-        ディレクトリ配下の全Pythonファイルからimport文を抽出
-        
+        Extract imports from all Python files in a directory.
+
         Args:
-            directory: 対象ディレクトリ
-            pattern: ファイルパターン（glob形式）
-            exclude_patterns: 除外パターンのリスト
-        
+            directory: Directory to scan
+            exclude_dirs: Directories to exclude
+
         Returns:
-            ImportRelationのリスト（全ファイル統合）
+            Dictionary mapping file paths to import lists
         """
-        directory = Path(directory)
-        
-        if exclude_patterns is None:
-            exclude_patterns = ['tests/**', 'backups/**', '__pycache__/**']
-        
-        all_imports = []
-        file_count = 0
-        
-        logger.info(f"Scanning directory: {directory}")
-        
-        for file_path in directory.glob(pattern):
-            # 除外パターンチェック
-            should_exclude = False
-            for exclude_pattern in exclude_patterns:
-                if file_path.match(exclude_pattern):
-                    should_exclude = True
-                    break
-            
-            if should_exclude:
-                logger.debug(f"Excluded: {file_path}")
+        if exclude_dirs is None:
+            exclude_dirs = ["__pycache__", ".git", "node_modules", "venv"]
+
+        results = {}
+
+        for py_file in directory.rglob("*.py"):
+            # Skip excluded directories
+            if any(excluded in str(py_file) for excluded in exclude_dirs):
                 continue
-            
-            # import抽出
-            imports = self.extract_from_file(file_path)
-            all_imports.extend(imports)
-            file_count += 1
-        
-        logger.info(f"Scanned {file_count} files, found {len(all_imports)} imports")
-        
-        return all_imports
-    
+
+            imports = self.extract_from_file(py_file)
+            if imports:
+                results[py_file] = imports
+
+        return results
+
     def get_imported_modules(self, imports: List[ImportRelation]) -> Set[str]:
-        """
-        import文リストから、インポートされているモジュール名の集合を取得
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            モジュール名の集合
-        """
+        """Get unique module names from import list"""
         return {imp.module for imp in imports if imp.module}
-    
+
     def get_imports_by_file(
-        self, 
-        imports: List[ImportRelation]
+        self, imports_dict: Dict[Path, List[ImportRelation]]
     ) -> Dict[str, List[ImportRelation]]:
-        """
-        ファイルごとにimport文をグループ化
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            {ファイルパス: ImportRelationのリスト}
-        """
-        result = {}
-        
-        for imp in imports:
-            if imp.source_file not in result:
-                result[imp.source_file] = []
-            result[imp.source_file].append(imp)
-        
-        return result
-    
+        """Convert Path keys to string keys for JSON serialization"""
+        return {str(path): imports for path, imports in imports_dict.items()}
+
     def filter_internal_imports(
-        self, 
-        imports: List[ImportRelation]
+        self, imports: List[ImportRelation], project_root: Optional[Path] = None
     ) -> List[ImportRelation]:
-        """
-        プロジェクト内部のimportのみをフィルタリング
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            内部importのみのリスト
-        """
-        internal_prefixes = ['agents', 'tools', 'tests']
-        
-        return [
-            imp for imp in imports
-            if any(imp.module.startswith(prefix) for prefix in internal_prefixes)
-        ]
-    
+        """Filter imports that are internal to the project"""
+        root = project_root or self.project_root
+        internal_imports = []
+
+        for imp in imports:
+            # Check if module path exists in project
+            module_path = self._resolve_module_path(imp.module)
+            if module_path and root in module_path.parents:
+                internal_imports.append(imp)
+
+        return internal_imports
+
     def filter_external_imports(
-        self, 
-        imports: List[ImportRelation]
+        self, imports: List[ImportRelation], project_root: Optional[Path] = None
     ) -> List[ImportRelation]:
-        """
-        外部ライブラリのimportのみをフィルタリング
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            外部importのみのリスト
-        """
-        internal_imports = self.filter_internal_imports(imports)
-        internal_modules = {imp.module for imp in internal_imports}
-        
-        return [
-            imp for imp in imports
-            if imp.module not in internal_modules
-        ]
-    
+        """Filter imports that are external to the project"""
+        root = project_root or self.project_root
+        external_imports = []
+
+        for imp in imports:
+            module_path = self._resolve_module_path(imp.module)
+            if not module_path or root not in module_path.parents:
+                external_imports.append(imp)
+
+        return external_imports
+
     def get_dependency_count(
-        self, 
-        imports: List[ImportRelation]
+        self, imports_dict: Dict[Path, List[ImportRelation]]
     ) -> Dict[str, int]:
-        """
-        ファイルごとの依存関係数を取得
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            {ファイルパス: 依存数}
-        """
-        imports_by_file = self.get_imports_by_file(imports)
-        
-        return {
-            file_path: len(file_imports)
-            for file_path, file_imports in imports_by_file.items()
-        }
-    
+        """Count dependencies between files"""
+        dependency_count = {}
+
+        for file_path, imports in imports_dict.items():
+            for imp in imports:
+                if imp.module not in dependency_count:
+                    dependency_count[imp.module] = 0
+                dependency_count[imp.module] += 1
+
+        return dependency_count
+
     def find_circular_imports(
-        self, 
-        imports: List[ImportRelation]
+        self, imports_dict: Dict[Path, List[ImportRelation]]
     ) -> List[List[str]]:
-        """
-        循環importを検出（簡易版）
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            循環しているファイルパスのリスト
-        
-        Note: これは簡易実装。完全な検出にはグラフアルゴリズムが必要
-        """
-        # TODO: Phase 1 Day 2でGraphBuilderを使った完全実装
-        logger.warning("Circular import detection is simplified in this version")
-        return []
-    
-    def export_to_dict(self, imports: List[ImportRelation]) -> Dict:
-        """
-        import文リストを辞書形式でエクスポート
-        
-        Args:
-            imports: ImportRelationのリスト
-        
-        Returns:
-            辞書形式のデータ
-        """
-        return {
-            'total_imports': len(imports),
-            'unique_modules': len(self.get_imported_modules(imports)),
-            'imports': [imp.to_dict() for imp in imports]
-        }
-    
+        """Find circular import patterns (basic implementation)"""
+        # This is a simplified implementation
+        # In a real system, you'd use graph algorithms
+        circular_imports = []
+        import_graph = {}
+
+        # Build import graph
+        for file_path, imports in imports_dict.items():
+            file_str = str(file_path)
+            if file_str not in import_graph:
+                import_graph[file_str] = set()
+
+            for imp in imports:
+                module_path = self._resolve_module_path(imp.module)
+                if module_path:
+                    import_graph[file_str].add(str(module_path))
+
+        # Simple cycle detection (for demonstration)
+        # In production, use NetworkX or similar
+        visited = set()
+
+        def dfs(node, path):
+            if node in path:
+                cycle_start = path.index(node)
+                circular_imports.append(path[cycle_start:] + [node])
+                return
+            if node in visited:
+                return
+
+            visited.add(node)
+            path.append(node)
+
+            for neighbor in import_graph.get(node, set()):
+                dfs(neighbor, path.copy())
+
+        for node in import_graph:
+            dfs(node, [])
+
+        return circular_imports
+
+    def export_to_dict(self, imports: List[ImportRelation]) -> List[Dict]:
+        """Export imports to JSON-serializable format"""
+        return [imp.to_dict() for imp in imports]
+
+    def _resolve_module_path(self, module: str) -> Optional[Path]:
+        """Resolve module name to file path"""
+        try:
+            # Simple implementation - in production, use importlib
+            if module.startswith("."):
+                # Relative import
+                return None
+
+            # Convert module to path
+            module_path = module.replace(".", "/") + ".py"
+            possible_paths = [self.project_root / module_path, Path(module_path)]
+
+            for path in possible_paths:
+                if path.exists():
+                    return path
+
+            return None
+
+        except Exception:
+            return None
+
     def clear_cache(self):
-        """キャッシュをクリア"""
-        self.cache.clear()
-        logger.info("Cache cleared")
+        """Clear the import cache"""
+        self._cache.clear()
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# コマンドライン実行用
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ==============================================================================
+# 後方互換性のためのエイリアス
+# ==============================================================================
+# ImportInfoはImportRelationの別名（static_analyzer.pyとの互換性のため）
+ImportInfo = ImportRelation
+
 
 def main():
-    """コマンドライン実行"""
+    """Command line interface for import extraction"""
     import argparse
-    
-    parser = argparse.ArgumentParser(description='Import文抽出ツール')
-    parser.add_argument('file_or_dir', help='ファイルまたはディレクトリパス')
-    parser.add_argument('--verbose', '-v', action='store_true', help='詳細出力')
-    
+    import json
+
+    parser = argparse.ArgumentParser(description="Extract imports from Python files")
+    parser.add_argument("path", help="File or directory path")
+    parser.add_argument("--output", "-o", help="Output JSON file")
+    parser.add_argument("--format", "-f", choices=["json", "text"], default="text")
+
     args = parser.parse_args()
-    
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    
+
     extractor = ImportExtractor()
-    path = Path(args.file_or_dir)
-    
+    path = Path(args.path)
+
     if path.is_file():
         imports = extractor.extract_from_file(path)
-        print(f"📄 ファイル: {path}")
-    elif path.is_dir():
-        imports = extractor.extract_from_directory(path)
-        print(f"📁 ディレクトリ: {path}")
+        results = {str(path): extractor.export_to_dict(imports)}
     else:
-        print(f"❌ パスが見つかりません: {path}")
-        sys.exit(1)
-    
-    print(f"📊 総import数: {len(imports)}")
-    print(f"📦 ユニークモジュール数: {len(extractor.get_imported_modules(imports))}")
-    print()
-    
-    # 内部/外部の分類
-    internal = extractor.filter_internal_imports(imports)
-    external = extractor.filter_external_imports(imports)
-    
-    print(f"🏠 内部import: {len(internal)}")
-    print(f"🌐 外部import: {len(external)}")
-    print()
-    
-    # 詳細表示
-    if args.verbose:
-        print("詳細:")
-        for imp in imports[:20]:  # 最初の20件
-            print(f"  {imp}")
+        imports_dict = extractor.extract_from_directory(path)
+        results = extractor.get_imports_by_file(imports_dict)
+        # Convert to export format
+        for file_path, imports in results.items():
+            results[file_path] = extractor.export_to_dict(imports)
+
+    if args.output:
+        with open(args.output, "w") as f:
+            json.dump(results, f, indent=2)
+        print(f"Results saved to {args.output}")
+    else:
+        if args.format == "json":
+            print(json.dumps(results, indent=2))
+        else:
+            for file_path, imports in results.items():
+                print(f"\n{file_path}:")
+                for imp in imports:
+                    print(f"  {imp}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
