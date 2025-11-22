@@ -12,6 +12,13 @@ sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
 from tools.folder_name_formatter import format_folder_name
 
+# Observer Enhanced Tracer Integration
+try:
+    from agents.observer_enhanced.tracer import tracer
+except ImportError:
+    # Tracer not available, continue without tracing
+    tracer = None
+
 
 class TaskExecutor:
     """タスク実行エンジン"""
