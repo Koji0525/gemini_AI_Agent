@@ -160,5 +160,12 @@
   "agents/task_executor.py": "5f22419d5bf29514abe950459444f77e",
   "core_agents/pm_agent_v3_fixed.py": "871fcf38de79d72089e4c1ed00f7a65f",
   "tools/knowledge_manager.py": "a1c426185d20683ad69f75dd98be3ceb",
-  "agents/observer_enhanced/graph/graph_db.py": "340fd5b0214abb1ad6699d9a5d68622d"
+  "agents/observer_enhanced/graph/graph_db.py": "340fd5b0214abb1ad6699d9a5d68622d",
+  "agents/observer_enhanced/tracer.py": "7ba90f28784659da55d3ddf7410cb1dd",
+  "agents/observer_enhanced/graph_builder.py": "e0e4b9f5fc7b13bb7ce7d92522101309",
+  "agents/observer_enhanced/static_analyzer.py": "9d895cd5dc7a1ebc43a25a968dc225d2",
+  "agents/observer_enhanced/trace_logger.py": "9c3e14facf7bbc572db6cd9217bb6a41",
+  "agents/observer_enhanced/trace_query.py": "10d47cf5bd82658728a90cf238a44ed6",
+  "agents/observer_enhanced/graph_db.py": "a4ac7a185e4109711302506b3c387cc6",
+  "agents/git_agent/untracked_warning.py": "ac43f478ea3fe424689b44e50cc77922"
 }
