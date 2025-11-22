@@ -148,7 +148,7 @@
   "tools/sheets_flow_orchestrator.py": "2392b99c92229d7c97bacc202067e709",
   "tools/sheets_validators/quick_diagnosis.py": "089df8337994b2836bf6e96b2586ca7a",
   "agents/git_agent/auto_commit_push_v10_auto.py": "866b74cad4bfcc969e5eb49fe03bafea",
-  ".quality_cache.json": "8e1059c1114e149afc16923b7a3bea4c",
+  ".quality_cache.json": "6f74f1fc4295df1416bf9a05797bdca8",
   "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624",
   "agents/complete_engine_ultimate.py": "bce74b246768edab2c44857392abd957",
   "core_agents/{base_name}_v{next_version:02d}{suffix}.py": "ae8eb9b3629a0ecd252ace7b38332170",
@@ -167,5 +167,11 @@
   "agents/observer_enhanced/trace_logger.py": "9c3e14facf7bbc572db6cd9217bb6a41",
   "agents/observer_enhanced/trace_query.py": "10d47cf5bd82658728a90cf238a44ed6",
   "agents/observer_enhanced/graph_db.py": "a4ac7a185e4109711302506b3c387cc6",
-  "agents/git_agent/untracked_warning.py": "ac43f478ea3fe424689b44e50cc77922"
+  "agents/git_agent/untracked_warning.py": "ac43f478ea3fe424689b44e50cc77922",
+  "agents/observer_enhanced/health_checker.py": "3e1d201235d1d3cdb12bcb8b8e2371a4",
+  "agents/observer_enhanced/impact_analyzer.py": "a9aaab8cc5e94337ef15a1b8148e6212",
+  "agents/observer_enhanced/orchestrator.py": "ede11d66de74f81f013978be144ca470",
+  "agents/observer_enhanced/scan_config.py": "8ba774252febd7d7fb33ec78fc0b750c",
+  "agents/observer_enhanced/alert_manager.py": "52e6d13ecf181656b82be2caba72782c",
+  "agents/observer_enhanced/__init__.py": "959588cf3c6474f07bf237b2070af924"
 }
