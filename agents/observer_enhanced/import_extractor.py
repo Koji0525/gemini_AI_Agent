@@ -1,176 +1,202 @@
+#!/usr/bin/env python3
 """
-Import文抽出器（修正版）
+Import抽出エンジン
+タスクID: P1-T001
 
 【責任】
 - Pythonファイルからimport文を抽出
-- 依存関係の明確化
-- AST解析ベース
+- 内部/外部モジュールの分類
+- 依存関係の解析
 """
 
 import ast
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 
 @dataclass
-class ImportRelation:
-    """Import関係を表すデータクラス"""
-
+class ImportInfo:
+    """Import情報を保持するデータクラス"""
     module: str
-    names: List[str]
+    name: Optional[str] = None
     alias: Optional[str] = None
     is_from_import: bool = False
-
+    line_number: int = 0
+    file_path: str = ""
+    
     def to_dict(self) -> Dict[str, Any]:
-        """辞書に変換"""
-        return asdict(self)
+        return {
+            'module': self.module,
+            'name': self.name,
+            'alias': self.alias,
+            'is_from_import': self.is_from_import,
+            'line_number': self.line_number,
+            'file_path': self.file_path
+        }
+
+
+# テスト互換性のためのエイリアス
+ImportRelation = ImportInfo
 
 
 class ImportExtractor:
     """Import文抽出クラス"""
-
-    def __init__(self):
-        pass
-
+    
+    def __init__(self, project_root: Optional[Path] = None):
+        self.project_root = project_root or Path.cwd()
+        self.internal_prefixes = {
+            'agents', 'tools', 'core_agents', 'browser_control',
+            'configuration', 'task_executor', 'knowledge_system',
+            'automation', 'scripts', 'utils'
+        }
+    
     def extract_imports(self, file_path: str) -> List[Dict[str, Any]]:
-        """
-        Import文を抽出（辞書形式で返す）
-
-        Args:
-            file_path: Pythonファイルパス
-
-        Returns:
-            [
-                {
-                    'module': 'os',
-                    'names': ['path', 'environ'],
-                    'alias': None,
-                    'is_from_import': True
-                },
-                ...
-            ]
-        """
+        """ファイルからimport文を抽出"""
+        imports = []
+        path = Path(file_path)
+        
+        if not path.exists():
+            return imports
+        
         try:
-            path = Path(file_path)
-
-            if not path.exists():
-                return []
-
-            with open(path, "r", encoding="utf-8") as f:
-                source = f.read()
-
-            tree = ast.parse(source, filename=str(path))
-
-            imports = []
-
+            content = path.read_text(encoding='utf-8')
+            tree = ast.parse(content)
+            
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
-                    # import xxx
                     for alias in node.names:
-                        imports.append(
-                            {
-                                "module": alias.name,
-                                "names": [alias.name],
-                                "alias": alias.asname,
-                                "is_from_import": False,
-                            }
-                        )
-
+                        imports.append({
+                            'module': alias.name,
+                            'name': None,
+                            'alias': alias.asname,
+                            'is_from_import': False,
+                            'line_number': node.lineno,
+                            'file_path': str(file_path)
+                        })
                 elif isinstance(node, ast.ImportFrom):
-                    # from xxx import yyy
-                    module = node.module or ""
-                    names = [alias.name for alias in node.names]
-
-                    imports.append(
-                        {"module": module, "names": names, "alias": None, "is_from_import": True}
-                    )
-
-            return imports
-
-        except SyntaxError as e:
-            # 構文エラーの場合は空リスト
-            print(f"Syntax error in {file_path}: {e}")
-            return []
-
-        except Exception as e:
-            print(f"Error extracting imports from {file_path}: {e}")
-            return []
-
+                    module = node.module or ''
+                    for alias in node.names:
+                        imports.append({
+                            'module': module,
+                            'name': alias.name,
+                            'alias': alias.asname,
+                            'is_from_import': True,
+                            'line_number': node.lineno,
+                            'file_path': str(file_path)
+                        })
+        except (SyntaxError, Exception):
+            pass
+        
+        return imports
+    
+    def extract_from_file(self, file_path: str) -> List[Dict[str, Any]]:
+        """ファイルまたはコード文字列からimport文を抽出"""
+        if '\n' in str(file_path) or 'import ' in str(file_path):
+            return self._extract_from_code(str(file_path))
+        else:
+            return self.extract_imports(str(file_path))
+    
+    def _extract_from_code(self, code: str) -> List[Dict[str, Any]]:
+        """コード文字列からimport文を抽出"""
+        imports = []
+        try:
+            tree = ast.parse(code)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for alias in node.names:
+                        imports.append({
+                            'module': alias.name,
+                            'name': None,
+                            'alias': alias.asname,
+                            'is_from_import': False,
+                            'line_number': node.lineno,
+                            'file_path': '<code>'
+                        })
+                elif isinstance(node, ast.ImportFrom):
+                    module = node.module or ''
+                    for alias in node.names:
+                        imports.append({
+                            'module': module,
+                            'name': alias.name,
+                            'alias': alias.asname,
+                            'is_from_import': True,
+                            'line_number': node.lineno,
+                            'file_path': '<code>'
+                        })
+        except (SyntaxError, Exception):
+            pass
+        return imports
+    
+    def extract_from_directory(self, directory: Path) -> List[Dict[str, Any]]:
+        """ディレクトリ内の全Pythonファイルからimport文を抽出"""
+        all_imports = []
+        dir_path = Path(directory)
+        if dir_path.exists():
+            for py_file in dir_path.rglob('*.py'):
+                imports = self.extract_imports(str(py_file))
+                all_imports.extend(imports)
+        return all_imports
+    
     def get_direct_dependencies(self, file_path: str) -> List[str]:
-        """
-        直接依存しているモジュール一覧取得
-
-        Args:
-            file_path: Pythonファイルパス
-
-        Returns:
-            ['os', 'sys', 'pathlib', ...]
-        """
+        """直接依存しているモジュールのリストを取得"""
         imports = self.extract_imports(file_path)
-
         modules = set()
         for imp in imports:
-            module = imp.get("module", "")
+            module = imp['module']
             if module:
-                # トップレベルモジュールのみ
-                top_module = module.split(".")[0]
+                top_module = module.split('.')[0]
                 modules.add(top_module)
-
         return sorted(list(modules))
+    
+    def filter_internal_imports(self, imports: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """内部モジュールのみをフィルタ"""
+        internal = []
+        for imp in imports:
+            module = imp.get('module', '')
+            top_module = module.split('.')[0] if module else ''
+            if top_module in self.internal_prefixes:
+                internal.append(imp)
+        return internal
+    
+    def filter_external_imports(self, imports: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """外部モジュールのみをフィルタ"""
+        external = []
+        for imp in imports:
+            module = imp.get('module', '')
+            top_module = module.split('.')[0] if module else ''
+            if top_module and top_module not in self.internal_prefixes:
+                external.append(imp)
+        return external
+    
+    def get_imports_by_file(self, imports: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        """ファイルごとにimportをグループ化"""
+        by_file: Dict[str, List[Dict[str, Any]]] = {}
+        for imp in imports:
+            file_path = imp.get('file_path', '<unknown>')
+            if file_path not in by_file:
+                by_file[file_path] = []
+            by_file[file_path].append(imp)
+        return by_file
+    
+    def get_imported_modules(self, imports: List[Dict[str, Any]]) -> Set[str]:
+        """インポートされているモジュール名のセットを取得"""
+        modules = set()
+        for imp in imports:
+            module = imp.get('module', '')
+            if module:
+                modules.add(module)
+        return modules
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CLI実行
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) < 2:
-        print("使用方法: python import_extractor.py <file_path>")
-        sys.exit(1)
-
-    file_path = sys.argv[1]
-
+def main():
+    """テスト実行"""
     extractor = ImportExtractor()
-    imports = extractor.extract_imports(file_path)
-
-    print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print(f"📝 Import抽出結果: {file_path}")
-    print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print()
-
-    for i, imp in enumerate(imports, 1):
-        print(f"{i}. module: {imp['module']}")
-        print(f"   names: {imp['names']}")
-        if imp.get("alias"):
-            print(f"   alias: {imp['alias']}")
-        print()
-
-    print(f"Total: {len(imports)}個のimport文")
+    imports = extractor.extract_imports(__file__)
+    print(f"このファイルのimport数: {len(imports)}")
+    for imp in imports:
+        print(f"  - {imp['module']}" + (f".{imp['name']}" if imp['name'] else ""))
 
 
-def extract_from_file(self, file_path):
-    """単一ファイルからimport情報を抽出（テスト用エイリアス）"""
-    return self.extract_imports(file_path)
-
-
-def extract_from_directory(self, directory):
-    """ディレクトリ配下の全ファイルからimport情報を抽出"""
-    from pathlib import Path
-
-    directory = Path(directory)
-    results = {}
-
-    for py_file in directory.rglob("*.py"):
-        if "__pycache__" in str(py_file):
-            continue
-
-        try:
-            imports = self.extract_imports(py_file)
-            results[str(py_file)] = imports
-        except Exception:
-            results[str(py_file)] = []
-
-    return results
+if __name__ == '__main__':
+    main()

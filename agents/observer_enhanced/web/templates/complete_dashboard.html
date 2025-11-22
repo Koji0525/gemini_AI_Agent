@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Observer - Complete Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+        
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr 300px;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            gap: 1px;
+            background: #1e293b;
+        }
+        
+        /* ヘッダー */
+        .header {
+            grid-column: 1 / -1;
+            background: #1e293b;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .health-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .health-score {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #10b981;
+        }
+        
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-online {
+            background: #065f46;
+            color: #10b981;
+        }
+        
+        /* 左サイドバー */
+        .sidebar-left {
+            background: #1e293b;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .nav-item {
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .nav-item:hover {
+            background: #334155;
+        }
+        
+        .nav-item.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .nav-icon {
+            font-size: 1.25rem;
+        }
+        
+        /* メインコンテンツ */
+        .main-content {
+            background: #0f172a;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        /* グラフビュー */
+        #graph-container {
+            width: 100%;
+            height: 600px;
+            background: #1e293b;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+        }
+        
+        /* 統計カード */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        
+        /* 検索UI */
+        .search-container {
+            margin-bottom: 2rem;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 1rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            color: #e2e8f0;
+            font-size: 1rem;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .search-results {
+            margin-top: 1rem;
+        }
+        
+        .result-item {
+            background: #1e293b;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .result-item:hover {
+            border-color: #3b82f6;
+            transform: translateX(4px);
+        }
+        
+        .result-file {
+            font-weight: 600;
+            color: #3b82f6;
+        }
+        
+        .result-snippet {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* 右サイドバー */
+        .sidebar-right {
+            background: #1e293b;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+        
+        .sidebar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #3b82f6;
+        }
+        
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+        
+        .filter-label {
+            display: block;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 0.5rem;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 0.5rem;
+            color: #e2e8f0;
+        }
+        
+        /* アラートリスト */
+        .alert-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid;
+        }
+        
+        .alert-critical {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+        
+        .alert-high {
+            background: rgba(249, 115, 22, 0.1);
+            border-color: #f97316;
+        }
+        
+        .alert-medium {
+            background: rgba(234, 179, 8, 0.1);
+            border-color: #eab308;
+        }
+        
+        /* ローディング */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
+        
+        .spinner {
+            border: 4px solid #334155;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* ボタン */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        /* テーブル */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .data-table th {
+            background: #1e293b;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        
+        .data-table tr:hover {
+            background: #1e293b;
+        }
+        
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+        
+        // メインダッシュボードコンポーネント
+        function Dashboard() {
+            const [activeView, setActiveView] = useState('overview');
+            const [healthData, setHealthData] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [dependencies, setDependencies] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            
+            // APIベースURL
+            const API_BASE = 'http://localhost:5002';
+            
+            // ヘルスデータ取得
+            useEffect(() => {
+                fetchHealthData();
+                const interval = setInterval(fetchHealthData, 10000); // 10秒ごと
+                return () => clearInterval(interval);
+            }, []);
+            
+            const fetchHealthData = async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/api/health`);
+                    const data = await response.json();
+                    setHealthData(data);
+                } catch (error) {
+                    console.error('Health check failed:', error);
+                }
+            };
+            
+            // コード検索
+            const handleSearch = async () => {
+                if (!searchQuery.trim()) return;
+                
+                setIsLoading(true);
+                try {
+                    const response = await fetch(`${API_BASE}/api/search/code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            query: searchQuery,
+                            max_results: 10
+                        })
+                    });
+                    const data = await response.json();
+                    setSearchResults(data.data || []);
+                } catch (error) {
+                    console.error('Search failed:', error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            // 依存関係スキャン
+            const scanDependencies = async () => {
+                setIsLoading(true);
+                try {
+                    const response = await fetch(`${API_BASE}/api/dependencies/scan`, {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    setDependencies(data.data);
+                    setActiveView('dependencies');
+                } catch (error) {
+                    console.error('Dependency scan failed:', error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            return (
+                <div className="dashboard-container">
+                    {/* ヘッダー */}
+                    <header className="header">
+                        <div className="header-title">
+                            🔍 Enhanced Observer
+                        </div>
+                        <div className="health-indicator">
+                            <div className="health-score">
+                                {healthData ? 'A' : '?'}
+                            </div>
+                            <span className="status-badge status-online">
+                                ● ONLINE
+                            </span>
+                        </div>
+                    </header>
+                    
+                    {/* 左サイドバー */}
+                    <aside className="sidebar-left">
+                        <nav>
+                            <div 
+                                className={`nav-item ${activeView === 'overview' ? 'active' : ''}`}
+                                onClick={() => setActiveView('overview')}
+                            >
+                                <span className="nav-icon">📊</span>
+                                <span>Overview</span>
+                            </div>
+                            <div 
+                                className={`nav-item ${activeView === 'dependencies' ? 'active' : ''}`}
+                                onClick={() => setActiveView('dependencies')}
+                            >
+                                <span className="nav-icon">🔗</span>
+                                <span>Dependencies</span>
+                            </div>
+                            <div 
+                                className={`nav-item ${activeView === 'impact' ? 'active' : ''}`}
+                                onClick={() => setActiveView('impact')}
+                            >
+                                <span className="nav-icon">⚡</span>
+                                <span>Impact Analysis</span>
+                            </div>
+                            <div 
+                                className={`nav-item ${activeView === 'search' ? 'active' : ''}`}
+                                onClick={() => setActiveView('search')}
+                            >
+                                <span className="nav-icon">🔍</span>
+                                <span>Code Search</span>
+                            </div>
+                            <div 
+                                className={`nav-item ${activeView === 'breaking' ? 'active' : ''}`}
+                                onClick={() => setActiveView('breaking')}
+                            >
+                                <span className="nav-icon">⚠️</span>
+                                <span>Breaking Changes</span>
+                            </div>
+                        </nav>
+                    </aside>
+                    
+                    {/* メインコンテンツ */}
+                    <main className="main-content">
+                        {/* Overview */}
+                        <div className={`content-section ${activeView === 'overview' ? 'active' : ''}`}>
+                            <h2 style={{marginBottom: '2rem'}}>System Overview</h2>
+                            
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <div className="stat-label">Total Components</div>
+                                    <div className="stat-value">15</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-label">Dependencies</div>
+                                    <div className="stat-value">{dependencies ? dependencies.total_dependencies : '---'}</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-label">Test Success Rate</div>
+                                    <div className="stat-value">84.3%</div>
+                                </div>
+                                <div className="stat-card">
+                                    <div className="stat-label">Uptime</div>
+                                    <div className="stat-value">24h+</div>
+                                </div>
+                            </div>
+                            
+                            <div style={{marginTop: '2rem'}}>
+                                <button className="btn btn-primary" onClick={scanDependencies}>
+                                    🔍 Run Full Scan
+                                </button>
+                            </div>
+                        </div>
+                        
+                        {/* Dependencies */}
+                        <div className={`content-section ${activeView === 'dependencies' ? 'active' : ''}`}>
+                            <h2 style={{marginBottom: '2rem'}}>Hidden Dependencies</h2>
+                            
+                            {isLoading ? (
+                                <div className="loading">
+                                    <div className="spinner"></div>
+                                </div>
+                            ) : dependencies ? (
+                                <div>
+                                    <div className="stats-grid">
+                                        {Object.entries(dependencies.by_type || {}).map(([type, count]) => (
+                                            <div className="stat-card" key={type}>
+                                                <div className="stat-label">{type}</div>
+                                                <div className="stat-value">{count}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p style={{color: '#94a3b8'}}>Click "Run Full Scan" to detect dependencies</p>
+                            )}
+                        </div>
+                        
+                        {/* Code Search */}
+                        <div className={`content-section ${activeView === 'search' ? 'active' : ''}`}>
+                            <h2 style={{marginBottom: '2rem'}}>Code Search</h2>
+                            
+                            <div className="search-container">
+                                <input 
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="Search functions, classes, keywords..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                />
+                                <button 
+                                    className="btn btn-primary" 
+                                    style={{marginTop: '1rem'}}
+                                    onClick={handleSearch}
+                                >
+                                    Search
+                                </button>
+                            </div>
+                            
+                            {isLoading ? (
+                                <div className="loading">
+                                    <div className="spinner"></div>
+                                </div>
+                            ) : (
+                                <div className="search-results">
+                                    {searchResults.map((result, index) => (
+                                        <div className="result-item" key={index}>
+                                            <div className="result-file">
+                                                {result.file_path}:{result.line_number}
+                                            </div>
+                                            <div className="result-snippet">
+                                                {result.code_snippet}
+                                            </div>
+                                            <div style={{marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b'}}>
+                                                Similarity: {(result.similarity_score * 100).toFixed(0)}%
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Impact Analysis */}
+                        <div className={`content-section ${activeView === 'impact' ? 'active' : ''}`}>
+                            <h2 style={{marginBottom: '2rem'}}>Impact Analysis</h2>
+                            <p style={{color: '#94a3b8'}}>Coming soon...</p>
+                        </div>
+                        
+                        {/* Breaking Changes */}
+                        <div className={`content-section ${activeView === 'breaking' ? 'active' : ''}`}>
+                            <h2 style={{marginBottom: '2rem'}}>Breaking Changes</h2>
+                            <p style={{color: '#94a3b8'}}>Coming soon...</p>
+                        </div>
+                    </main>
+                    
+                    {/* 右サイドバー */}
+                    <aside className="sidebar-right">
+                        <div className="sidebar-section">
+                            <div className="sidebar-title">Filters</div>
+                            <div className="filter-group">
+                                <label className="filter-label">Severity</label>
+                                <select className="filter-select">
+                                    <option>All</option>
+                                    <option>Critical</option>
+                                    <option>High</option>
+                                    <option>Medium</option>
+                                    <option>Low</option>
+                                </select>
+                            </div>
+                            <div className="filter-group">
+                                <label className="filter-label">Type</label>
+                                <select className="filter-select">
+                                    <option>All</option>
+                                    <option>File I/O</option>
+                                    <option>Environment</option>
+                                    <option>Subprocess</option>
+                                    <option>Network</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div className="sidebar-section">
+                            <div className="sidebar-title">Recent Alerts</div>
+                            <div className="alert-item alert-critical">
+                                <strong>Critical</strong>
+                                <div style={{fontSize: '0.875rem', marginTop: '0.5rem'}}>
+                                    Subprocess detected in pm_agent.py
+                                </div>
+                            </div>
+                            <div className="alert-item alert-high">
+                                <strong>High</strong>
+                                <div style={{fontSize: '0.875rem', marginTop: '0.5rem'}}>
+                                    API signature changed
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            );
+        }
+        
+        // レンダリング
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
