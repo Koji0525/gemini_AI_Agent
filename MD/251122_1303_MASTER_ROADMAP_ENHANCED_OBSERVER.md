@@ -171,11 +171,11 @@ git revert HEAD
 
 | 状態 | タスクID | タスク名 | ファイルパス | 行数 | 担当 | 期限 | 備考 |
 |:---:|:---|:---|:---|:---:|:---:|:---:|:---|
-| ⬜ | P0-T001 | プロジェクト構造作成 | `agents/observer_enhanced/` | - | AI | Day 0 | ディレクトリ作成 |
-| ⬜ | P0-T002 | 依存関係インストール | `requirements_observer.txt` | 20 | AI | Day 0 | pytz, networkx, flask |
-| ⬜ | P0-T003 | 設定ファイル作成 | `config/observer_config.yaml` | 200 | AI | Day 0 | 全パラメータ定義 |
-| ⬜ | P0-T004 | ベーステスト環境構築 | `tests/observer_enhanced/` | - | AI | Day 0 | pytest設定 |
-| ⬜ | P0-T005 | 既存システムバックアップ | `backups/` | - | AI | Day 0 | 全15ファイル |
+| ✅ | P0-T001 | プロジェクト構造作成 | `agents/observer_enhanced/` | - | AI | Day 0 | ディレクトリ作成 |
+| ✅ | P0-T002 | 依存関係インストール | `requirements_observer.txt` | 20 | AI | Day 0 | pytz, networkx, flask |
+| ✅ | P0-T003 | 設定ファイル作成 | `config/observer_config.yaml` | 200 | AI | Day 0 | 全パラメータ定義 |
+| ✅ | P0-T004 | ベーステスト環境構築 | `tests/observer_enhanced/` | - | AI | Day 0 | pytest設定 |
+| ✅ | P0-T005 | 既存システムバックアップ | `backups/` | - | AI | Day 0 | 全15ファイル |
 
 **完了条件**: 5タスク全て ✅、所要時間 < 4時間
 
@@ -187,9 +187,9 @@ git revert HEAD
 
 | 状態 | タスクID | タスク名 | ファイルパス | 行数 | 依存 | テスト | 備考 |
 |:---:|:---|:---|:---|:---:|:---|:---:|:---|
-| ⬜ | P1-T001 | ImportExtractor実装 | `agents/observer_enhanced/import_extractor.py` | 500 | なし | 5件 | ast.parse使用 |
-| ⬜ | P1-T002 | ImportExtractorテスト | `tests/observer_enhanced/test_import_extractor.py` | 300 | P1-T001 | - | 成功率95%以上 |
-| ⬜ | P1-T003 | 既存pm_agent.py解析テスト | - | - | P1-T001 | 1件 | 実ファイルで検証 |
+| ✅ | P1-T001 | ImportExtractor実装 | `agents/observer_enhanced/import_extractor.py` | 500 | なし | 5件 | ast.parse使用 |
+| ✅ | P1-T002 | ImportExtractorテスト | `tests/observer_enhanced/test_import_extractor.py` | 300 | P1-T001 | - | 成功率95%以上 |
+| ✅ | P1-T003 | 既存pm_agent.py解析テスト | - | - | P1-T001 | 1件 | 実ファイルで検証 |
 
 **完了条件**: import文抽出成功率100%（15ファイルテスト）
 
