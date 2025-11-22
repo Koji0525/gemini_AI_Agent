@@ -304,6 +304,171 @@
                 font-size: 2.5em;
             }
         }
+    
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           Phase 3: グラフ可視化スタイル
+           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        
+        .graph-controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .graph-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .control-button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .control-button:hover {
+            background: #5568d3;
+        }
+        
+        .graph-stats {
+            margin-left: auto;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        #graphContainer {
+            width: 100%;
+            height: 600px;
+            background: #f9fafb;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #graphContainer svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* ノード詳細パネル */
+        .node-detail-panel {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 350px;
+            max-height: 80vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #667eea;
+            color: white;
+        }
+        
+        .panel-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        
+        .close-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.3s ease;
+        }
+        
+        .close-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .panel-content {
+            padding: 20px;
+            max-height: calc(80vh - 70px);
+            overflow-y: auto;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            color: #666;
+        }
+        
+        /* グラフノード/エッジのスタイル */
+        .graph-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .graph-node:hover {
+            stroke-width: 3px;
+        }
+        
+        .graph-node.selected {
+            stroke: #f59e0b;
+            stroke-width: 4px;
+        }
+        
+        .graph-link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 1.5px;
+        }
+        
+        .graph-link.highlighted {
+            stroke: #667eea;
+            stroke-opacity: 1;
+            stroke-width: 3px;
+        }
+        
+        .graph-label {
+            font-size: 10px;
+            pointer-events: none;
+            user-select: none;
+        }
+
     </style>
 </head>
 <body>
@@ -359,8 +524,321 @@
                 <div class="spinner"></div>
                 <p>データ読み込み中...</p>
             </div>
+
+        
+        <!-- 依存関係グラフ可視化（P3-001〜007） -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-title">
+                <span class="card-icon">🕸️</span>
+                システム依存関係グラフ
+            </div>
+            
+            <!-- フィルタコントロール（P3-007） -->
+            <div class="graph-controls">
+                <label>
+                    <input type="checkbox" id="filterModules" checked> モジュール
+                </label>
+                <label>
+                    <input type="checkbox" id="filterFunctions" checked> 関数
+                </label>
+                <label>
+                    <input type="checkbox" id="filterClasses" checked> クラス
+                </label>
+                <button id="resetGraph" class="control-button">リセット</button>
+                <span id="graphStats" class="graph-stats"></span>
+            </div>
+            
+            <!-- グラフ表示エリア -->
+            <div id="graphContainer" class="loading">
+                <div class="spinner"></div>
+                <p>グラフデータ読み込み中...</p>
+            </div>
+            
+            <!-- ノード詳細パネル（P3-006） -->
+            <div id="nodeDetailPanel" class="node-detail-panel" style="display: none;">
+                <div class="panel-header">
+                    <h3 id="nodeDetailTitle">ノード詳細</h3>
+                    <button id="closeDetailPanel" class="close-button">×</button>
+                </div>
+                <div id="nodeDetailContent" class="panel-content"></div>
+            </div>
+        </div>
+
         </div>
     </div>
+
+    
+    <!-- D3.js CDN（P3-001） -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <script>
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           Phase 3: グラフ可視化JavaScript
+           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        
+        let graphData = null;
+        let simulation = null;
+        let svg = null;
+        let selectedNode = null;
+        
+        // グラフデータの読み込みと変換（P3-002）
+        async function loadGraph() {
+            try {
+                const response = await fetch(`${API_BASE}/graph?limit=100`);
+                const data = await response.json();
+                graphData = data.graph;
+                
+                // データ変換: ノードIDをインデックスに変換
+                const nodeMap = new Map();
+                graphData.nodes.forEach((node, index) => {
+                    nodeMap.set(node.id, index);
+                    node.type = node.type || 'module'; // デフォルトタイプ
+                });
+                
+                // エッジのsource/targetをインデックスに変換
+                graphData.edges = graphData.edges.map(edge => ({
+                    source: nodeMap.get(edge.source),
+                    target: nodeMap.get(edge.target),
+                    type: edge.type || 'imports'
+                })).filter(edge => edge.source !== undefined && edge.target !== undefined);
+                
+                renderGraph();
+                updateGraphStats();
+            } catch (error) {
+                document.getElementById('graphContainer').innerHTML = `
+                    <div class="no-alerts">エラー: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // グラフの描画（P3-003, P3-004）
+        function renderGraph() {
+            const container = document.getElementById('graphContainer');
+            container.innerHTML = '';
+            
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            // SVG作成
+            svg = d3.select('#graphContainer')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+            
+            // ズーム機能（P3-005）
+            const zoom = d3.zoom()
+                .scaleExtent([0.1, 10])
+                .on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            const g = svg.append('g');
+            
+            // 力学モデルシミュレーション
+            simulation = d3.forceSimulation(graphData.nodes)
+                .force('link', d3.forceLink(graphData.edges).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(30));
+            
+            // エッジ描画（P3-004）
+            const link = g.append('g')
+                .selectAll('line')
+                .data(graphData.edges)
+                .enter().append('line')
+                .attr('class', 'graph-link')
+                .attr('stroke-width', 1.5);
+            
+            // ノード描画（P3-003）
+            const node = g.append('g')
+                .selectAll('circle')
+                .data(graphData.nodes)
+                .enter().append('circle')
+                .attr('class', 'graph-node')
+                .attr('r', 8)
+                .attr('fill', d => getNodeColor(d.type))
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2)
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded))
+                .on('click', showNodeDetail); // P3-006
+            
+            // ノードラベル
+            const label = g.append('g')
+                .selectAll('text')
+                .data(graphData.nodes)
+                .enter().append('text')
+                .attr('class', 'graph-label')
+                .attr('dx', 12)
+                .attr('dy', 4)
+                .text(d => d.label || d.id.split('/').pop());
+            
+            // シミュレーション更新
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                label
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+        }
+        
+        // ノードタイプ別の色
+        function getNodeColor(type) {
+            const colors = {
+                'module': '#60a5fa',
+                'function': '#34d399',
+                'class': '#f472b6',
+                'file': '#a78bfa',
+                'default': '#94a3b8'
+            };
+            return colors[type] || colors.default;
+        }
+        
+        // ドラッグ機能（P3-005）
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+        
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+        
+        // ノード詳細表示（P3-006）
+        function showNodeDetail(event, d) {
+            selectedNode = d;
+            
+            // 選択状態の表示
+            d3.selectAll('.graph-node').classed('selected', false);
+            d3.select(event.target).classed('selected', true);
+            
+            // 接続されたエッジをハイライト
+            d3.selectAll('.graph-link')
+                .classed('highlighted', l => l.source === d || l.target === d);
+            
+            // 詳細パネル表示
+            const panel = document.getElementById('nodeDetailPanel');
+            const title = document.getElementById('nodeDetailTitle');
+            const content = document.getElementById('nodeDetailContent');
+            
+            title.textContent = d.label || d.id;
+            
+            let html = `
+                <div class="detail-item">
+                    <div class="detail-label">ID</div>
+                    <div class="detail-value">${d.id}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">タイプ</div>
+                    <div class="detail-value">${d.type || 'unknown'}</div>
+                </div>
+            `;
+            
+            if (d.dependencies && d.dependencies.length > 0) {
+                html += `
+                    <div class="detail-item">
+                        <div class="detail-label">依存関係 (${d.dependencies.length})</div>
+                        <div class="detail-value">${d.dependencies.join('<br>')}</div>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = html;
+            panel.style.display = 'block';
+        }
+        
+        // 詳細パネルを閉じる
+        document.getElementById('closeDetailPanel').addEventListener('click', () => {
+            document.getElementById('nodeDetailPanel').style.display = 'none';
+            d3.selectAll('.graph-node').classed('selected', false);
+            d3.selectAll('.graph-link').classed('highlighted', false);
+        });
+        
+        // フィルタ機能（P3-007）
+        function applyFilters() {
+            const showModules = document.getElementById('filterModules').checked;
+            const showFunctions = document.getElementById('filterFunctions').checked;
+            const showClasses = document.getElementById('filterClasses').checked;
+            
+            if (!graphData) return;
+            
+            // フィルタ済みノード
+            const filteredNodes = graphData.nodes.filter(node => {
+                if (node.type === 'module') return showModules;
+                if (node.type === 'function') return showFunctions;
+                if (node.type === 'class') return showClasses;
+                return true;
+            });
+            
+            const nodeIds = new Set(filteredNodes.map(n => n.id));
+            
+            // フィルタ済みエッジ
+            const filteredEdges = graphData.edges.filter(edge => {
+                const sourceNode = graphData.nodes[edge.source.index || edge.source];
+                const targetNode = graphData.nodes[edge.target.index || edge.target];
+                return sourceNode && targetNode && 
+                       nodeIds.has(sourceNode.id) && nodeIds.has(targetNode.id);
+            });
+            
+            // 一時データでグラフ再描画
+            const tempData = {
+                nodes: filteredNodes,
+                edges: filteredEdges
+            };
+            
+            const originalData = graphData;
+            graphData = tempData;
+            renderGraph();
+            graphData = originalData;
+            
+            updateGraphStats();
+        }
+        
+        // グラフ統計更新
+        function updateGraphStats() {
+            if (!graphData) return;
+            
+            const stats = document.getElementById('graphStats');
+            stats.textContent = `ノード: ${graphData.nodes.length} | エッジ: ${graphData.edges.length}`;
+        }
+        
+        // グラフリセット
+        document.getElementById('resetGraph').addEventListener('click', () => {
+            document.getElementById('filterModules').checked = true;
+            document.getElementById('filterFunctions').checked = true;
+            document.getElementById('filterClasses').checked = true;
+            loadGraph();
+        });
+        
+        // フィルタ変更イベント
+        document.getElementById('filterModules').addEventListener('change', applyFilters);
+        document.getElementById('filterFunctions').addEventListener('change', applyFilters);
+        document.getElementById('filterClasses').addEventListener('change', applyFilters);
+        
+        // グラフ初期読み込み
+        loadGraph();
+    </script>
 
     <script>
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
