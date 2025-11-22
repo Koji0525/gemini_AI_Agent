@@ -1,0 +1,60 @@
+{
+  "knowledge_base": [
+    {
+      "event": "code_analysis",
+      "details": {
+        "file_path": "/tmp/test_module.py",
+        "classes": [
+          {
+            "name": "TestClass",
+            "docstring": "テストクラス",
+            "methods": [
+              {
+                "name": "test_method",
+                "docstring": "テストメソッド",
+                "args": [
+                  "self",
+                  "arg1"
+                ],
+                "is_async": false
+              }
+            ],
+            "bases": []
+          }
+        ],
+        "functions": [
+          {
+            "name": "test_function",
+            "docstring": "テスト関数",
+            "args": [
+              "x"
+            ],
+            "is_async": false
+          }
+        ],
+        "imports": [],
+        "module_docstring": "テストモジュール",
+        "analyzed_at": "2025-11-22T11:31:54.793842"
+      },
+      "timestamp": "2025-11-22T11:31:54.793925",
+      "agent": "DocumentationAgent"
+    },
+    {
+      "event": "knowledge_optimized",
+      "details": {
+        "status": "optimized",
+        "original_count": 6,
+        "deduplicated_count": 1,
+        "final_count": 1,
+        "removed_duplicates": 5,
+        "removed_old": 0,
+        "optimized_at": "2025-11-22T20:36:14.224000"
+      },
+      "timestamp": "2025-11-22T20:36:14.224087",
+      "agent": "LearningOptimizer"
+    }
+  ],
+  "total_entries": 2,
+  "last_updated": "2025-11-22T20:36:14.224092",
+  "last_optimized": "2025-11-22T20:36:14.223745"
+}
