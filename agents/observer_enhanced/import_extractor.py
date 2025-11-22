@@ -149,3 +149,28 @@ if __name__ == "__main__":
         print()
 
     print(f"Total: {len(imports)}個のimport文")
+
+
+def extract_from_file(self, file_path):
+    """単一ファイルからimport情報を抽出（テスト用エイリアス）"""
+    return self.extract_imports(file_path)
+
+
+def extract_from_directory(self, directory):
+    """ディレクトリ配下の全ファイルからimport情報を抽出"""
+    from pathlib import Path
+
+    directory = Path(directory)
+    results = {}
+
+    for py_file in directory.rglob("*.py"):
+        if "__pycache__" in str(py_file):
+            continue
+
+        try:
+            imports = self.extract_imports(py_file)
+            results[str(py_file)] = imports
+        except Exception:
+            results[str(py_file)] = []
+
+    return results
