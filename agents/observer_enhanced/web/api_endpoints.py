@@ -191,6 +191,26 @@ async def root():
     return HTMLResponse(content=html_content)
 
 
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """
+    簡易Webダッシュボード
+    
+    リアルタイムでシステム状態を可視化
+    """
+    template_path = Path(__file__).parent / "templates" / "dashboard_simple.html"
+    
+    if not template_path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard template not found")
+    
+    with open(template_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HTMLResponse(content=html_content)
+
+
 @app.get("/api/health")
 async def get_health():
     """
