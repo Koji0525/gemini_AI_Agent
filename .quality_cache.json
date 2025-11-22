@@ -148,7 +148,7 @@
   "tools/sheets_flow_orchestrator.py": "2392b99c92229d7c97bacc202067e709",
   "tools/sheets_validators/quick_diagnosis.py": "089df8337994b2836bf6e96b2586ca7a",
   "agents/git_agent/auto_commit_push_v10_auto.py": "866b74cad4bfcc969e5eb49fe03bafea",
-  ".quality_cache.json": "ab92e9d2e5a1b7a5c00935143333352c",
+  ".quality_cache.json": "e2ec0f250eb2594905aafcb9ddb77b79",
   "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624",
   "agents/complete_engine_ultimate.py": "bce74b246768edab2c44857392abd957",
   "core_agents/{base_name}_v{next_version:02d}{suffix}.py": "ae8eb9b3629a0ecd252ace7b38332170",
@@ -176,5 +176,6 @@
   "agents/observer_enhanced/__init__.py": "959588cf3c6474f07bf237b2070af924",
   "data_models/__init__.py": "b4a12b8b3e61e05eacb989269dc9cdbb",
   "agents/observer_enhanced/static_analyzer_updated.py": "57b76c81bf41392641252783c8a27f6a",
-  "agents/web_dashboard/dashboard_server.py": "1f0df2dd71bf0db50634770c4f434511"
+  "agents/web_dashboard/dashboard_server.py": "1f0df2dd71bf0db50634770c4f434511",
+  "agents/observer_enhanced/web/api_endpoints.py": "4cce7c71d6c6590288bc5cdd71e10b5e"
 }
