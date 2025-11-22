@@ -1,0 +1,20 @@
+# Enhanced Observer System Dependencies
+# Phase 0 Setup
+
+# 既存依存関係（確認のみ）
+google-api-python-client>=2.0.0
+google-auth>=2.0.0
+google-auth-oauthlib>=0.5.0
+google-auth-httplib2>=0.1.0
+
+# 新規依存関係
+networkx>=3.0          # グラフ処理
+flask>=3.0.0           # Web API
+flask-cors>=4.0.0      # CORS対応
+flask-socketio>=5.3.0  # WebSocket
+python-socketio>=5.10.0
+pytz>=2024.1           # タイムゾーン（既に一部で使用）
+pyyaml>=6.0            # 設定ファイル
+pytest>=8.0.0          # テスト（既存）
+pytest-cov>=4.1.0      # カバレッジ
+pytest-asyncio>=0.23.0 # 非同期テスト

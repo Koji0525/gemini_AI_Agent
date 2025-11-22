@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>📚 ナレッジベース管理システム</h1>
+    <p>すべてのナレッジを見える化・管理</p>
+    
+    <div class="quick-stats">
+        <div class="stat-card">
+            <h3>主な機能</h3>
+            <ul>
+                <li>✅ スプレッドシート風表示</li>
+                <li>✅ 全データ閲覧可能</li>
+                <li>✅ 高度な検索・フィルター</li>
+                <li>✅ 品質チェック</li>
+                <li>✅ CSV/JSONエクスポート</li>
+            </ul>
+        </div>
+        
+        <div class="stat-card">
+            <h3>クイックアクセス</h3>
+            <div class="quick-links">
+                <a href="/knowledge" class="btn btn-primary">📋 ナレッジ一覧</a>
+                <a href="/stats" class="btn btn-secondary">📊 統計・分析</a>
+                <a href="/api/knowledge" class="btn btn-secondary">🔌 API</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}ナレッジ一覧{% endblock %}
+
+{% block content %}
+<div class="knowledge-list">
+    <h1>📋 ナレッジ一覧</h1>
+    
+    <!-- 検索・フィルター -->
+    <div class="filter-panel">
+        <form method="GET" action="/knowledge">
+            <div class="filter-row">
+                <input type="text" name="q" placeholder="🔍 キーワード検索..." value="{{ query }}" class="search-input">
+                
+                <input type="date" name="date_from" value="{{ date_from }}" placeholder="開始日">
+                <input type="date" name="date_to" value="{{ date_to }}" placeholder="終了日">
+                
+                <select name="per_page">
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50件</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100件</option>
+                    <option value="200" {% if per_page == 200 %}selected{% endif %}>200件</option>
+                </select>
+                
+                <button type="submit" class="btn btn-primary">検索</button>
+                <a href="/knowledge" class="btn btn-secondary">リセット</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- 統計情報 -->
+    <div class="info-bar">
+        <span>📊 総件数: <strong>{{ total }}</strong>件</span>
+        <span>📄 表示: {{ (page-1) * per_page + 1 }}～{{ [page * per_page, total] | min }}件</span>
+        <span>📃 ページ: {{ page }}/{{ total_pages }}</span>
+        
+        <div class="export-links">
+            <a href="/export/csv" class="btn-small">CSV</a>
+            <a href="/export/json" class="btn-small">JSON</a>
+            <a href="/manage" class="btn-small btn-danger">管理</a>
+        </div>
+    </div>
+    
+    <!-- 削除フォーム -->
+    <form method="POST" action="/delete/single" id="delete-form">
+        <div class="delete-bar">
+            <button type="button" onclick="selectAll()" class="btn-small">全選択</button>
+            <button type="button" onclick="deselectAll()" class="btn-small">全解除</button>
+            <button type="submit" class="btn-small btn-danger" onclick="return confirmDelete()">選択を削除</button>
+            <span id="selected-count">0件選択</span>
+        </div>
+        
+        <!-- スプレッドシート風テーブル -->
+        <div class="table-container">
+            <table class="knowledge-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">
+                            <input type="checkbox" id="select-all-checkbox" onchange="toggleAll(this)">
+                        </th>
+                        {% for col in columns %}
+                        <th>
+                            <a href="?page={{ page }}&sort_by={{ col }}&sort_order={% if sort_by == col and sort_order == 'ASC' %}DESC{% else %}ASC{% endif %}&q={{ query }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">
+                                {{ col }}
+                                {% if sort_by == col %}
+                                    {% if sort_order == 'ASC' %}▲{% else %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        {% endfor %}
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in entries %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="entry_ids" value="{{ entry['id'] }}" class="entry-checkbox" onchange="updateCount()">
+                        </td>
+                        {% for col in columns %}
+                        <td>
+                            {% if col == 'content' %}
+                                {{ entry[col][:100] }}...
+                            {% else %}
+                                {{ entry[col] }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td>
+                            <a href="/knowledge/{{ entry['id'] }}" class="btn-small">詳細</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+    
+    <!-- ページネーション -->
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" class="btn">« 前へ</a>
+        {% endif %}
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="current-page">{{ p }}</span>
+            {% elif p <= 3 or p > total_pages - 3 or (p >= page - 2 and p <= page + 2) %}
+                <a href="?page={{ p }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}">{{ p }}</a>
+            {% elif p == 4 or p == total_pages - 3 %}
+                <span>...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}&q={{ query }}&date_from={{ date_from }}&date_to={{ date_to }}&per_page={{ per_page }}" class="btn">次へ »</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function updateCount() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox:checked');
+    document.getElementById('selected-count').textContent = `${checkboxes.length}件選択`;
+}
+
+function toggleAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateCount();
+}
+
+function selectAll() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    checkboxes.forEach(cb => cb.checked = true);
+    document.getElementById('select-all-checkbox').checked = true;
+    updateCount();
+}
+
+function deselectAll() {
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    checkboxes.forEach(cb => cb.checked = false);
+    document.getElementById('select-all-checkbox').checked = false;
+    updateCount();
+}
+
+function confirmDelete() {
+    const count = document.querySelectorAll('.entry-checkbox:checked').length;
+    if (count === 0) {
+        alert('削除するエントリを選択してください');
+        return false;
+    }
+    return confirm(`選択した${count}件のエントリを削除します。よろしいですか？\n\n削除前に自動的にバックアップが作成されます。`);
+}
+</script>
+
+<style>
+.delete-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#selected-count {
+    margin-left: auto;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.entry-checkbox {
+    cursor: pointer;
+    transform: scale(1.2);
+}
+
+#select-all-checkbox {
+    cursor: pointer;
+    transform: scale(1.2);
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,18 @@
+{
+  "id": "entry_20251120_104239",
+  "content": "\n# test_task\n\n## 概要\nPhase 3統合システムで自動生成された高品質コード\n\n## 品質\n- 総合スコア: 10.0/10\n- 構文チェック: 合格\n- テスト: 合格\n- 統合: 完了\n\n## 利用方法\n```python\nfrom agents.generated.test_task import *\n```\n\n## 自動生成\nこのコードはPhase 3統合システムにより自動生成されました。\n",
+  "source": "auto_generated:test_task",
+  "metadata": {
+    "task_id": "test_task",
+    "output_path": "/tmp/test",
+    "quality_score": 10.0,
+    "test_results": {},
+    "category": "generated_code",
+    "tags": [
+      "auto_generated",
+      "phase3"
+    ],
+    "timestamp": "2025-11-20T10:42:39.646598"
+  },
+  "created_at": "2025-11-20T10:42:39.646622"
+}

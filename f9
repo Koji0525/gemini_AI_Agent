@@ -1,0 +1,6 @@
+#!/bin/bash
+# F9コマンドの簡易ラッパー
+
+cd /workspaces/gemini_AI_Agent
+python3 tools/f9_command.py "$@"
+

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}統計・分析{% endblock %}
+
+{% block content %}
+<div class="stats-page">
+    <h1>📊 統計・分析</h1>
+    
+    <!-- サマリーカード -->
+    <div class="stats-summary">
+        <div class="stat-card">
+            <h3>総エントリ数</h3>
+            <p class="stat-number">{{ total }}</p>
+            <span>件</span>
+        </div>
+        
+        <div class="stat-card">
+            <h3>今日追加</h3>
+            <p class="stat-number">{{ today }}</p>
+            <span>件</span>
+        </div>
+        
+        <div class="stat-card">
+            <h3>今週追加</h3>
+            <p class="stat-number">{{ this_week }}</p>
+            <span>件</span>
+        </div>
+    </div>
+    
+    <!-- 日別統計 -->
+    <div class="chart-section">
+        <h2>📈 日別追加数（過去30日）</h2>
+        <div class="chart">
+            <table class="chart-table">
+                <tbody>
+                    {% for stat in daily_stats %}
+                    <tr>
+                        <td class="date">{{ stat['date'] }}</td>
+                        <td class="bar">
+                            <div class="bar-fill" style="width: {{ stat['count'] * 10 }}px">
+                                {{ stat['count'] }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 品質分布 -->
+    <div class="chart-section">
+        <h2>⭐ 品質スコア分布</h2>
+        <div class="quality-chart">
+            {% for score, count in quality_distribution.items() %}
+            <div class="quality-bar">
+                <span class="label">{{ score }}</span>
+                <div class="bar-fill" style="width: {{ count * 5 }}px">
+                    {{ count }}件
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

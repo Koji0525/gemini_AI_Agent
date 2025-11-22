@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}API ドキュメント{% endblock %}
+
+{% block content %}
+<div class="api-docs">
+    <h1>🔌 API ドキュメント</h1>
+    
+    <div class="api-section">
+        <h2>概要</h2>
+        <p>ナレッジベース管理システムのREST APIです。JSON形式でデータを取得できます。</p>
+    </div>
+    
+    <div class="api-section">
+        <h2>📋 エンドポイント一覧</h2>
+        
+        <!-- エンドポイント1: ナレッジ一覧 -->
+        <div class="endpoint-card">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <code class="endpoint-path">/api/knowledge</code>
+            </div>
+            
+            <div class="endpoint-body">
+                <h3>説明</h3>
+                <p>ナレッジエントリの一覧を取得します。</p>
+                
+                <h3>パラメータ</h3>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>パラメータ</th>
+                            <th>型</th>
+                            <th>説明</th>
+                            <th>デフォルト</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>q</code></td>
+                            <td>string</td>
+                            <td>検索キーワード</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><code>limit</code></td>
+                            <td>integer</td>
+                            <td>取得件数（最大100件）</td>
+                            <td>100</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>使用例</h3>
+                <div class="code-block">
+                    <pre><code># 全件取得
+curl http://localhost:5000/api/knowledge
+
+# 検索（Phase 4A）
+curl "http://localhost:5000/api/knowledge?q=Phase+4A"
+
+# 件数指定（10件）
+curl "http://localhost:5000/api/knowledge?limit=10"</code></pre>
+                </div>
+                
+                <h3>レスポンス例</h3>
+                <div class="code-block">
+                    <pre><code>{
+  "total": 528,
+  "entries": [
+    {
+      "id": 528,
+      "title": "Phase 4A: 7_24時間稼働最終確認_023321_04",
+      "content": "# 7_24時間稼働最終確認...",
+      "created_at": "2025-11-21 18:07:08",
+      "category": "general",
+      "tags": "",
+      "vector_synced": 0
+    },
+    ...
+  ]
+}</code></pre>
+                </div>
+                
+                <h3>テスト実行</h3>
+                <button class="btn btn-primary" onclick="testAPI('/api/knowledge')">
+                    このAPIを実行
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="api-section">
+        <h2>💾 エクスポート</h2>
+        
+        <div class="export-options">
+            <div class="export-card">
+                <h3>CSV形式</h3>
+                <p>全データをCSV形式でダウンロード</p>
+                <a href="/export/csv" class="btn btn-primary">CSV ダウンロード</a>
+            </div>
+            
+            <div class="export-card">
+                <h3>JSON形式</h3>
+                <p>全データをJSON形式でダウンロード</p>
+                <a href="/export/json" class="btn btn-secondary">JSON ダウンロード</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="api-section">
+        <h2>�� レスポンスフィールド</h2>
+        
+        <table class="field-table">
+            <thead>
+                <tr>
+                    <th>フィールド</th>
+                    <th>型</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>integer</td>
+                    <td>エントリID（ユニーク）</td>
+                </tr>
+                <tr>
+                    <td><code>title</code></td>
+                    <td>string</td>
+                    <td>タイトル</td>
+                </tr>
+                <tr>
+                    <td><code>content</code></td>
+                    <td>string</td>
+                    <td>本文（Markdown形式）</td>
+                </tr>
+                <tr>
+                    <td><code>created_at</code></td>
+                    <td>datetime</td>
+                    <td>作成日時</td>
+                </tr>
+                <tr>
+                    <td><code>category</code></td>
+                    <td>string</td>
+                    <td>カテゴリ</td>
+                </tr>
+                <tr>
+                    <td><code>tags</code></td>
+                    <td>string</td>
+                    <td>タグ（カンマ区切り）</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="api-section">
+        <h2>🔗 統合例</h2>
+        
+        <h3>Python</h3>
+        <div class="code-block">
+            <pre><code>import requests
+
+# ナレッジ一覧取得
+response = requests.get('http://localhost:5000/api/knowledge')
+data = response.json()
+
+print(f"総件数: {data['total']}")
+for entry in data['entries'][:5]:
+    print(f"[{entry['id']}] {entry['title']}")
+
+# 検索
+response = requests.get('http://localhost:5000/api/knowledge', 
+                       params={'q': 'Phase 4A', 'limit': 10})
+results = response.json()
+print(f"検索結果: {results['total']}件")</code></pre>
+        </div>
+        
+        <h3>JavaScript</h3>
+        <div class="code-block">
+            <pre><code>// ナレッジ一覧取得
+fetch('http://localhost:5000/api/knowledge')
+    .then(response => response.json())
+    .then(data => {
+        console.log(`総件数: ${data.total}`);
+        data.entries.forEach(entry => {
+            console.log(`[${entry.id}] ${entry.title}`);
+        });
+    });
+
+// 検索
+fetch('http://localhost:5000/api/knowledge?q=Phase+4A&limit=10')
+    .then(response => response.json())
+    .then(results => {
+        console.log(`検索結果: ${results.total}件`);
+    });</code></pre>
+        </div>
+    </div>
+</div>
+
+<div id="api-result" class="api-result" style="display: none;">
+    <h3>API実行結果</h3>
+    <pre id="result-content"></pre>
+</div>
+
+<script>
+function testAPI(endpoint) {
+    const resultDiv = document.getElementById('api-result');
+    const resultContent = document.getElementById('result-content');
+    
+    resultDiv.style.display = 'block';
+    resultContent.textContent = '実行中...';
+    
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            resultContent.textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(error => {
+            resultContent.textContent = `エラー: ${error}`;
+        });
+}
+</script>
+
+<style>
+.api-docs {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.api-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.api-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.endpoint-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.endpoint-header {
+    background: #34495e;
+    color: white;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.method {
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.method.get {
+    background: #27ae60;
+}
+
+.endpoint-path {
+    color: white;
+    font-size: 1.1rem;
+}
+
+.endpoint-body {
+    padding: 1.5rem;
+}
+
+.endpoint-body h3 {
+    color: #2c3e50;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.param-table, .field-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.param-table th, .field-table th {
+    background: #34495e;
+    color: white;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.param-table td, .field-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.param-table code, .field-table code {
+    background: #ecf0f1;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    color: #e74c3c;
+}
+
+.code-block {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 1.5rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.code-block pre {
+    margin: 0;
+}
+
+.code-block code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.export-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.export-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.export-card h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.api-result {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-top: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.api-result pre {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 1.5rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    max-height: 500px;
+}
+</style>
+{% endblock %}

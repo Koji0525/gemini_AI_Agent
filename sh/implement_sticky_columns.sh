@@ -1,0 +1,653 @@
+#!/bin/bash
+# カラム固定実装
+
+cd /workspaces/gemini_AI_Agent
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎯 案1実装：カラム固定（左端+右端）"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Flaskプロセス停止
+echo "📍 STEP 1: Flaskプロセス停止"
+pkill -f "knowledge_webapp.py" || echo "  プロセスなし"
+sleep 2
+
+# 既存CSSをバックアップ
+echo ""
+echo "📍 STEP 2: CSSバックアップ"
+if [ -f "app/static/css/style.css" ]; then
+    cp app/static/css/style.css "app/static/css/style.css.backup_$(date +%y%m%d_%H%M%S)"
+    echo "  ✅ バックアップ作成完了"
+fi
+
+# 新しいCSS（カラム固定機能付き）
+echo ""
+echo "📍 STEP 3: カラム固定CSS追加"
+
+cat > app/static/css/style.css << 'CSS'
+/* ナレッジベース管理システム CSS（カラム固定版） */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ナビゲーション */
+.navbar {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    transition: opacity 0.3s;
+}
+
+.nav-links a:hover {
+    opacity: 0.8;
+}
+
+/* ヒーロー */
+.hero {
+    text-align: center;
+    padding: 3rem 0;
+}
+
+.hero h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.stat-card ul {
+    list-style: none;
+    text-align: left;
+}
+
+.stat-card li {
+    padding: 0.5rem 0;
+}
+
+.quick-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* ボタン */
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+/* フィルターパネル */
+.filter-panel {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 300px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+input[type="date"], select {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+/* 情報バー */
+.info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.info-bar span {
+    margin-right: 2rem;
+}
+
+.export-links {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* 削除バー */
+.delete-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#selected-count {
+    margin-left: auto;
+    font-weight: bold;
+    color: #3498db;
+}
+
+/* テーブルコンテナ */
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow-x: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+/* テーブル */
+.knowledge-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.knowledge-table thead {
+    background: #34495e;
+    color: white;
+}
+
+.knowledge-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.knowledge-table th a {
+    color: white;
+    text-decoration: none;
+    display: block;
+}
+
+.knowledge-table th a:hover {
+    opacity: 0.8;
+}
+
+.knowledge-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #ecf0f1;
+    white-space: nowrap;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.knowledge-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   🌟 カラム固定機能（案1）
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* 左端固定: チェックボックス */
+.knowledge-table th:nth-child(1),
+.knowledge-table td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    background: #34495e; /* ヘッダー色 */
+    z-index: 20;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.knowledge-table tbody td:nth-child(1) {
+    background: white; /* データ行は白 */
+}
+
+.knowledge-table tbody tr:hover td:nth-child(1) {
+    background: #f8f9fa; /* ホバー時 */
+}
+
+/* 左端固定: ID */
+.knowledge-table th:nth-child(2),
+.knowledge-table td:nth-child(2) {
+    position: sticky;
+    left: 50px; /* チェックボックス幅 */
+    background: #34495e;
+    z-index: 20;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.knowledge-table tbody td:nth-child(2) {
+    background: white;
+}
+
+.knowledge-table tbody tr:hover td:nth-child(2) {
+    background: #f8f9fa;
+}
+
+/* 右端固定: 操作ボタン */
+.knowledge-table th:last-child,
+.knowledge-table td:last-child {
+    position: sticky;
+    right: 0;
+    background: #34495e;
+    z-index: 20;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+}
+
+.knowledge-table tbody td:last-child {
+    background: white;
+}
+
+.knowledge-table tbody tr:hover td:last-child {
+    background: #f8f9fa;
+}
+
+/* チェックボックス */
+.entry-checkbox,
+#select-all-checkbox {
+    cursor: pointer;
+    transform: scale(1.2);
+}
+
+/* ページネーション */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.pagination a, .pagination span {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s;
+}
+
+.pagination a:hover {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.current-page {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+/* 詳細ページ */
+.knowledge-detail {
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+
+.detail-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.detail-card h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.meta-info {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #ecf0f1;
+}
+
+.meta-info span {
+    color: #7f8c8d;
+}
+
+.content-section {
+    margin: 2rem 0;
+}
+
+.content-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.content-section pre {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.actions {
+    margin-top: 2rem;
+}
+
+/* 統計ページ */
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #3498db;
+    margin: 0.5rem 0;
+}
+
+.chart-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.chart-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+}
+
+.chart-table {
+    width: 100%;
+}
+
+.chart-table td {
+    padding: 0.5rem 0;
+}
+
+.chart-table .date {
+    width: 120px;
+    color: #7f8c8d;
+}
+
+.bar-fill {
+    background: #3498db;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+}
+
+.quality-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.quality-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.quality-bar .label {
+    width: 100px;
+    font-weight: 600;
+}
+
+/* フッター */
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: #7f8c8d;
+    margin-top: 4rem;
+}
+
+/* アラート */
+.alert {
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* 管理ページ */
+.manage-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.manage-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.manage-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin: 1rem 0;
+}
+
+.form-group {
+    margin: 1rem 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+input[type="number"] {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    min-width: 200px;
+}
+
+.example {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-left: 4px solid #3498db;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+}
+
+.manage-section.info {
+    background: #e8f4f8;
+    border-left: 4px solid #3498db;
+}
+
+.manage-section.info ul {
+    list-style: none;
+    padding: 0;
+}
+
+.manage-section.info li {
+    padding: 0.5rem 0;
+}
+CSS
+
+echo "  ✅ カラム固定CSS作成完了"
+
+# 確認
+echo ""
+echo "📍 STEP 4: CSS確認"
+if grep -q "position: sticky" app/static/css/style.css; then
+    echo "  ✅ カラム固定コード確認"
+else
+    echo "  ❌ 更新失敗"
+    exit 1
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ 案1実装完了！"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🎯 実装内容:"
+echo "  ✅ 左端固定: チェックボックス + ID"
+echo "  ✅ 右端固定: 操作ボタン"
+echo "  ✅ 中央部分: スクロール可能"
+echo "  ✅ 影付き: 境界が明確"
+echo ""
+echo "🚀 Flask Webアプリを起動してください:"
+echo ""
+echo "   bash sh/start_knowledge_webapp.sh"
+echo ""
+echo "📖 確認項目:"
+echo "   1. http://localhost:5000/knowledge を開く"
+echo "   2. 横スクロールしても..."
+echo "      ✅ チェックボックスが常に見える（左端）"
+echo "      ✅ IDが常に見える（左端）"
+echo "      ✅ 操作ボタンが常に見える（右端）"
+echo "   3. 影で境界が分かる"
+echo ""
+echo "⚠️  ブラウザのキャッシュをクリア:"
+echo "   Ctrl+Shift+R（強制リロード）"
+echo ""
+echo "🎉 これでスプレッドシートのような操作感！"
+echo ""
+

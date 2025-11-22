@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ナレッジベースレポート</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        .stats-card {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #444;
+        }
+        .entry {
+            background: #2a2a2a;
+            border-left: 4px solid #00ff00;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .entry-id {
+            color: #00aaff;
+            font-weight: bold;
+        }
+        .entry-date {
+            color: #888;
+        }
+        .entry-content {
+            margin-top: 10px;
+            color: #ccc;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .timestamp {
+            text-align: center;
+            color: #888;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 ナレッジベースレポート</h1>
+        
+        <div class="stats-card">
+            <h2>📋 データベース情報</h2>
+            <div class="stat">
+                <span>カラム:</span>
+                <span>id, title, content, category, tags, scenario, created_at, embedding, vector_synced</span>
+            </div>
+        </div>
+        
+        <div class="stats-card">
+            <h2>📊 統計情報</h2>
+            <div class="stat">
+                <span>総エントリ数:</span>
+                <span>521件</span>
+            </div>
+
+            <div class="stat">
+                <span>今日追加:</span>
+                <span>0件</span>
+            </div>
+
+            <div class="stat">
+                <span>今週追加:</span>
+                <span>0件</span>
+            </div>
+
+            <div class="stat">
+                <span>今月追加:</span>
+                <span>521件</span>
+            </div>
+
+        </div>
+        
+        <div class="stats-card">
+            <h2>📝 最新エントリ（最新20件）</h2>
+
+            <div class="entry">
+                <div class="entry-id">ID: 521</div>
+<div class="entry-date">作成: 2025-11-09 19:26:54</div>
+                <div class="entry-content">async/awaitを使用すると、非同期処理を同期処理のように書くことができます...</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 520</div>
+<div class="entry-date">作成: 2025-11-09 19:26:45</div>
+                <div class="entry-content">内容</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 519</div>
+<div class="entry-date">作成: 2025-11-09 19:23:36</div>
+                <div class="entry-content">async/awaitを使用すると、非同期処理を同期処理のように書くことができます...</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 518</div>
+<div class="entry-date">作成: 2025-11-09 19:23:18</div>
+                <div class="entry-content">内容</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 517</div>
+<div class="entry-date">作成: 2025-11-09 16:08:44</div>
+                <div class="entry-content">包括的な例外捕捉、詳細なロギング、適切なリトライ機制、ユーザーフレンドリーなエラーメッセージの4層構造でシステムの信頼性を向上させる。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 516</div>
+<div class="entry-date">作成: 2025-11-09 16:08:44</div>
+                <div class="entry-content">移行前のバックアップ分析、カラムマッピングの確認、段階的な移行実行、移行後の検証を実施する。既存データの整合性を保ちながら、新しいスキーマへの安全な移行が可能。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 515</div>
+<div class="entry-date">作成: 2025-11-09 16:08:43</div>
+                <div class="entry-content">大規模な問題は、なぜなぜ分析で10個以上の根本原因を特定し、段階的な切り分けと抜本的対策を実施する。各ステップで確実に動作することを確認しながら進めることで、長期化を防ぐ。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 514</div>
+<div class="entry-date">作成: 2025-11-09 16:08:43</div>
+                <div class="entry-content">標準的なimportが失敗する環境では、importlib.util.spec_from_file_location()を使用した直接インポートが有効。これにより環境依存の問題を解決できる。絶対パスを使用し、sys.pathへの明示的な追加も重要。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 513</div>
+<div class="entry-date">作成: 2025-11-09 16:07:26</div>
+                <div class="entry-content">大規模な問題は、なぜなぜ分析で10個以上の根本原因を特定し、段階的な切り分けと抜本的対策を実施する。各ステップで確実に動作することを確認しながら進めることで、長期化を防ぐ。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 512</div>
+<div class="entry-date">作成: 2025-11-09 16:07:18</div>
+                <div class="entry-content">標準的なimportが失敗する環境では、importlib.util.spec_from_file_location()を使用した直接インポートが有効。これにより環境依存の問題を解決できる。絶対パスを使用し、sys.pathへの明示的な追加も重要。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 511</div>
+<div class="entry-date">作成: 2025-11-09 16:01:49</div>
+                <div class="entry-content">データアクセス層を抽象化し、ビジネスロジックとデータソースを分離。テスト容易性と保守性が向上。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 510</div>
+<div class="entry-date">作成: 2025-11-09 16:01:37</div>
+                <div class="entry-content">接続プールの設定見直しとタイムアウト値の調整。max_connectionsとtimeoutパラメータを最適化しました。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 509</div>
+<div class="entry-date">作成: 2025-11-09 16:01:24</div>
+                <div class="entry-content">with文を使用したリソース管理。__enter__と__exit__メソッドを実装することで、リソースの自動解放が可能になります。</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 508</div>
+<div class="entry-date">作成: 2025-11-09 15:57:45</div>
+                <div class="entry-content">async/awaitを使用すると、非同期処理を同期処理のように書くことができます...</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 507</div>
+<div class="entry-date">作成: 2025-11-09 15:57:35</div>
+                <div class="entry-content">内容</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 506</div>
+<div class="entry-date">作成: 2025-11-09 08:09:53</div>
+                <div class="entry-content">track_quality_score() で業界標準の0.7閾値を使用し、コンテキストに応じて動的に調整できるようにする</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 505</div>
+<div class="entry-date">作成: 2025-11-09 08:09:53</div>
+                <div class="entry-content">analyze_load_distribution() で十分なサンプルサイズ（100件以上）のトレースデータを使用し、標準偏差ベースの計算を実施する</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 504</div>
+<div class="entry-date">作成: 2025-11-09 08:09:53</div>
+                <div class="entry-content">十分なトレースデータを生成し、map_agent_dependencies() メソッドで時系列ソートと連続トレース分析を実施する</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 503</div>
+<div class="entry-date">作成: 2025-11-09 08:09:53</div>
+                <div class="entry-content">Flask-SocketIOのCORS設定を確認し、socketio.emit() で適切なイベント名とデータを送信する</div>
+            </div>
+
+            <div class="entry">
+                <div class="entry-id">ID: 502</div>
+<div class="entry-date">作成: 2025-11-09 08:09:53</div>
+                <div class="entry-content">各重要ステップ（初期化、分析、完了）で明示的に observability_manager.record_trace() を呼び出し、try-exceptで囲む</div>
+            </div>
+
+        </div>
+        
+        <div class="timestamp">
+            生成日時: 2025-11-20 21:46:22
+        </div>
+    </div>
+</body>
+</html>

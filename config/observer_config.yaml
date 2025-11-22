@@ -1,0 +1,199 @@
+# Enhanced Observer System Configuration
+# Version: 1.0
+# Created: 2025-11-22
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# System Paths
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+paths:
+  project_root: "/workspaces/gemini_AI_Agent"
+  logs_dir: "logs"
+  config_dir: "config"
+  backups_dir: "backups"
+  
+  # データベース
+  traces_db: "logs/traces.db"
+  graph_db: "logs/graph.json"
+  
+  # 既存システム（読み取り専用）
+  existing_agents: "agents"
+  existing_tools: "tools"
+  existing_tests: "tests"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Static Analysis Layer (Layer 1)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+static_analysis:
+  # スキャン対象
+  scan_patterns:
+    - "agents/**/*.py"
+    - "tools/**/*.py"
+    - "!tests/**"
+    - "!backups/**"
+  
+  # パフォーマンス設定
+  max_file_size_mb: 5
+  scan_timeout_seconds: 180  # 3分
+  
+  # グラフ設定
+  max_nodes: 200
+  max_edges: 1000
+  
+  # キャッシュ
+  cache_enabled: true
+  cache_ttl_seconds: 300  # 5分
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Dynamic Tracing Layer (Layer 2)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+dynamic_tracing:
+  # トレース設定
+  enabled: true
+  trace_all_agents: true
+  trace_tools: true
+  
+  # パフォーマンス
+  max_overhead_ms: 5
+  
+  # データ保持
+  retention_days: 30
+  auto_cleanup: true
+  
+  # ログレベル
+  log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Graph Control Layer (Layer 3)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+graph_control:
+  # 影響範囲分析
+  impact_analysis_depth: 3  # 3階層
+  
+  # スコアリング
+  importance_weights:
+    agents: 3.0
+    tools: 2.0
+    tests: 1.0
+  
+  # グラフアルゴリズム
+  layout_algorithm: "force_directed"  # force_directed, hierarchical
+  
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Orchestration Layer (Layer 0)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+orchestration:
+  # 診断サイクル
+  diagnostic_interval_minutes: 10
+  
+  # ヘルスチェック
+  health_check:
+    enabled: true
+    
+    # 評価項目と配点
+    scoring:
+      test_success_rate: 30  # テスト成功率
+      agent_alive_rate: 25   # エージェント生存率
+      api_response_time: 15  # API応答時間
+      error_rate: 15         # エラー発生率
+      resource_usage: 10     # リソース使用率
+      knowledge_usage: 5     # ナレッジ活用率
+    
+    # 閾値
+    thresholds:
+      test_success_rate_min: 84.3  # 絶対に下回らない
+      grade_warning: 70            # C以下で警告
+      grade_critical: 60           # D以下でアラート
+  
+  # アラート
+  alerts:
+    enabled: true
+    channels:
+      - "log"
+      - "file"
+    
+    # アラートレベル
+    levels:
+      low: 70
+      medium: 60
+      high: 50
+      critical: 40
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Web Dashboard
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+dashboard:
+  # サーバー設定
+  host: "0.0.0.0"
+  port: 5001
+  debug: false
+  
+  # WebSocket
+  websocket_enabled: true
+  update_interval_seconds: 5
+  
+  # パフォーマンス
+  max_concurrent_sessions: 10
+  response_timeout_seconds: 3
+  
+  # セキュリティ
+  cors_enabled: true
+  allowed_origins:
+    - "http://localhost:*"
+    - "https://*.github.dev"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Testing
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+testing:
+  # 既存テスト保護
+  existing_tests:
+    min_success_rate: 84.3
+    rollback_on_failure: true
+  
+  # 新規テスト
+  new_tests:
+    target_success_rate: 95.0
+    min_coverage: 80.0
+  
+  # パフォーマンステスト
+  performance:
+    dashboard_load_max_seconds: 3
+    graph_render_max_seconds: 3
+    static_scan_max_seconds: 180
+    trace_query_max_seconds: 1
+    health_check_max_seconds: 10
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Logging
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # ファイル出力
+  file:
+    enabled: true
+    path: "logs/observer.log"
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+  
+  # コンソール出力
+  console:
+    enabled: true
+    colorize: true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Feature Flags
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+features:
+  static_analysis: true
+  dynamic_tracing: true
+  graph_control: true
+  orchestration: true
+  web_dashboard: true
+  
+  # 実験的機能
+  experimental:
+    auto_healing: false
+    predictive_analysis: false
+

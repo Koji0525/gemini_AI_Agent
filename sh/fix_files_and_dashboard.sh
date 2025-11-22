@@ -1,0 +1,758 @@
+#!/bin/bash
+# ファイル整理とダッシュボード修正
+
+cd /workspaces/gemini_AI_Agent
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 ファイル整理とダッシュボード修正"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+NOW_JST=$(TZ=Asia/Tokyo date +%y%m%d_%H%M)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STEP 1: MDファイルを正しい場所に移動
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "STEP 1: MDファイルの整理"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# MD/ディレクトリを確保
+mkdir -p MD
+
+# ルートにある.mdファイルをMD/に移動（命名規則に従って）
+echo "📂 MDファイルを整理中..."
+
+if [ -f "DASHBOARD_MANUAL.md" ]; then
+    mv DASHBOARD_MANUAL.md "MD/${NOW_JST}_DASHBOARD_MANUAL.md"
+    echo "  ✅ DASHBOARD_MANUAL.md → MD/${NOW_JST}_DASHBOARD_MANUAL.md"
+fi
+
+if [ -f "START_GUIDE.md" ]; then
+    mv START_GUIDE.md "MD/${NOW_JST}_START_GUIDE.md"
+    echo "  ✅ START_GUIDE.md → MD/${NOW_JST}_START_GUIDE.md"
+fi
+
+if [ -f "DASHBOARD_QUICK_GUIDE.txt" ]; then
+    mv DASHBOARD_QUICK_GUIDE.txt "MD/${NOW_JST}_DASHBOARD_QUICK_GUIDE.txt"
+    echo "  ✅ DASHBOARD_QUICK_GUIDE.txt → MD/${NOW_JST}_DASHBOARD_QUICK_GUIDE.txt"
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STEP 2: ダッシュボードHTMLの修正（開始ボタン機能追加）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "STEP 2: ダッシュボードHTMLの修正"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+cat > agents/web_dashboard/dashboard_fixed.html << 'HTML'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自律開発システム - ダッシュボード</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .system-status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .status-running {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status-stopped {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #e53e3e;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+        
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #48bb78;
+        }
+        
+        .task-item.pending {
+            border-left-color: #ed8936;
+        }
+        
+        .task-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .task-meta {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .log-viewer {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .refresh-info {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 自律開発システム - ダッシュボード</h1>
+            <p class="subtitle">24時間稼働監視 & 人間指示インターフェース（F5 + F9統合）</p>
+            <div id="systemStatusBadge" class="system-status-badge status-stopped">
+                ⏹️ 停止中
+            </div>
+        </div>
+        
+        <div class="grid">
+            <!-- システム状態 -->
+            <div class="card">
+                <h2>📊 システム状態</h2>
+                <div class="stat-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">総タスク数</div>
+                        <div class="stat-value" id="totalTasks">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">完了タスク</div>
+                        <div class="stat-value" id="completedTasks">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">実行中タスク</div>
+                        <div class="stat-value" id="pendingTasks">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">平均品質</div>
+                        <div class="stat-value" id="avgQuality">-</div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="refreshStats()">🔄 更新</button>
+                    <button class="btn btn-success" id="startBtn" onclick="startSystem()">▶️ 開始</button>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopSystem()" disabled>⏸️ 停止</button>
+                </div>
+            </div>
+            
+            <!-- 人間指示（F9） -->
+            <div class="card">
+                <h2>💬 人間指示（F9）</h2>
+                <div class="form-group">
+                    <label class="form-label">指示タイプ</label>
+                    <select class="form-select" id="instructionType">
+                        <option value="add_task">📝 タスク追加</option>
+                        <option value="pause_system">⏸️ システム一時停止</option>
+                        <option value="resume_system">▶️ システム再開</option>
+                        <option value="change_priority">🔄 優先度変更</option>
+                        <option value="stop_task">⏹️ タスク停止</option>
+                        <option value="message">💬 メッセージ</option>
+                        <option value="emergency_stop">🚨 緊急停止</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">指示内容</label>
+                    <textarea class="form-textarea" id="instructionContent" placeholder="指示内容を入力してください..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">優先度</label>
+                    <select class="form-select" id="instructionPriority">
+                        <option value="high">🔴 高</option>
+                        <option value="medium" selected>🟡 中</option>
+                        <option value="low">🟢 低</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="sendInstruction()" style="width: 100%;">
+                    📤 指示を送信
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <!-- ペンディングタスク -->
+            <div class="card">
+                <h2>⏳ ペンディングタスク</h2>
+                <div class="task-list" id="pendingTasksList">
+                    <p style="text-align: center; color: #666;">読み込み中...</p>
+                </div>
+            </div>
+            
+            <!-- 人間指示一覧 -->
+            <div class="card">
+                <h2>📨 人間指示一覧</h2>
+                <div class="task-list" id="instructionsList">
+                    <p style="text-align: center; color: #666;">読み込み中...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ログビューアー -->
+        <div class="card">
+            <h2>📝 リアルタイムログ</h2>
+            <div class="log-viewer" id="logViewer">
+                <div class="loading">ログを読み込み中...</div>
+            </div>
+        </div>
+        
+        <div class="refresh-info">
+            🔄 自動更新: 10秒ごと | 最終更新: <span id="lastUpdate">-</span>
+        </div>
+    </div>
+    
+    <script>
+        // システム状態を定期的にチェック
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch('/api/system/status');
+                const data = await response.json();
+                
+                const badge = document.getElementById('systemStatusBadge');
+                const startBtn = document.getElementById('startBtn');
+                const stopBtn = document.getElementById('stopBtn');
+                
+                if (data.is_running) {
+                    badge.className = 'system-status-badge status-running';
+                    badge.textContent = '▶️ 稼働中';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    badge.className = 'system-status-badge status-stopped';
+                    badge.textContent = '⏹️ 停止中';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('システム状態取得エラー:', error);
+            }
+        }
+        
+        // システム開始
+        async function startSystem() {
+            if (!confirm('24時間稼働システムを開始しますか？\n\n開始すると、15分ごとにpendingタスクを自動実行します。')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/system/start', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ システムを開始しました\n\nタスク実行ログのターミナルで進捗を確認できます。');
+                    checkSystemStatus();
+                    refreshStats();
+                } else {
+                    alert('❌ 開始エラー:\n' + result.message);
+                }
+            } catch (error) {
+                console.error('システム開始エラー:', error);
+                alert('❌ エラーが発生しました:\n' + error);
+            }
+        }
+        
+        // システム停止
+        async function stopSystem() {
+            if (!confirm('24時間稼働システムを停止しますか？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/system/stop', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ システムを停止しました');
+                    checkSystemStatus();
+                } else {
+                    alert('❌ 停止エラー:\n' + result.message);
+                }
+            } catch (error) {
+                console.error('システム停止エラー:', error);
+                alert('❌ エラーが発生しました:\n' + error);
+            }
+        }
+        
+        // API呼び出し（既存の関数）
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                document.getElementById('totalTasks').textContent = data.total_tasks || 0;
+                document.getElementById('completedTasks').textContent = data.completed_tasks || 0;
+                document.getElementById('pendingTasks').textContent = data.pending_tasks || 0;
+                document.getElementById('avgQuality').textContent = (data.avg_quality || 0).toFixed(1);
+                
+                updateTimestamp();
+            } catch (error) {
+                console.error('統計取得エラー:', error);
+            }
+        }
+        
+        async function fetchPendingTasks() {
+            try {
+                const response = await fetch('/api/tasks/pending');
+                const tasks = await response.json();
+                
+                const container = document.getElementById('pendingTasksList');
+                
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">ペンディングタスクはありません</p>';
+                    return;
+                }
+                
+                container.innerHTML = tasks.map(task => `
+                    <div class="task-item pending">
+                        <div class="task-title">${task.task_id}</div>
+                        <div class="task-meta">
+                            優先度: ${task.priority} | 
+                            推定時間: ${task.estimated_time}
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('タスク取得エラー:', error);
+            }
+        }
+        
+        async function fetchInstructions() {
+            try {
+                const response = await fetch('/api/instructions');
+                const instructions = await response.json();
+                
+                const container = document.getElementById('instructionsList');
+                
+                if (instructions.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">指示はありません</p>';
+                    return;
+                }
+                
+                container.innerHTML = instructions.map(inst => {
+                    const statusClass = inst.status === 'pending' ? 'pending' : 'completed';
+                    const statusIcon = inst.status === 'pending' ? '⏳' : '✅';
+                    return `
+                        <div class="task-item ${statusClass}">
+                            <div class="task-title">${statusIcon} ${inst.instruction_type}</div>
+                            <div class="task-meta">${inst.content}</div>
+                            <div class="task-meta">${inst.timestamp}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('指示取得エラー:', error);
+            }
+        }
+        
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const data = await response.json();
+                
+                const logViewer = document.getElementById('logViewer');
+                logViewer.textContent = data.logs || 'ログがありません';
+                logViewer.scrollTop = logViewer.scrollHeight;
+                
+            } catch (error) {
+                console.error('ログ取得エラー:', error);
+            }
+        }
+        
+        async function sendInstruction() {
+            const type = document.getElementById('instructionType').value;
+            const content = document.getElementById('instructionContent').value;
+            const priority = document.getElementById('instructionPriority').value;
+            
+            if (!content.trim()) {
+                alert('指示内容を入力してください');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/instruction', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        instruction_type: type,
+                        content: content,
+                        priority: priority
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ 指示を送信しました\n\n最大15分後に自動処理されます。');
+                    document.getElementById('instructionContent').value = '';
+                    fetchInstructions();
+                } else {
+                    alert('❌ 指示の送信に失敗しました');
+                }
+                
+            } catch (error) {
+                console.error('指示送信エラー:', error);
+                alert('❌ エラーが発生しました');
+            }
+        }
+        
+        function refreshStats() {
+            checkSystemStatus();
+            fetchStats();
+            fetchPendingTasks();
+            fetchInstructions();
+            fetchLogs();
+        }
+        
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ja-JP');
+        }
+        
+        // 初期ロードと自動更新
+        refreshStats();
+        setInterval(refreshStats, 10000); // 10秒ごとに更新
+        setInterval(checkSystemStatus, 5000); // 5秒ごとにシステム状態チェック
+    </script>
+</body>
+</html>
+HTML
+
+# HTMLを既存ファイルに置き換え
+cp agents/web_dashboard/dashboard.html "agents/web_dashboard/dashboard.html.backup_${NOW_JST}"
+cp agents/web_dashboard/dashboard_fixed.html agents/web_dashboard/dashboard.html
+
+echo "✅ ダッシュボードHTML修正完了"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# STEP 3: 運用マニュアルをMD/に作成
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "STEP 3: 運用マニュアル作成"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+cat > "MD/${NOW_JST}_DASHBOARD_FIXED_COMPLETE.md" << 'DOC'
+# ダッシュボード修正完了
+
+## 修正内容
+
+### 1. ファイル配置の修正
+- ✅ すべての.mdファイルをMD/フォルダに配置
+- ✅ MDファイルの命名規則に従う（YYMMDD_HHMM_FEATURE.md）
+
+### 2. ダッシュボードの開始ボタン機能追加
+- ✅ `/api/system/start` エンドポイント連携
+- ✅ `/api/system/stop` エンドポイント連携
+- ✅ システム状態表示（稼働中/停止中）
+- ✅ ボタンの有効/無効切り替え
+
+### 3. 動作フロー
+```
+【ダッシュボード】
+  ↓ 開始ボタンクリック
+【/api/system/start POST】
+  ↓
+【24時間稼働システム起動】
+  ↓
+【ターミナル2にログ表示開始】
+  ↓
+【15分ごとにpendingタスク実行】
+```
+
+## 使用方法
+
+### 1. ダッシュボード再起動
+```bash
+pkill -f dashboard_server.py
+bash start_dashboard_background_v2.sh
+```
+
+### 2. ターミナル2でログ監視
+```bash
+bash sh/run_foreground_executor.sh
+```
+
+### 3. ブラウザで開始
+1. http://localhost:8000 を開く
+2. 「▶️ 開始」ボタンをクリック
+3. ターミナル2でログが流れ始める
+
+## トラブルシューティング
+
+### 開始ボタンを押しても動かない場合
+1. ダッシュボードのログを確認
+```bash
+   tail -f logs/dashboard_8000.log
+```
+
+2. エンドポイントの動作確認
+```bash
+   curl -X POST http://localhost:8000/api/system/start
+```
+
+3. ダッシュボードを再起動
+```bash
+   pkill -f dashboard_server.py
+   bash start_dashboard_background_v2.sh
+```
+
+DOC
+
+echo "✅ 運用マニュアル作成: MD/${NOW_JST}_DASHBOARD_FIXED_COMPLETE.md"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ ファイル整理とダッシュボード修正完了"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 修正内容:"
+echo "  1. ✅ MDファイルをMD/に移動（命名規則適用）"
+echo "  2. ✅ ダッシュボードHTMLに開始/停止機能追加"
+echo "  3. ✅ システム状態表示追加"
+echo "  4. ✅ 運用マニュアル作成"
+echo ""
+echo "🎯 今すぐ実行:"
+echo ""
+echo "【ステップ1】ダッシュボード再起動"
+echo "  pkill -f dashboard_server.py"
+echo "  bash start_dashboard_background_v2.sh"
+echo ""
+echo "【ステップ2】ブラウザで確認"
+echo "  http://localhost:8000"
+echo "  「▶️ 開始」ボタンをクリック"
+echo ""
+echo "【ステップ3】ターミナル2でログ確認"
+echo "  bash sh/run_foreground_executor.sh"
+echo ""
+
+# 自動再起動
+read -p "ダッシュボードを今すぐ再起動しますか？ [Y/n] " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    echo "🔄 ダッシュボードを再起動中..."
+    pkill -f dashboard_server.py 2>/dev/null
+    sleep 2
+    bash start_dashboard_background_v2.sh
+    
+    echo ""
+    echo "✅ 再起動完了"
+    echo ""
+    echo "📍 ブラウザでアクセス: http://localhost:8000"
+    echo "   「▶️ 開始」ボタンが正しく動作するはずです"
+    echo ""
+fi
+

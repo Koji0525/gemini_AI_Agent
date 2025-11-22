@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}ナレッジ詳細 #{{ entry['id'] }}{% endblock %}
+
+{% block content %}
+<div class="knowledge-detail">
+    <h1>📄 ナレッジ詳細 #{{ entry['id'] }}</h1>
+    
+    <div class="detail-card">
+        <h2>{{ entry['title'] }}</h2>
+        
+        <div class="meta-info">
+            <span>🆔 ID: {{ entry['id'] }}</span>
+            <span>📅 作成日時: {{ entry['created_at'] }}</span>
+        </div>
+        
+        <div class="content-section">
+            <h3>内容</h3>
+            <pre>{{ entry['content'] }}</pre>
+        </div>
+        
+        <div class="actions">
+            <a href="/knowledge" class="btn">← 一覧に戻る</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

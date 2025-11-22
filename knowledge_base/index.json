@@ -1,0 +1,33 @@
+{
+  "entries": [
+    {
+      "id": "entry_20251120_104239",
+      "source": "test",
+      "task_id": null,
+      "quality_score": null,
+      "created_at": "2025-11-20T10:42:39.642133"
+    },
+    {
+      "id": "entry_20251120_104239",
+      "source": "auto_generated:test_task",
+      "task_id": "test_task",
+      "quality_score": 10.0,
+      "created_at": "2025-11-20T10:42:39.646622"
+    },
+    {
+      "id": "entry_20251120_104450",
+      "source": "auto_generated:7_フラッキーテスト検出設計_221738_03",
+      "task_id": "7_フラッキーテスト検出設計_221738_03",
+      "quality_score": 10.0,
+      "created_at": "2025-11-20T10:44:50.833456"
+    },
+    {
+      "id": "entry_20251120_104553",
+      "source": "auto_generated:7_24時間稼働最終確認_221738_04",
+      "task_id": "7_24時間稼働最終確認_221738_04",
+      "quality_score": 10.0,
+      "created_at": "2025-11-20T10:45:53.003755"
+    }
+  ],
+  "last_updated": "2025-11-20T10:45:53.004113"
+}

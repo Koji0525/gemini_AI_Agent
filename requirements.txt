@@ -56,14 +56,23 @@ pytest-asyncio>=0.21.0
 black>=23.0.0
 flake8>=6.0.0
 mypy>=1.5.0
+isort
+autoflake
+faiss-cpu
+sentence-transformers
+psutil
 
 # =============================================
 # WordPress連携
 # =============================================
 requests>=2.32.4
 # wordpress>=1.0  # インストール済みだが機能未確認# WordPress連携
+wordpress-api==1.2.9
+python-wordpress-xmlrpc==2.3
+
 
 # =============================================
 # GitHub連携
 # =============================================
 PyGithub>=2.1.1
+

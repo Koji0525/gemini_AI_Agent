@@ -1,0 +1,12 @@
+{
+    "database_path": "flaky_tests.db",
+    "detection_window_size": 10,
+    "flaky_success_rate_threshold": 0.8,
+    "flaky_duration_variance_threshold": 0.1,
+    "min_duration_for_variance_check": 0.5,
+    "re_run_on_detection_attempt": 3,
+    "test_runner_command": "pytest",
+    "test_report_format": "xml",
+    "output_report_path": "pytest_results.xml",
+    "flaky_test_age_days_threshold": 30
+}
