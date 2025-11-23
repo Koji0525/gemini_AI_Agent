@@ -165,3 +165,154 @@
     <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
+
+<!-- 重複ファイルセクション（Phase 5実装済み部分の拡張） -->
+<script>
+// 既存の重複ファイル表示を拡張
+function enhanceDuplicateDisplay() {
+    // 重複ファイルのバージョン情報を色分け表示
+    const duplicateSection = document.getElementById('duplicate-files-section');
+    
+    if (duplicateSection) {
+        // バージョン情報の可視化
+        duplicateSection.querySelectorAll('.duplicate-group').forEach(group => {
+            const files = group.querySelectorAll('.file-item');
+            
+            // 最新バージョンを緑色、古いバージョンを黄色で表示
+            let maxVersion = 0;
+            files.forEach(file => {
+                const version = parseInt(file.dataset.version || '0');
+                if (version > maxVersion) maxVersion = version;
+            });
+            
+            files.forEach(file => {
+                const version = parseInt(file.dataset.version || '0');
+                const isBackup = file.dataset.path.includes('backup');
+                
+                if (isBackup) {
+                    file.style.backgroundColor = '#f0f0f0'; // グレー: バックアップ
+                    file.style.opacity = '0.6';
+                } else if (version === maxVersion) {
+                    file.style.backgroundColor = '#d4edda'; // 緑: 最新版
+                    file.style.border = '2px solid #28a745';
+                } else {
+                    file.style.backgroundColor = '#fff3cd'; // 黄: 旧版
+                    file.style.border = '1px solid #ffc107';
+                }
+            });
+        });
+    }
+}
+
+// ページロード時に実行
+document.addEventListener('DOMContentLoaded', enhanceDuplicateDisplay);
+</script>
+
+<!-- 信号機セクション -->
+<section id="signal-section" class="mb-4">
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">🚦 ファイル変更リスク信号機</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="card text-center border-danger">
+                        <div class="card-body">
+                            <h2 class="text-danger" id="high-risk-count">-</h2>
+                            <p class="mb-0">🔴 高リスク</p>
+                            <small class="text-muted">20+個から参照</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center border-warning">
+                        <div class="card-body">
+                            <h2 class="text-warning" id="medium-risk-count">-</h2>
+                            <p class="mb-0">🟡 中リスク</p>
+                            <small class="text-muted">10-19個から参照</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center border-success">
+                        <div class="card-body">
+                            <h2 class="text-success" id="low-risk-count">-</h2>
+                            <p class="mb-0">🟢 低リスク</p>
+                            <small class="text-muted">1-9個から参照</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center border-secondary">
+                        <div class="card-body">
+                            <h2 class="text-secondary" id="unused-count">-</h2>
+                            <p class="mb-0">💤 未使用</p>
+                            <small class="text-muted">0個から参照</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="high-risk-files">
+                <h6>🔴 高リスクファイル（変更注意）</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>ファイル</th>
+                                <th>被依存数</th>
+                                <th>総import数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="high-risk-table">
+                            <tr><td colspan="3" class="text-center">読み込み中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// 信号機データの読み込みと表示
+async function loadSignals() {
+    try {
+        const response = await fetch('/api/signals');
+        const data = await response.json();
+        
+        // カウント表示
+        document.getElementById('high-risk-count').textContent = data.high_risk_count;
+        document.getElementById('medium-risk-count').textContent = data.medium_risk_count;
+        document.getElementById('low-risk-count').textContent = data.low_risk_count;
+        document.getElementById('unused-count').textContent = data.unused_count;
+        
+        // 高リスクファイルテーブル
+        const tbody = document.getElementById('high-risk-table');
+        tbody.innerHTML = '';
+        
+        if (data.high_risk && data.high_risk.length > 0) {
+            data.high_risk.slice(0, 10).forEach(file => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><code>${file.path}</code></td>
+                    <td><span class="badge bg-danger">${file.import_count}</span></td>
+                    <td>${file.total_imports}</td>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">高リスクファイルはありません</td></tr>';
+        }
+    } catch (error) {
+        console.error('信号機データの読み込みエラー:', error);
+    }
+}
+
+// ページロード時に実行
+document.addEventListener('DOMContentLoaded', () => {
+    loadSignals();
+    // 30秒ごとに更新
+    setInterval(loadSignals, 30000);
+});
+</script>
