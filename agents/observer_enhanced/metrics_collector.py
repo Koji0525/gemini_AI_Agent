@@ -6,7 +6,7 @@ CPU、メモリ、ディスク、ネットワークなどのシステムメト�
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any,  Dict, List
 
@@ -20,6 +20,7 @@ class MetricsCollector:
 
     def __init__(self, metrics_file: str = "logs/system_metrics.json"):
         """
+        self.logger = logger
         初期化
 
         Args:

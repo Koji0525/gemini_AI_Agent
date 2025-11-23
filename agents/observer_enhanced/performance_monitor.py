@@ -28,6 +28,7 @@ class PerformanceMonitor:
 
     def __init__(self, alert_file: str = "logs/performance_alerts.json"):
         """
+        self.logger = logger
         初期化
 
         Args:
