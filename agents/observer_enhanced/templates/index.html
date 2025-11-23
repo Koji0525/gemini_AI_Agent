@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>依存関係可視化ダッシュボード v1.0</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <h1>🔍 依存関係可視化ダッシュボード</h1>
+            <div class="header-info">
+                <span id="status" class="status-badge">読み込み中...</span>
+                <span id="timestamp"></span>
+            </div>
+        </header>
+
+        <!-- 統計情報パネル -->
+        <section class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-value" id="total-modules">-</div>
+                <div class="stat-label">総モジュール数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-dependencies">-</div>
+                <div class="stat-label">総依存関係数</div>
+            </div>
+            <div class="stat-card high-impact">
+                <div class="stat-value" id="high-impact">-</div>
+                <div class="stat-label">高影響モジュール</div>
+            </div>
+            <div class="stat-card medium-impact">
+                <div class="stat-value" id="medium-impact">-</div>
+                <div class="stat-label">中影響モジュール</div>
+            </div>
+            <div class="stat-card low-impact">
+                <div class="stat-value" id="low-impact">-</div>
+                <div class="stat-label">低影響モジュール</div>
+            </div>
+        </section>
+
+        <!-- Top 10 依存モジュール -->
+        <section class="top-modules">
+            <h2>🏆 最も依存されているモジュール Top 10</h2>
+            <div id="top-modules-list" class="modules-list"></div>
+        </section>
+
+        <!-- 依存関係グラフ -->
+        <section class="graph-section">
+            <h2>📊 依存関係グラフ（上位50モジュール）</h2>
+            <div class="graph-controls">
+                <button id="refresh-btn" class="btn">🔄 更新</button>
+                <button id="zoom-in-btn" class="btn">🔍 拡大</button>
+                <button id="zoom-out-btn" class="btn">🔍 縮小</button>
+                <button id="reset-btn" class="btn">↻ リセット</button>
+            </div>
+            <div id="graph-container"></div>
+        </section>
+
+        <!-- 影響範囲検索 -->
+        <section class="search-section">
+            <h2>🔎 影響範囲検索</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="ファイル名を入力（例: sheets_manager）">
+                <button id="search-btn" class="btn btn-primary">検索</button>
+            </div>
+            <div id="search-results" class="search-results"></div>
+        </section>
+
+        <!-- フッター -->
+        <footer class="footer">
+            <p>依存関係可視化システム v1.0 | API: <a href="/docs" target="_blank">/docs</a></p>
+        </footer>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
