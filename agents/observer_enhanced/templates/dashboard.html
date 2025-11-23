@@ -3,33 +3,474 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Observer Enhanced - Dashboard</title>
+    <title>🔭 Observer Enhanced Dashboard v2.0</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-        .status { padding: 15px; margin: 20px 0; border-radius: 4px; background: #e3f2fd; border-left: 4px solid #2196f3; }
-        .api-list { margin-top: 30px; }
-        .api-item { padding: 10px; margin: 10px 0; background: #f8f9fa; border-radius: 4px; font-family: monospace; }
-        .success { color: #28a745; font-weight: bold; }
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .health-score {
+            font-size: 3rem;
+            font-weight: bold;
+        }
+        .grade-A { color: #28a745; }
+        .grade-B { color: #17a2b8; }
+        .grade-C { color: #ffc107; }
+        .grade-D { color: #fd7e14; }
+        .grade-F { color: #dc3545; }
+        .agent-badge {
+            display: inline-block;
+            padding: 8px 12px;
+            margin: 4px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background-color: #e9ecef;
+            transition: all 0.2s;
+        }
+        .agent-badge:hover {
+            background-color: #dee2e6;
+            transform: scale(1.05);
+        }
+        .agent-active {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+        }
+        .agent-inactive {
+            background-color: #f8d7da;
+            border: 2px solid #dc3545;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-good { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-critical { background-color: #dc3545; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .last-update {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-align: right;
+            margin-top: 10px;
+        }
+        .api-endpoint {
+            font-family: 'Courier New', monospace;
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 4px 0;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔍 Observer Enhanced Dashboard</h1>
-        <div class="status">
-            <p class="success">✅ Webサーバー起動成功</p>
-            <p>Phase 5 スクリプト1: Flask Webサーバー実装完了</p>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">�� Observer Enhanced Dashboard v2.0</span>
+            <a href="/dependencies" class="btn btn-light btn-sm me-2">🕸️ 依存関係</a><a href="/analysis" class="btn btn-light btn-sm me-3">🔍 問題検出</a><span class="navbar-text text-white" id="currentTime">Loading...</span>
         </div>
-        <h2>📡 利用可能なAPI</h2>
-        <div class="api-list">
-            <div class="api-item">GET /api/health - システム健全性チェック</div>
-            <div class="api-item">GET /api/metrics - 最新メトリクス取得</div>
-            <div class="api-item">GET /api/alerts - アラート一覧取得</div>
-            <div class="api-item">GET /api/status - 統合ステータス取得</div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- 左カラム: メトリクスとグラフ -->
+            <div class="col-lg-8">
+                <!-- システム健全性スコア -->
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">システム健全性スコア</h5>
+                        <div class="health-score" id="healthScore">--</div>
+                        <div class="h4" id="healthGrade">--</div>
+                        <div class="text-muted" id="healthStatus">計測中...</div>
+                        <div class="last-update" id="healthUpdate">--</div>
+                    </div>
+                </div>
+
+                <!-- リソース使用率 -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-label">🖥️ CPU使用率</div>
+                            <div class="metric-value" id="cpuUsage">--%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-label">💾 メモリ使用率</div>
+                            <div class="metric-value" id="memoryUsage">--%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metric-card">
+                            <div class="metric-label">�� ディスク使用率</div>
+                            <div class="metric-value" id="diskUsage">--%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- リアルタイムグラフ -->
+                <div class="card mb-4 mt-4">
+                    <div class="card-body">
+                        <h5 class="card-title">📈 リアルタイムメトリクス（直近30秒）</h5>
+                        <div class="chart-container">
+                            <canvas id="metricsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- タスク統計 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">📋 タスク統計</h5>
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <h3 id="taskTotal" class="text-primary">--</h3>
+                                <p class="text-muted">総数</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h3 id="taskCompleted" class="text-success">--</h3>
+                                <p class="text-muted">完了</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h3 id="taskFailed" class="text-danger">--</h3>
+                                <p class="text-muted">失敗</p>
+                            </div>
+                        </div>
+                        <div class="progress mt-3" style="height: 25px;">
+                            <div id="taskProgressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%">
+                                0%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右カラム: エージェント状態とアラート -->
+            <div class="col-lg-4">
+                <!-- エージェント状態 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">👥 エージェント状態（15件）</h5>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>稼働中: <strong id="agentActive">0</strong></span>
+                                <span>待機中: <strong id="agentInactive">15</strong></span>
+                            </div>
+                        </div>
+                        <div id="agentList">
+                            <div class="agent-badge">PMAgent</div>
+                            <div class="agent-badge">TaskExecutor</div>
+                            <div class="agent-badge">ReviewAgent</div>
+                            <div class="agent-badge">GoalEvaluator</div>
+                            <div class="agent-badge">CollaborationAgent</div>
+                            <div class="agent-badge">ErrorClassifier</div>
+                            <div class="agent-badge">DecisionSupportSystem</div>
+                            <div class="agent-badge">RollbackAgent</div>
+                            <div class="agent-badge">QualityFeedbackLoop</div>
+                            <div class="agent-badge">LearningOptimizer</div>
+                            <div class="agent-badge">KnowledgeBaseManager</div>
+                            <div class="agent-badge">SelfLearningPipeline</div>
+                            <div class="agent-badge">MonitoringAgent</div>
+                            <div class="agent-badge">ExecutionAnalyzer</div>
+                            <div class="agent-badge">SystemObserver</div>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0" role="alert">
+                            <small>💡 v1.24.0起動時に実データ表示</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- アラート一覧 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">🚨 アラート（最新10件）</h5>
+                        <div id="alertList">
+                            <p class="text-muted">アラートはありません</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- パフォーマンス傾向 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">📊 パフォーマンス傾向</h5>
+                        <div id="trendInfo">
+                            <p class="text-muted">データ収集中...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- APIエンドポイント -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">📡 APIエンドポイント</h5>
+                        <div class="api-endpoint">GET /api/health</div>
+                        <div class="api-endpoint">GET /api/metrics</div>
+                        <div class="api-endpoint">GET /api/alerts</div>
+                        <div class="api-endpoint">GET /api/status</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <h2>📊 次のステップ</h2>
-        <p>Phase 5 スクリプト2で完全なダッシュボード（Chart.js統合）を実装予定</p>
     </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // グローバル変数
+        let metricsChart = null;
+        let metricsHistory = {
+            labels: [],
+            cpu: [],
+            memory: [],
+            disk: []
+        };
+        const MAX_DATA_POINTS = 10; // 30秒分（3秒ごと×10）
+
+        // Chart.js初期化
+        function initChart() {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            metricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU %',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'メモリ %',
+                            data: [],
+                            borderColor: '#764ba2',
+                            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'ディスク %',
+                            data: [],
+                            borderColor: '#f093fb',
+                            backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // メトリクス更新
+        function updateMetrics(data) {
+            // CPU, Memory, Disk表示
+            document.getElementById('cpuUsage').textContent = data.cpu_percent + '%';
+            document.getElementById('memoryUsage').textContent = data.memory_percent + '%';
+            document.getElementById('diskUsage').textContent = data.disk_percent + '%';
+
+            // グラフ更新
+            const now = new Date().toLocaleTimeString('ja-JP');
+            
+            metricsHistory.labels.push(now);
+            metricsHistory.cpu.push(data.cpu_percent);
+            metricsHistory.memory.push(data.memory_percent);
+            metricsHistory.disk.push(data.disk_percent);
+
+            // データポイント数制限
+            if (metricsHistory.labels.length > MAX_DATA_POINTS) {
+                metricsHistory.labels.shift();
+                metricsHistory.cpu.shift();
+                metricsHistory.memory.shift();
+                metricsHistory.disk.shift();
+            }
+
+            // Chart.js更新
+            metricsChart.data.labels = metricsHistory.labels;
+            metricsChart.data.datasets[0].data = metricsHistory.cpu;
+            metricsChart.data.datasets[1].data = metricsHistory.memory;
+            metricsChart.data.datasets[2].data = metricsHistory.disk;
+            metricsChart.update();
+        }
+
+        // 健全性スコア更新
+        function updateHealthScore(data) {
+            const score = data.health_score;
+            const grade = data.grade;
+            const status = data.status;
+
+            document.getElementById('healthScore').textContent = score.toFixed(1);
+            document.getElementById('healthGrade').textContent = `グレード: ${grade}`;
+            document.getElementById('healthGrade').className = `h4 grade-${grade}`;
+            document.getElementById('healthStatus').textContent = `ステータス: ${status}`;
+            document.getElementById('healthUpdate').textContent = `最終更新: ${new Date().toLocaleTimeString('ja-JP')}`;
+        }
+
+        // アラート表示
+        function updateAlerts(alerts) {
+            const alertList = document.getElementById('alertList');
+            
+            if (alerts.length === 0) {
+                alertList.innerHTML = '<p class="text-muted">アラートはありません</p>';
+                return;
+            }
+
+            let html = '';
+            alerts.forEach(alert => {
+                const levelClass = alert.level === 'critical' ? 'danger' : 'warning';
+                const icon = alert.level === 'critical' ? '🔴' : '⚠️';
+                html += `
+                    <div class="alert alert-${levelClass} alert-dismissible fade show" role="alert">
+                        ${icon} <strong>${alert.type}</strong>: ${alert.message}
+                        <small class="d-block">${new Date(alert.timestamp).toLocaleString('ja-JP')}</small>
+                    </div>
+                `;
+            });
+            alertList.innerHTML = html;
+        }
+
+        // パフォーマンス傾向更新
+        function updateTrends(data) {
+            const trendInfo = document.getElementById('trendInfo');
+            const trend = data.trend;
+            let icon, message, className;
+
+            if (trend === 'improving') {
+                icon = '📈';
+                className = 'text-success';
+            } else if (trend === 'deteriorating') {
+                icon = '📉';
+                className = 'text-danger';
+            } else {
+                icon = '➡️';
+                className = 'text-info';
+            }
+
+            trendInfo.innerHTML = `
+                <div class="${className}">
+                    <h4>${icon} ${data.message}</h4>
+                </div>
+            `;
+        }
+
+        // タスク統計更新（ダミーデータ）
+        function updateTaskStats() {
+            // 実際のデータはGoogleSheetsから取得予定
+            const total = 50;
+            const completed = 45;
+            const failed = 2;
+            const successRate = ((completed / total) * 100).toFixed(1);
+
+            document.getElementById('taskTotal').textContent = total;
+            document.getElementById('taskCompleted').textContent = completed;
+            document.getElementById('taskFailed').textContent = failed;
+            
+            const progressBar = document.getElementById('taskProgressBar');
+            progressBar.style.width = successRate + '%';
+            progressBar.textContent = successRate + '%';
+        }
+
+        // 時刻更新
+        function updateCurrentTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString('ja-JP');
+        }
+
+        // 全データ取得と更新
+        async function fetchAndUpdate() {
+            try {
+                // ヘルスチェック
+                const healthResponse = await fetch('/api/health');
+                const healthData = await healthResponse.json();
+                updateHealthScore(healthData);
+                updateMetrics(healthData.metrics);
+
+                // アラート取得
+                const alertsResponse = await fetch('/api/alerts?count=10');
+                const alertsData = await alertsResponse.json();
+                updateAlerts(alertsData.data);
+
+                // 傾向取得
+                const trendsResponse = await fetch('/api/trends');
+                const trendsData = await trendsResponse.json();
+                updateTrends(trendsData.data);
+
+                // タスク統計更新
+                updateTaskStats();
+
+            } catch (error) {
+                console.error('データ取得エラー:', error);
+            }
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            updateCurrentTime();
+            fetchAndUpdate();
+
+            // 自動更新（5秒ごと）
+            setInterval(fetchAndUpdate, 5000);
+            setInterval(updateCurrentTime, 1000);
+        });
+    </script>
 </body>
 </html>
