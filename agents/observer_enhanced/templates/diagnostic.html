@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API診断</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #dfd; }
+        .error { background: #fdd; }
+    </style>
+</head>
+<body>
+    <h1>🔍 API診断ツール</h1>
+    <div id="results"></div>
+    <script>
+        async function runTests() {
+            const results = document.getElementById('results');
+            const endpoints = [
+                '/api/health',
+                '/api/stats',
+                '/api/nodes',
+                '/api/edges'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    results.innerHTML += `
+                        <div class="test success">
+                            ✅ ${endpoint}: ${response.status} OK
+                            <pre>${JSON.stringify(data, null, 2).substring(0, 200)}...</pre>
+                        </div>
+                    `;
+                } catch (error) {
+                    results.innerHTML += `
+                        <div class="test error">
+                            ❌ ${endpoint}: ${error.message}
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>
