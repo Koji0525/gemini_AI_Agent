@@ -120,6 +120,31 @@
             </div>
         </section>
 
+
+        <!-- Phase 5: 重複ファイル検出 -->
+        <section class="phase5-section">
+            <h2>🔍 Phase 5: 重複ファイル検出</h2>
+            
+            <div class="duplicate-summary">
+                <div class="summary-card">
+                    <div class="summary-label">重複グループ数</div>
+                    <div class="summary-value" id="duplicate-groups-count">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">重複ファイル総数</div>
+                    <div class="summary-value" id="duplicate-files-count">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">削減可能サイズ</div>
+                    <div class="summary-value" id="potential-reduction">-</div>
+                </div>
+            </div>
+            
+            <div class="duplicate-list" id="duplicate-list">
+                <p style="color: #666;">読み込み中...</p>
+            </div>
+        </section>
+
         <div class="content-grid">
             <section class="panel">
                 <h2>🏆 最も依存されているモジュール Top 10</h2>

@@ -335,3 +335,99 @@ function showError(message) {
         </div>
     `;
 }
+
+// Phase 5: 重複ファイル検出の表示関数
+async function loadDuplicates() {
+    try {
+        const data = await fetchAPI('/api/duplicates/summary');
+        
+        if (!data.exists) {
+            document.getElementById('duplicate-groups-count').textContent = '0';
+            document.getElementById('duplicate-files-count').textContent = '0';
+            document.getElementById('potential-reduction').textContent = '-';
+            document.getElementById('duplicate-list').innerHTML = '<p>⚠️ 重複検出データがありません</p>';
+            return;
+        }
+        
+        document.getElementById('duplicate-groups-count').textContent = data.total_groups;
+        document.getElementById('duplicate-files-count').textContent = data.total_duplicates;
+        
+        // 削減可能サイズを計算（削除候補の合計）
+        let totalSize = 0;
+        for (const group of data.top_groups || []) {
+            for (const file of group.files) {
+                if (file.path !== group.recommendation.keep) {
+                    totalSize += file.file_size || 0;
+                }
+            }
+        }
+        document.getElementById('potential-reduction').textContent = formatBytes(totalSize);
+        
+        // Top 5グループを表示
+        displayDuplicateGroups(data.top_groups || []);
+        
+    } catch (error) {
+        console.error('重複ファイル取得エラー:', error);
+        document.getElementById('duplicate-list').innerHTML = '<p>❌ データ取得エラー</p>';
+    }
+}
+
+function displayDuplicateGroups(groups) {
+    const container = document.getElementById('duplicate-list');
+    
+    if (groups.length === 0) {
+        container.innerHTML = '<p>✅ 重複ファイルは検出されませんでした</p>';
+        return;
+    }
+    
+    container.innerHTML = groups.map(group => {
+        const maxRefs = Math.max(...group.files.map(f => f.import_count));
+        
+        return `
+            <div class="duplicate-group">
+                <div class="duplicate-group-header">
+                    📁 ${group.base_name} (${group.files.length}個のバージョン, 最大${maxRefs}個から参照)
+                </div>
+                ${group.files.map(file => {
+                    const isKeep = file.path === group.recommendation.keep;
+                    const status = isKeep ? 'keep' : 'delete';
+                    const icon = isKeep ? '✅' : '⚠️';
+                    const label = isKeep ? '保持推奨' : '削除候補';
+                    
+                    return `
+                        <div class="duplicate-file-item ${status}">
+                            <div>
+                                <div class="file-path">${icon} ${label}: ${file.path}</div>
+                                <div class="file-stats">
+                                    被依存: ${file.import_count}個 | サイズ: ${formatBytes(file.file_size)} | 
+                                    バージョン: ${file.version}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                ${group.recommendation.warning ? `
+                    <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px;">
+                        ⚠️ ${group.recommendation.warning}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// loadAllData関数に追加
+const originalLoadAllData = loadAllData;
+loadAllData = async function() {
+    await originalLoadAllData();
+    await loadDuplicates();
+}
+
