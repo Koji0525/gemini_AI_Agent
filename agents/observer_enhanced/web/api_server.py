@@ -377,6 +377,177 @@ async def get_signals():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def detect_duplicate_files(graph_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    重複ファイルを検出
+
+    ファイル名のパターンマッチングにより、バージョン違いのファイルを検出します。
+
+    検出パターン:
+        - file_v2.py, file_v3.py, file_v30.py
+        - file_old.py, file_new.py
+        - file_backup.py, file_copy.py
+
+    Args:
+        graph_data: 依存関係グラフデータ
+
+    Returns:
+        List[Dict]: 重複ファイルグループのリスト
+    """
+    import re
+    from collections import defaultdict
+
+    nodes = graph_data.get("nodes", [])
+
+    # ファイル名からベース名を抽出するパターン
+    version_patterns = [
+        (r"(.+?)_v\d+", "version"),  # file_v2, file_v30
+        (r"(.+?)_old", "old"),  # file_old
+        (r"(.+?)_new", "new"),  # file_new
+        (r"(.+?)_backup\d*", "backup"),  # file_backup, file_backup2
+        (r"(.+?)_copy\d*", "copy"),  # file_copy, file_copy2
+        (r"(.+?)_\d{6}", "timestamp"),  # file_251123
+        (r"(.+?)\.backup", "backup_ext"),  # file.py.backup
+    ]
+
+    # ベース名でグループ化
+    base_groups = defaultdict(list)
+
+    for node in nodes:
+        file_id = node.get("id", "")
+
+        # パターンマッチング
+        for pattern, label in version_patterns:
+            match = re.match(pattern, file_id)
+            if match:
+                base_name = match.group(1)
+                base_groups[base_name].append({"file": file_id, "pattern": label, "node": node})
+                break
+
+    # 2つ以上のファイルがある場合のみ重複とみなす
+    duplicates = []
+    for base_name, files in base_groups.items():
+        if len(files) >= 2:
+            duplicates.append({"base_name": base_name, "count": len(files), "files": files})
+
+    return duplicates
+
+
+def determine_latest_version(
+    files: List[Dict[str, Any]], imported_by: Dict[str, List[str]]
+) -> Dict[str, Any]:
+    """
+    最新版を判定
+
+    判定基準:
+        1. 被依存数（多い方が現役）
+        2. 更新日時（新しい方が最新）
+        3. ファイル名（バージョン番号が大きい方）
+
+    Args:
+        files: ファイルリスト
+        imported_by: 被依存関係マップ
+
+    Returns:
+        Dict: 最新版と判定されたファイル情報
+    """
+    import re
+
+    scored_files = []
+
+    for file_info in files:
+        file_id = file_info["file"]
+        file_info["node"]
+
+        # スコア計算
+        score = 0
+
+        # 1. 被依存数（最重要）
+        imported_by_count = len(imported_by.get(file_id, []))
+        score += imported_by_count * 100
+
+        # 2. バージョン番号（v30 > v3 > v2）
+        version_match = re.search(r"_v(\d+)", file_id)
+        if version_match:
+            version_num = int(version_match.group(1))
+            score += version_num
+
+        # 3. "new" や "latest" を含む場合は加点
+        if "new" in file_id.lower() or "latest" in file_id.lower():
+            score += 50
+
+        # 4. "old" や "backup" を含む場合は減点
+        if "old" in file_id.lower() or "backup" in file_id.lower():
+            score -= 50
+
+        scored_files.append({**file_info, "score": score, "imported_by_count": imported_by_count})
+
+    # スコアでソート
+    scored_files.sort(key=lambda x: x["score"], reverse=True)
+
+    return scored_files[0] if scored_files else None
+
+
+@app.get("/api/duplicates")
+async def get_duplicates():
+    """
+    重複ファイルを検出
+
+    Returns:
+        List[Dict]: 重複ファイルグループのリスト
+    """
+    try:
+        data = load_graph_data()
+
+        # 重複検出
+        duplicates = detect_duplicate_files(data)
+
+        # 被依存関係を計算
+        imported_by = calculate_imported_by(data)
+
+        # 各グループに最新版判定を追加
+        result = []
+        for dup_group in duplicates:
+            latest = determine_latest_version(dup_group["files"], imported_by)
+
+            # ファイル情報を整形
+            files_info = []
+            for file_info in dup_group["files"]:
+                file_id = file_info["file"]
+                is_latest = (file_id == latest["file"]) if latest else False
+
+                files_info.append(
+                    {
+                        "file": file_id,
+                        "pattern": file_info["pattern"],
+                        "imported_by_count": len(imported_by.get(file_id, [])),
+                        "is_latest": is_latest,
+                        "recommended_action": "keep" if is_latest else "review",
+                    }
+                )
+
+            # 最新版でソート
+            files_info.sort(key=lambda x: x["is_latest"], reverse=True)
+
+            result.append(
+                {
+                    "base_name": dup_group["base_name"],
+                    "count": dup_group["count"],
+                    "files": files_info,
+                    "latest_file": latest["file"] if latest else None,
+                }
+            )
+
+        # ファイル数でソート（多い順）
+        result.sort(key=lambda x: x["count"], reverse=True)
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to get duplicates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 def main():
     """メイン実行"""
     logger.info("Starting API server...")
