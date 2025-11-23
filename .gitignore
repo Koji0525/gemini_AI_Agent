@@ -178,3 +178,8 @@ exports/traces_*.json
 _WIP/
 __pycache__/
 *.pyc
+.quality_cache.json
+*.broken_*
+*.old
+gemini_AI_Agent/
+knowledge_system/database/knowledge.db

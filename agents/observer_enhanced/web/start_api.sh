@@ -15,8 +15,8 @@ if [ ! -f "$JSON_FILE" ] || [ ! -s "$JSON_FILE" ]; then
     echo "🔍 プロジェクトをスキャンします..."
     
     python3 << 'PYSCAN'
-import sys
 import json
+import sys
 import time
 from pathlib import Path
 
