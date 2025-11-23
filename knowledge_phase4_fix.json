@@ -1,0 +1,71 @@
+{
+  "phase": "Phase 4",
+  "timestamp": "2025-11-23T09:30:00+09:00",
+  "summary": "psutil使用法とメソッド実装の修正",
+  "entries": [
+    {
+      "title": "psutilのCPU/メモリ情報の正しい取得方法",
+      "category": "library_usage",
+      "problem": "KeyError: 'percent' - psutilの戻り値を直接辞書として扱っていた",
+      "cause": [
+        "psutil.cpu_percent()は数値を返す（辞書ではない）",
+        "psutil.virtual_memory()はオブジェクトを返す（辞書ではない）",
+        "属性アクセス（.percent）が必要"
+      ],
+      "solution": {
+        "before": "metrics['cpu']['percent']",
+        "after": "cpu_percent = psutil.cpu_percent(interval=0.1)\nmetrics = {'cpu': {'percent': cpu_percent}}",
+        "key_point": "psutilの戻り値を明示的に辞書形式に変換する"
+      },
+      "code_example": {
+        "correct": "# CPU\ncpu_percent = psutil.cpu_percent(interval=0.1)\nmetrics['cpu'] = {'percent': cpu_percent, 'count': psutil.cpu_count()}\n\n# メモリ\nmemory = psutil.virtual_memory()\nmetrics['memory'] = {\n    'total': memory.total,\n    'percent': memory.percent,\n    'used': memory.used\n}",
+        "incorrect": "metrics = {\n    'cpu': psutil.cpu_percent(),\n    'memory': psutil.virtual_memory()\n}"
+      },
+      "prevention": [
+        "ライブラリ使用前にドキュメント確認",
+        "型ヒントで戻り値の型を明示",
+        "最初のテストでprint()して構造確認"
+      ],
+      "impact": "エラー修正時間: 20分",
+      "tags": ["psutil", "Python", "ライブラリ使用法"]
+    },
+    {
+      "title": "メソッド実装の確認方法",
+      "category": "development_process",
+      "problem": "get_status()メソッドが実装されていると思い込んでいた",
+      "cause": [
+        "実装計画とコードの乖離",
+        "grepによる確認不足"
+      ],
+      "solution": {
+        "check_command": "grep -n 'def get_status' agents/observer_enhanced/performance_monitor.py",
+        "implement_if_missing": "仕様書に基づいて実装を追加"
+      },
+      "prevention": [
+        "実装前チェックリスト作成",
+        "class定義を読んで既存メソッドを確認",
+        "hasattr()で動的確認"
+      ],
+      "best_practice": "python3 -c \"from module import Class; print([m for m in dir(Class()) if not m.startswith('_')])\"",
+      "impact": "実装漏れゼロ化",
+      "tags": ["開発プロセス", "実装確認", "grep"]
+    },
+    {
+      "title": "循環参照の回避（遅延初期化）",
+      "category": "design_pattern",
+      "problem": "MetricsCollectorとPerformanceMonitorの相互依存",
+      "cause": "お互いをimportして初期化しようとした",
+      "solution": {
+        "pattern": "遅延初期化（Lazy Initialization）",
+        "implementation": "self.metrics_collector = None\n\ndef get_status(self):\n    if self.metrics_collector is None:\n        from module import MetricsCollector\n        self.metrics_collector = MetricsCollector()"
+      },
+      "benefits": [
+        "循環importを回避",
+        "必要な時だけインスタンス生成",
+        "テスト時のモック差し替えが容易"
+      ],
+      "impact": "設計品質向上",
+      "tags": ["設計パターン", "循環参照", "遅延初期化"]
+    }
+  ]
+}

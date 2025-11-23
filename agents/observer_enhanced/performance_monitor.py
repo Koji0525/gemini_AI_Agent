@@ -371,3 +371,57 @@ def get_performance_monitor() -> PerformanceMonitor:
             "memory_percent": memory_percent
         }
 
+
+    def get_status(self) -> Dict[str, Any]:
+        """
+        システム全体のパフォーマンスステータスを取得
+        
+        Returns:
+            Dict[str, Any]: ステータス情報
+        """
+        try:
+            # 最新メトリクスを収集
+            if hasattr(self, 'metrics_collector'):
+                current_metrics = self.metrics_collector.collect_system_metrics()
+            else:
+                # MetricsCollectorがない場合は直接収集
+                from observer_enhanced.metrics_collector import MetricsCollector
+                collector = MetricsCollector()
+                current_metrics = collector.collect_system_metrics()
+            
+            # CPU/メモリ/ディスクの状態判定
+            cpu_percent = current_metrics.get("cpu", {}).get("percent", 0)
+            memory_percent = current_metrics.get("memory", {}).get("percent", 0)
+            disk_percent = current_metrics.get("disk", {}).get("percent", 0)
+            
+            # 総合ステータス判定
+            if cpu_percent > 90 or memory_percent > 90 or disk_percent > 90:
+                overall_status = "critical"
+            elif cpu_percent > 70 or memory_percent > 70 or disk_percent > 80:
+                overall_status = "warning"
+            else:
+                overall_status = "healthy"
+            
+            return {
+                "overall_status": overall_status,
+                "timestamp": current_metrics.get("timestamp"),
+                "cpu": {
+                    "percent": cpu_percent,
+                    "status": "critical" if cpu_percent > 90 else "warning" if cpu_percent > 70 else "healthy"
+                },
+                "memory": {
+                    "percent": memory_percent,
+                    "status": "critical" if memory_percent > 90 else "warning" if memory_percent > 70 else "healthy"
+                },
+                "disk": {
+                    "percent": disk_percent,
+                    "status": "critical" if disk_percent > 90 else "warning" if disk_percent > 80 else "healthy"
+                }
+            }
+        except Exception as e:
+            self.logger.error(f"ステータス取得エラー: {e}")
+            return {
+                "overall_status": "unknown",
+                "error": str(e)
+            }
+
