@@ -1,258 +1,180 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-*.egg-info/
-dist/
-build/
 
-# 環境変数・認証情報
-.env
-.env.local
-credentials.json
-configuration/service_account.json
-*.key
-*.pem
-
-# Google Sheets認証
-token.json
-token.pickle
-
-# ブラウザデータ
-cookies/
-*.pkl
-session_data/
-chrome_profile/
-browser_profile/
-
-# ログファイル
-*.log
-logs/
-agent_outputs/
-
-# テンポラリファイル
-*.tmp
-*.bak
-*.swp
-*~
-.DS_Store
-
-# 出力ファイル（オプション - 必要に応じてコメントアウト）
-# agent_outputs/
-# downloads/
-
-# IDE設定
-.vscode/
-.idea/
-*.sublime-*
-
-# テストファイル
-.pytest_cache/
-.coverage
-htmlcov/
-
-# スクリプト実行結果
-*.md.backup
-*_backup.*
-
-# 一時的なテストスクリプト（本番用スクリプトは含める）
-test_*.sh
-*_temp.py
-*_tmp.py
-
-# バックアップ
-_BACKUP/
-_WIP/
-_ARCHIVE/
-
-# Playwright
-node_modules/
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
-
-# Gemini cookies (機密情報)
-gemini_cookies.json
-*_cookies.json
-*.pyc
-*.pyo
-
-# Phase 2開発時の一時ファイル
-run_pm_tasks_adaptive_v1.3_test.py
-_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
-_WIP/task_dependency_manager_v01.py
-
-# バックアップ
-_BACKUP/
-
-# ログファイル
-*.log
-gemini_automation.log
-
-# クッキー
-*_cookies.json
-
-# Google Cloud認証情報（絶対にコミットしない）
-service_account.json
-**/service_account.json
-gemini_auto_generate/configuration/service_account.json
-
-# 認証情報（絶対にコミットしない）
-**/*_key.json
-**/*.pem
-**/credentials.json
-# 実行時生成ファイル
-docs/
-
-# 作業中ファイル
-_WIP/
-_BACKUP/
-_ARCHIVE/
-
-# POCファイル
-*_poc.py
-run_poc_*.py
-_BACKUP/
-_ARCHIVE/
-Claude/
-demos/
-
+# *.md は除外しない（重要ドキュメントも含まれる）
 # === セキュリティ強化 (v1.15.1) ===
-.env
-.env.*
-*.backup
-*.backup.*
-*.bak
-**/credentials.json
-*.key
-**/service_account.json
-wordpress_cookies.json.backup
-
+# === テスト・実験用ファイル ===
+# === ナレッジ抽出ファイル ===
+# === 一時ファイル・バックアップ ===
+# === 会話ログ・レポート ===
+# ====================
+# ===================================================
+# Backups are tracked
+# Gemini cookies (機密情報)
+# Google Cloud認証情報（絶対にコミットしない）
+# Google Sheets認証
+# IDE設定
+# POCファイル
+# Phase 2開発時の一時ファイル
+# Playwright
+# Python
+# agent_outputs/
+# backups/ is intentionally tracked
+# downloads/
+# reports/
+# v1.15.0/v1.16.0 開発中の一時ファイル
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# キャッシュファイル（機密情報を含む可能性）
+# クッキー
+# スクリプト実行結果
+# セキュリティチェック用一時ファイル
+# テストファイル
+# テンポラリファイル
+# ナレッジ抽出ファイル
+# バックアップ
+# バックアップファイル
 # バックアップファイル完全除外
+# バックアップファイル（1680個を除外）
+# ブラウザデータ
+# レポート・ドキュメント（82個）- 必要なものは手動で追加
+# ログファイル
+# 一時ファイル
+# 一時的なテストスクリプト（本番用スクリプトは含める）
+# 会話ログ・データベース
+# 作業中ファイル
+# 出力ファイル（オプション - 必要に応じてコメントアウト）
+# 品質チェックキャッシュ
+# 実行時生成ファイル
+# 環境変数・認証情報
+# 監視システム出力
+# 自動生成ファイル - アーカイブ
+# 認証情報
+# 認証情報（絶対にコミットしない）
+# 🔄 自動生成ファイル（Git管理不要）
+# 🔒 機密情報（絶対にコミットしない）
+# 🛡️ 再発防止策：バックアップ・一時ファイル除外
+*$py.class
+**/*.pem
+**/*_key.json
+**/credentials.json
+**/service_account.json
 *.backup
+*.backup*
 *.backup.*
+*.backup_*
 *.bak
 *.bak*
-.env.backup*
-*.backup
-*.backup.*
-.env.*
-
-# v1.15.0/v1.16.0 開発中の一時ファイル
-README_v1.15.0.md
-/tmp/*.md
-*_TEMP.md
-*_DRAFT.md
-
-# セキュリティチェック用一時ファイル
-gap_analysis.md
-system_check.sh
-
-# キャッシュファイル（機密情報を含む可能性）
-.quality_cache.json
+*.before_*
+*.broken
 *.cache.json
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 🔒 機密情報（絶対にコミットしない）
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-.env
-.env.*
+*.egg-info/
 *.env
 *.env.*
+*.key
+*.log
+*.md.backup
+*.pem
+*.pkl
+*.py[cod]
+*.pyc
+*.pyo
+*.so
+*.sublime-*
+*.swp
+*.tmp
+*.v*_backup
+*_DRAFT.md
+*_TEMP.md
+*_backup.*
+*_backup.py
+*_backup_*
+*_cookies.json
+*_poc.py
+*_temp.py
+*_tmp.py
+*~
+.DS_Store
+.Python
+.coverage
+.env
+.env.*
 .env.backup*
+.env.development
 .env.local
 .env.production
-.env.development
-
-# 認証情報
-credentials.json
-**/credentials.json
-service_account*.json
-*.key
-*.pem
-token.json
-
-# キャッシュファイル（機密情報を含む可能性）
+.idea/
+.pytest_cache/
 .quality_cache.json
-*.cache.json
-__pycache__/
-*.pyc
-
-# 一時ファイル
-*_TEMP.md
-*_DRAFT.md
-README_v*.md
+.vscode/
+/blob-report/
+/playwright-report/
+/playwright/.auth/
+/playwright/.cache/
+/test-results/
 /tmp/*.md
+Claude/
+ENV/
+README_v*.md
+README_v1.15.0.md
+_ARCHIVE/
+_BACKUP/
+_WIP/
+_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
+_WIP/task_dependency_manager_v01.py
+__pycache__/
+agent_outputs/
+browser_profile/
+build/
+chrome_profile/
+configuration/service_account.json
+conversations/
+cookies/
+credentials.json
+database/
+demos/
+dist/
+docs/
+env/
+exports/alerts_*.json
+exports/archive/
+exports/dependency_graph_*.json
+exports/dependency_graph_*.json  
+exports/traces_*.json
+extracted_knowledge_*.txt
+gap_analysis.md
+gemini_auto_generate/configuration/service_account.json
+gemini_automation.log
+gemini_cookies.json
+htmlcov/
+knowledge_*.txt
+logs/
+node_modules/
+reports/
+run_pm_tasks_adaptive_v1.3_test.py
+run_poc_*.py
+service_account*.json
+service_account.json
+session_data/
+system_check.sh
+test_*.sh
+token.json
+token.pickle
+venv/
+wordpress_cookies.json.backup
+
+# ====================
+# 🔄 自動生成ファイル（Git管理不要）
+# ====================
+
+# 監視システム出力
+exports/archive/
+exports/alerts_*.json
+exports/dependency_graph_*.json
+exports/traces_*.json
 
 # バックアップファイル
-*.backup
-*.bak
-*~
-
-# Backups are tracked
-# backups/ is intentionally tracked
-
-# === 一時ファイル・バックアップ ===
-*.backup
-*.backup_*
+*.backup*
 *_backup_*
-*.before_*
-*.broken
-*.v*_backup
-
-# === 会話ログ・レポート ===
-conversations/
-reports/
-
-# === ナレッジ抽出ファイル ===
-extracted_knowledge_*.txt
-knowledge_*.txt
-
-# === テスト・実験用ファイル ===
-*_poc.py
-*_temp.py
-*_tmp.py
-run_poc_*.py
-
-
-# ===================================================
-# 🛡️ 再発防止策：バックアップ・一時ファイル除外
-# ===================================================
-
-# バックアップファイル（1680個を除外）
-*.backup
-*.backup_*
-*_backup_*
-*.before_*
-*.broken
-*.v*_backup
-*_backup.py
 
 # 一時ファイル
-*_poc.py
-*_temp.py
-*_tmp.py
-run_poc_*.py
-
-# ナレッジ抽出ファイル
-extracted_knowledge_*.txt
-knowledge_*.txt
-
-# 会話ログ・データベース
-conversations/
-database/
-
-# レポート・ドキュメント（82個）- 必要なものは手動で追加
-# reports/
-# *.md は除外しない（重要ドキュメントも含まれる）
-
-# 自動生成ファイル - アーカイブ
-exports/archive/
-*.backup*
+_WIP/
+__pycache__/
+*.pyc
