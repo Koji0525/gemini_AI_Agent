@@ -60,37 +60,68 @@ class MetricsCollector:
         except Exception as e:
             logger.error(f"Failed to save metrics history: {e}")
 
-    def collect_system_metrics(self) -> Dict:
+    def collect_system_metrics(self) -> Dict[str, Any]:
         """
         システムメトリクスを収集
-
+        
         Returns:
-            メトリクスデータ
+            Dict[str, Any]: CPU、メモリ、ディスク、ネットワークの情報
         """
         try:
+            # CPU使用率（パーセント値）
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            cpu_count = psutil.cpu_count()
+            
+            # メモリ情報
+            memory = psutil.virtual_memory()
+            
+            # ディスク情報
+            disk = psutil.disk_usage('/')
+            
+            # ネットワーク情報
+            network = psutil.net_io_counters()
+            
+            # 構造化されたメトリクス
             metrics = {
-                "timestamp": datetime.now().isoformat(),
-                "cpu": self._collect_cpu_metrics(),
-                "memory": self._collect_memory_metrics(),
-                "disk": self._collect_disk_metrics(),
-                "network": self._collect_network_metrics(),
-                "process": self._collect_process_metrics(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "cpu": {
+                    "percent": float(cpu_percent),
+                    "count": cpu_count
+                },
+                "memory": {
+                    "total": memory.total,
+                    "available": memory.available,
+                    "percent": float(memory.percent),
+                    "used": memory.used,
+                    "free": memory.free
+                },
+                "disk": {
+                    "total": disk.total,
+                    "used": disk.used,
+                    "free": disk.free,
+                    "percent": float(disk.percent)
+                },
+                "network": {
+                    "bytes_sent": network.bytes_sent,
+                    "bytes_recv": network.bytes_recv,
+                    "packets_sent": network.packets_sent,
+                    "packets_recv": network.packets_recv
+                }
             }
-
-            # 履歴に追加
-            self.metrics_history.append(metrics)
-            self.metrics_history = self.metrics_history[-1000:]  # 最新1000件
-
-            # 定期的に保存（10件ごと）
-            if len(self.metrics_history) % 10 == 0:
-                self._save_history()
-
+            
+            self.logger.info(f"Metrics collected: CPU={cpu_percent:.1f}%, Memory={memory.percent:.1f}%")
             return metrics
-
+            
         except Exception as e:
-            logger.error(f"Failed to collect metrics: {e}")
-            return {"timestamp": datetime.now().isoformat(), "error": str(e)}
-
+            self.logger.error(f"Failed to collect metrics: {e}")
+            return {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "error": str(e),
+                "cpu": {"percent": 0, "count": 0},
+                "memory": {"percent": 0, "total": 0, "used": 0},
+                "disk": {"percent": 0, "total": 0, "used": 0},
+                "network": {"bytes_sent": 0, "bytes_recv": 0}
+            }
     def _collect_cpu_metrics(self) -> Dict:
         """CPU関連メトリクス"""
         return {
