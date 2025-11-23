@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Git自動コミット＆プッシュツール v11
+
+【🔒 重要な保護されたセクション】
+この部分には、過去のインシデント（INCIDENT-2025-11-23-001）により
+修正された重要なコードが含まれています。
+
+⚠️  変更前に必ず以下を確認してください:
+1. docs/incident_registry/incident_*_flake8_non_python_files.md を読む
+2. なぜこの修正が必要だったのか理解する
+3. 変更が必要な理由を明確にする
+4. テストケースを作成する
+5. 影響範囲を確認する
+
+最終修正日: 2025-11-23
+インシデントID: INCIDENT-2025-11-23-001
+"""
+
 from auto_repair_enhancer import AdvancedErrorFixer
 
 """
