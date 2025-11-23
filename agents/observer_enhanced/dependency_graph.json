@@ -7376,8 +7376,8 @@
             "lines": 245,
             "functions": 3,
             "classes": 1,
-            "imports": 21,
-            "last_modified": "2025-11-23T05:17:04.261757",
+            "imports": 19,
+            "last_modified": "2025-11-23T05:25:31.313752",
             "type": "file",
         },
         {
@@ -7999,6 +7999,15 @@
             "classes": 0,
             "imports": 10,
             "last_modified": "2025-11-22T11:34:49.449797",
+            "type": "file",
+        },
+        {
+            "id": "agents/observer_enhanced/web/api_server.py",
+            "lines": 251,
+            "functions": 2,
+            "classes": 0,
+            "imports": 9,
+            "last_modified": "2025-11-23T05:29:42.822749",
             "type": "file",
         },
         {
