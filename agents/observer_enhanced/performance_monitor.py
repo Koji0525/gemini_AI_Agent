@@ -240,6 +240,99 @@ class PerformanceMonitor:
         """
         return self.alerts[-limit:]
 
+
+    def get_status(self) -> Dict[str, Any]:
+        """
+        システム全体のパフォーマンスステータスを取得
+        
+        Returns:
+            Dict[str, Any]: {
+                "overall_status": str,  # healthy/warning/critical
+                "timestamp": str,
+                "cpu": {"percent": float, "status": str},
+                "memory": {"percent": float, "status": str},
+                "disk": {"percent": float, "status": str}
+            }
+        """
+        from datetime import datetime
+        
+        try:
+            # MetricsCollectorから現在のメトリクスを取得
+            from observer_enhanced.metrics_collector import MetricsCollector
+            collector = MetricsCollector()
+            current_metrics = collector.collect_system_metrics()
+            
+            # エラーチェック
+            if "error" in current_metrics:
+                return {
+                    "overall_status": "unknown",
+                    "error": current_metrics["error"],
+                    "timestamp": current_metrics.get("timestamp")
+                }
+            
+            # 各リソースのパーセンテージ取得
+            cpu_data = current_metrics.get("cpu", {})
+            memory_data = current_metrics.get("memory", {})
+            disk_data = current_metrics.get("disk", {})
+            
+            cpu_percent = cpu_data.get("percent", 0)
+            memory_percent = memory_data.get("percent", 0)
+            disk_percent = disk_data.get("percent", 0)
+            
+            # 状態判定関数
+            def judge_status(percent: float, warn_threshold: float = 70, crit_threshold: float = 90) -> str:
+                if percent >= crit_threshold:
+                    return "critical"
+                elif percent >= warn_threshold:
+                    return "warning"
+                else:
+                    return "healthy"
+            
+            # 各リソースの状態
+            cpu_status = judge_status(cpu_percent)
+            memory_status = judge_status(memory_percent)
+            disk_status = judge_status(disk_percent, warn_threshold=80, crit_threshold=90)
+            
+            # 総合ステータス（最も悪い状態に合わせる）
+            all_statuses = [cpu_status, memory_status, disk_status]
+            if "critical" in all_statuses:
+                overall_status = "critical"
+            elif "warning" in all_statuses:
+                overall_status = "warning"
+            else:
+                overall_status = "healthy"
+            
+            result = {
+                "overall_status": overall_status,
+                "timestamp": current_metrics.get("timestamp"),
+                "cpu": {
+                    "percent": cpu_percent,
+                    "status": cpu_status
+                },
+                "memory": {
+                    "percent": memory_percent,
+                    "status": memory_status
+                },
+                "disk": {
+                    "percent": disk_percent,
+                    "status": disk_status
+                }
+            }
+            
+            self.logger.info(f"System status: {overall_status}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get status: {e}")
+            return {
+                "overall_status": "unknown",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+                "cpu": {"percent": 0, "status": "unknown"},
+                "memory": {"percent": 0, "status": "unknown"},
+                "disk": {"percent": 0, "status": "unknown"}
+            }
+
     def get_alert_summary(self, hours: int = 24) -> Dict:
         """
         アラートサマリーを取得
@@ -276,63 +369,6 @@ def get_performance_monitor() -> PerformanceMonitor:
     return _performance_monitor
 
 
-    def get_status(self) -> Dict[str, Any]:
-        """
-        パフォーマンスステータスを取得
-        
-        Returns:
-            総合ステータスとコンポーネント別状態
-        """
-        from datetime import datetime
-        
-        try:
-            # 各コンポーネントのパフォーマンスチェック
-            components = {}
-            
-            # 1. API応答時間チェック
-            api_status = self._check_api_performance()
-            components["api"] = api_status
-            
-            # 2. データベース応答時間チェック
-            db_status = self._check_database_performance()
-            components["database"] = db_status
-            
-            # 3. システムリソースチェック
-            resource_status = self._check_resource_usage()
-            components["resources"] = resource_status
-            
-            # 総合ステータス判定
-            all_statuses = [comp.get("status", "unknown") for comp in components.values()]
-            
-            if "critical" in all_statuses:
-                overall_status = "critical"
-            elif "degraded" in all_statuses:
-                overall_status = "degraded"
-            elif all(s == "healthy" for s in all_statuses):
-                overall_status = "healthy"
-            else:
-                overall_status = "unknown"
-            
-            status = {
-                "timestamp": datetime.now().isoformat(),
-                "overall_status": overall_status,
-                "components": components
-            }
-            
-            # ステータス履歴に保存
-            self._save_status(status)
-            
-            return status
-            
-        except Exception as e:
-            self.logger.error(f"Failed to get performance status: {e}")
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "overall_status": "error",
-                "error": str(e),
-                "components": {}
-            }
-    
     def _check_api_performance(self) -> Dict[str, Any]:
         """API応答時間チェック"""
         # 簡易実装
@@ -370,58 +406,4 @@ def get_performance_monitor() -> PerformanceMonitor:
             "cpu_percent": cpu_percent,
             "memory_percent": memory_percent
         }
-
-
-    def get_status(self) -> Dict[str, Any]:
-        """
-        システム全体のパフォーマンスステータスを取得
-        
-        Returns:
-            Dict[str, Any]: ステータス情報
-        """
-        try:
-            # 最新メトリクスを収集
-            if hasattr(self, 'metrics_collector'):
-                current_metrics = self.metrics_collector.collect_system_metrics()
-            else:
-                # MetricsCollectorがない場合は直接収集
-                from observer_enhanced.metrics_collector import MetricsCollector
-                collector = MetricsCollector()
-                current_metrics = collector.collect_system_metrics()
-            
-            # CPU/メモリ/ディスクの状態判定
-            cpu_percent = current_metrics.get("cpu", {}).get("percent", 0)
-            memory_percent = current_metrics.get("memory", {}).get("percent", 0)
-            disk_percent = current_metrics.get("disk", {}).get("percent", 0)
-            
-            # 総合ステータス判定
-            if cpu_percent > 90 or memory_percent > 90 or disk_percent > 90:
-                overall_status = "critical"
-            elif cpu_percent > 70 or memory_percent > 70 or disk_percent > 80:
-                overall_status = "warning"
-            else:
-                overall_status = "healthy"
-            
-            return {
-                "overall_status": overall_status,
-                "timestamp": current_metrics.get("timestamp"),
-                "cpu": {
-                    "percent": cpu_percent,
-                    "status": "critical" if cpu_percent > 90 else "warning" if cpu_percent > 70 else "healthy"
-                },
-                "memory": {
-                    "percent": memory_percent,
-                    "status": "critical" if memory_percent > 90 else "warning" if memory_percent > 70 else "healthy"
-                },
-                "disk": {
-                    "percent": disk_percent,
-                    "status": "critical" if disk_percent > 90 else "warning" if disk_percent > 80 else "healthy"
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"ステータス取得エラー: {e}")
-            return {
-                "overall_status": "unknown",
-                "error": str(e)
-            }
 
