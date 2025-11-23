@@ -1,6 +1,6 @@
 """
 依存関係可視化システム API Server
-Phase 0-3: 基本機能のみ（安定版）
+Phase 0-3完全版（ダッシュボード対応）
 """
 
 import json
@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 
 # ロギング設定
 logging.basicConfig(level=logging.INFO)
@@ -39,7 +40,6 @@ def load_graph_data():
     global graph_data
 
     try:
-        # プロジェクトルートからの相対パスで読み込み
         current_dir = Path(__file__).parent
         project_root = current_dir.parent.parent.parent
         graph_file = project_root / "docs" / "dependency_map.json"
@@ -56,20 +56,15 @@ def load_graph_data():
 
         nodes = data.get("nodes", [])
         edges = data.get("edges", [])
-        metadata = data.get("metadata", {})
 
         logger.info(f"✅ グラフデータ読み込み成功")
         logger.info(f"   - ノード数: {len(nodes)}")
         logger.info(f"   - エッジ数: {len(edges)}")
 
-        graph_data = {"nodes": nodes, "edges": edges, "metadata": metadata}
+        graph_data = {"nodes": nodes, "edges": edges, "metadata": data.get("metadata", {})}
 
         return graph_data
 
-    except json.JSONDecodeError as e:
-        logger.error(f"❌ JSONデコードエラー: {e}")
-        graph_data = {"nodes": [], "edges": [], "metadata": {"error": str(e)}}
-        return graph_data
     except Exception as e:
         logger.error(f"❌ グラフデータ読み込みエラー: {e}")
         graph_data = {"nodes": [], "edges": [], "metadata": {"error": str(e)}}
@@ -146,8 +141,6 @@ async def startup_event():
     load_graph_data()
     if graph_data and len(graph_data.get("nodes", [])) > 0:
         logger.info(f"✅ グラフデータ読み込み成功: {len(graph_data['nodes'])} ノード")
-    else:
-        logger.error("❌ グラフデータ読み込み失敗")
 
 
 @app.on_event("shutdown")
@@ -158,18 +151,17 @@ async def shutdown_event():
 
 @app.get("/")
 async def root():
-    """ルートエンドポイント"""
-    return {
-        "message": "依存関係可視化システム API",
-        "version": "1.0.0",
-        "status": "running",
-        "endpoints": {
-            "health": "/health",
-            "dependencies": "/api/dependencies",
-            "signals": "/api/signals",
-            "docs": "/docs",
-        },
-    }
+    """ルート - ダッシュボードにリダイレクト"""
+    return RedirectResponse(url="/dashboard")
+
+
+@app.get("/dashboard")
+async def dashboard():
+    """ダッシュボードを表示"""
+    dashboard_file = Path(__file__).parent / "dashboard" / "index.html"
+    if not dashboard_file.exists():
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return FileResponse(dashboard_file)
 
 
 @app.get("/health")
@@ -183,24 +175,13 @@ async def get_dependencies():
     """依存関係データを取得"""
     global graph_data
 
-    try:
-        if graph_data is None:
-            logger.info("グラフデータが未読み込み、読み込みます...")
-            load_graph_data()
+    if graph_data is None:
+        load_graph_data()
 
-        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
-            logger.warning("グラフデータが空、再読み込みを試行...")
-            load_graph_data()
+    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+        return {"nodes": [], "edges": [], "metadata": {"error": "No data"}}
 
-        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
-            logger.error("グラフデータの読み込みに失敗しました")
-            return {"nodes": [], "edges": [], "metadata": {"error": "No data available"}}
-
-        return graph_data
-
-    except Exception as e:
-        logger.error(f"依存関係データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"データ取得エラー: {str(e)}")
+    return graph_data
 
 
 @app.get("/api/signals")
@@ -208,30 +189,19 @@ async def get_signals():
     """信号機データを取得"""
     global graph_data
 
-    try:
-        if graph_data is None:
-            logger.info("グラフデータが未読み込み、読み込みます...")
-            load_graph_data()
+    if graph_data is None:
+        load_graph_data()
 
-        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
-            logger.warning("グラフデータが空、再読み込みを試行...")
-            load_graph_data()
+    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+        return {
+            "total_files": 0,
+            "signal_counts": {"🔴": 0, "🟡": 0, "🟢": 0, "💤": 0},
+            "high_risk_files": [],
+            "all_files": [],
+        }
 
-        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
-            logger.error("グラフデータの読み込みに失敗しました")
-            return {
-                "total_files": 0,
-                "signal_counts": {"🔴": 0, "🟡": 0, "🟢": 0, "💤": 0},
-                "high_risk_files": [],
-                "all_files": [],
-            }
-
-        result = analyze_signals(graph_data)
-        return result
-
-    except Exception as e:
-        logger.error(f"信号機データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=f"信号機データ取得エラー: {str(e)}")
+    result = analyze_signals(graph_data)
+    return result
 
 
 if __name__ == "__main__":
