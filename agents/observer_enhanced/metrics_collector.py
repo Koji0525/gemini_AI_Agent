@@ -199,73 +199,19 @@ class MetricsCollector:
 
 
 
+    def collect_metrics(self) -> Dict[str, Any]:
+        """
+        メトリクス収集（エイリアス）
+        
+        collect_system_metrics() の別名
+        """
+        return self.collect_system_metrics()
+
+
 def get_metrics_collector() -> MetricsCollector:
     """メトリクスコレクターのシングルトンインスタンスを取得"""
     global _metrics_collector
     if _metrics_collector is None:
         _metrics_collector = MetricsCollector()
     return _metrics_collector
-
-
-    def collect_metrics(self) -> Dict[str, Any]:
-        """
-        システムメトリクスを収集
-        
-        Returns:
-            CPU、メモリ、ディスクの使用状況
-        """
-        import psutil
-        from datetime import datetime
-        
-        try:
-            # CPU使用率
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            cpu_count = psutil.cpu_count()
-            
-            # メモリ使用率
-            memory = psutil.virtual_memory()
-            
-            # ディスク使用率
-            disk = psutil.disk_usage('/')
-            
-            # ネットワーク統計（オプション）
-            network = psutil.net_io_counters()
-            
-            metrics = {
-                "timestamp": datetime.now().isoformat(),
-                "cpu": {
-                    "percent": cpu_percent,
-                    "count": cpu_count
-                },
-                "memory": {
-                    "total": memory.total,
-                    "available": memory.available,
-                    "percent": memory.percent,
-                    "used": memory.used
-                },
-                "disk": {
-                    "total": disk.total,
-                    "used": disk.used,
-                    "free": disk.free,
-                    "percent": disk.percent
-                },
-                "network": {
-                    "bytes_sent": network.bytes_sent,
-                    "bytes_recv": network.bytes_recv,
-                    "packets_sent": network.packets_sent,
-                    "packets_recv": network.packets_recv
-                }
-            }
-            
-            # メトリクス履歴に保存
-            self._save_metrics(metrics)
-            
-            return metrics
-            
-        except Exception as e:
-            self.logger.error(f"Failed to collect metrics: {e}")
-            return {
-                "timestamp": datetime.now().isoformat(),
-                "error": str(e)
-            }
 
