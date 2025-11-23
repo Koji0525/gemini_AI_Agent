@@ -3,77 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>依存関係可視化ダッシュボード v1.0</title>
+    <title>依存関係可視化ダッシュボード - Phase 2対応版</title>
     <link rel="stylesheet" href="/static/css/dashboard.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- ヘッダー -->
-        <header class="header">
+        <header>
             <h1>🔍 依存関係可視化ダッシュボード</h1>
             <div class="header-info">
-                <span id="status" class="status-badge">読み込み中...</span>
-                <span id="timestamp"></span>
+                <span id="status" class="status-badge loading">読み込み中...</span>
+                <span id="timestamp" class="timestamp">更新: --</span>
+                <button id="refresh-btn" class="btn btn-primary">🔄 更新</button>
             </div>
         </header>
 
-        <!-- 統計情報パネル -->
-        <section class="stats-panel">
+        <!-- Phase 1: 基本依存関係 -->
+        <section class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="total-modules">-</div>
                 <div class="stat-label">総モジュール数</div>
+                <div class="stat-value" id="total-modules">-</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="total-dependencies">-</div>
                 <div class="stat-label">総依存関係数</div>
+                <div class="stat-value" id="total-dependencies">-</div>
             </div>
             <div class="stat-card high-impact">
+                <div class="stat-label">🔴 高影響モジュール</div>
                 <div class="stat-value" id="high-impact">-</div>
-                <div class="stat-label">高影響モジュール</div>
             </div>
             <div class="stat-card medium-impact">
+                <div class="stat-label">🟡 中影響モジュール</div>
                 <div class="stat-value" id="medium-impact">-</div>
-                <div class="stat-label">中影響モジュール</div>
             </div>
             <div class="stat-card low-impact">
+                <div class="stat-label">🟢 低影響モジュール</div>
                 <div class="stat-value" id="low-impact">-</div>
-                <div class="stat-label">低影響モジュール</div>
             </div>
         </section>
 
-        <!-- Top 10 依存モジュール -->
-        <section class="top-modules">
-            <h2>🏆 最も依存されているモジュール Top 10</h2>
-            <div id="top-modules-list" class="modules-list"></div>
-        </section>
+        <!-- Phase 2: 高度な分析 -->
+        <section class="phase2-section">
+            <h2>🚀 Phase 2: 高度な分析機能</h2>
+            
+            <div class="phase2-grid">
+                <!-- 隠れた依存関係 -->
+                <div class="phase2-card">
+                    <div class="card-header">
+                        <h3>🔐 隠れた依存関係</h3>
+                        <span class="card-badge" id="hidden-deps-badge">-</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="metric-row">
+                            <span>環境変数:</span>
+                            <strong id="env-vars-count">-</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>ファイル操作:</span>
+                            <strong id="file-ops-count">-</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>外部コマンド:</span>
+                            <strong id="commands-count">-</strong>
+                        </div>
+                        <details>
+                            <summary>Top 5 環境変数</summary>
+                            <ul id="top-env-vars" class="top-list"></ul>
+                        </details>
+                    </div>
+                </div>
 
-        <!-- 依存関係グラフ -->
-        <section class="graph-section">
-            <h2>📊 依存関係グラフ（上位50モジュール）</h2>
-            <div class="graph-controls">
-                <button id="refresh-btn" class="btn">🔄 更新</button>
-                <button id="zoom-in-btn" class="btn">🔍 拡大</button>
-                <button id="zoom-out-btn" class="btn">🔍 縮小</button>
-                <button id="reset-btn" class="btn">↻ リセット</button>
+                <!-- 循環依存 -->
+                <div class="phase2-card">
+                    <div class="card-header">
+                        <h3>🔄 循環依存</h3>
+                        <span class="card-badge" id="cycles-badge">-</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="cycles-status" class="status-message">
+                            <span class="status-icon">✅</span>
+                            <span>循環依存なし（健全）</span>
+                        </div>
+                        <div id="cycles-list" class="cycles-container"></div>
+                    </div>
+                </div>
+
+                <!-- 破壊的変更 -->
+                <div class="phase2-card">
+                    <div class="card-header">
+                        <h3>⚠️ 破壊的変更</h3>
+                        <span class="card-badge" id="breaking-badge">-</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="breaking-status" class="status-message">
+                            <span class="status-icon">✅</span>
+                            <span>最近の破壊的変更なし</span>
+                        </div>
+                        <div id="breaking-list" class="breaking-container"></div>
+                    </div>
+                </div>
+
+                <!-- リスクスコア -->
+                <div class="phase2-card">
+                    <div class="card-header">
+                        <h3>�� リスクスコア分析</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="risk-search">
+                            <input type="text" id="risk-search-input" placeholder="ファイルパス入力..." value="tools/sheets_manager.py">
+                            <button id="risk-search-btn" class="btn">分析</button>
+                        </div>
+                        <div id="risk-result" class="risk-result"></div>
+                    </div>
+                </div>
             </div>
-            <div id="graph-container"></div>
         </section>
 
-        <!-- 影響範囲検索 -->
-        <section class="search-section">
-            <h2>🔎 影響範囲検索</h2>
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="ファイル名を入力（例: sheets_manager）">
-                <button id="search-btn" class="btn btn-primary">検索</button>
+        <div class="content-grid">
+            <section class="panel">
+                <h2>🏆 最も依存されているモジュール Top 10</h2>
+                <div id="top-modules-list" class="module-list"></div>
+            </section>
+
+            <section class="panel">
+                <h2>🔎 影響範囲検索</h2>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="モジュール名またはファイルパス...">
+                    <button id="search-btn" class="btn">検索</button>
+                </div>
+                <div id="search-results" class="search-results"></div>
+            </section>
+        </div>
+
+        <section class="panel graph-panel">
+            <div class="graph-header">
+                <h2>📊 依存関係グラフ（上位50モジュール）</h2>
+                <div class="graph-controls">
+                    <button id="zoom-in-btn" class="btn btn-sm">🔍 拡大</button>
+                    <button id="zoom-out-btn" class="btn btn-sm">🔍 縮小</button>
+                    <button id="reset-btn" class="btn btn-sm">🔄 リセット</button>
+                </div>
             </div>
-            <div id="search-results" class="search-results"></div>
+            <div id="graph-container" class="graph-container"></div>
         </section>
-
-        <!-- フッター -->
-        <footer class="footer">
-            <p>依存関係可視化システム v1.0 | API: <a href="/docs" target="_blank">/docs</a></p>
-        </footer>
     </div>
 
     <script src="/static/js/dashboard.js"></script>

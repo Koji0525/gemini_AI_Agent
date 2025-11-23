@@ -307,3 +307,297 @@ body {
         flex-direction: column;
     }
 }
+
+/* 更新ボタンを目立たせる */
+#refresh-btn {
+    background: var(--success-color);
+    color: white;
+    font-weight: bold;
+}
+
+#refresh-btn:hover {
+    background: #059669;
+}
+
+/* クリック可能なモジュール項目 */
+.module-item {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.module-item:hover {
+    background: #cbd5e1;
+    transform: translateX(5px);
+}
+
+/* 検索結果の改善 */
+.result-card details {
+    margin-top: 15px;
+}
+
+.result-card summary {
+    cursor: pointer;
+    padding: 10px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.result-card summary:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+.result-card ul {
+    padding-left: 20px;
+}
+
+.result-card li {
+    padding: 5px 0;
+}
+
+/* ===================================================================
+   Phase 2: 高度な分析機能のスタイル
+   =================================================================== */
+
+.phase2-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.phase2-section h2 {
+    color: white;
+    margin: 0 0 20px 0;
+    font-size: 1.5rem;
+}
+
+.phase2-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.phase2-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.card-header {
+    background: #f8f9fa;
+    padding: 15px;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+.card-badge {
+    background: #667eea;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.card-body {
+    padding: 15px;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.metric-row:last-of-type {
+    border-bottom: none;
+}
+
+.metric-row strong {
+    color: #667eea;
+    font-size: 1.1rem;
+}
+
+.top-list {
+    list-style: none;
+    padding: 10px 0 0 0;
+    margin: 0;
+}
+
+.top-list li {
+    padding: 8px;
+    background: #f8f9fa;
+    margin: 5px 0;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.status-message {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    color: #155724;
+}
+
+.status-message.warning {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    color: #856404;
+}
+
+.status-message.error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.status-icon {
+    font-size: 1.5rem;
+}
+
+.cycles-container, .breaking-container {
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.cycle-item, .breaking-item {
+    padding: 10px;
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.breaking-item.critical {
+    background: #f8d7da;
+    border-color: #dc3545;
+}
+
+.breaking-item.high {
+    background: #fff3cd;
+    border-color: #ffc107;
+}
+
+.risk-search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.risk-search input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.risk-result {
+    margin-top: 15px;
+}
+
+.risk-card {
+    padding: 15px;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+}
+
+.risk-card.critical {
+    background: #fee;
+    border-color: #dc3545;
+}
+
+.risk-card.high {
+    background: #fff8e1;
+    border-color: #ff9800;
+}
+
+.risk-card.medium {
+    background: #fff3e0;
+    border-color: #ffc107;
+}
+
+.risk-card.low {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+
+.risk-card.minimal {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.risk-score {
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.risk-level {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.risk-factors {
+    margin: 15px 0;
+}
+
+.risk-factor {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    background: rgba(255,255,255,0.7);
+    margin: 5px 0;
+    border-radius: 4px;
+}
+
+.recommendations {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 6px;
+}
+
+.recommendations h4 {
+    margin: 0 0 10px 0;
+    color: #2d3748;
+}
+
+.recommendations ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.recommendations li {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .phase2-grid {
+        grid-template-columns: 1fr;
+    }
+}
