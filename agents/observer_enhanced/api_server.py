@@ -624,3 +624,38 @@ async def get_duplicate_summary():
         return summary
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/api/signals")
+async def get_signals():
+    """全ファイルの信号機情報を返す"""
+    try:
+        signal_path = PROJECT_ROOT / "docs" / "signal_analysis.json"
+        if not signal_path.exists():
+            return {"error": "信号機分析ファイルが見つかりません"}
+
+        with open(signal_path, "r", encoding="utf-8") as f:
+            signal_data = json.load(f)
+
+        return signal_data
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/signals/high-risk")
+async def get_high_risk_files():
+    """高リスクファイルのみを返す"""
+    try:
+        signal_path = PROJECT_ROOT / "docs" / "signal_analysis.json"
+        if not signal_path.exists():
+            return {"error": "信号機分析ファイルが見つかりません"}
+
+        with open(signal_path, "r", encoding="utf-8") as f:
+            signal_data = json.load(f)
+
+        return {
+            "high_risk_count": signal_data["high_risk_count"],
+            "files": signal_data["high_risk"],
+        }
+    except Exception as e:
+        return {"error": str(e)}

@@ -702,3 +702,381 @@ async def get_impact_range(file_path: str, max_depth: int = 3):
 
 if __name__ == "__main__":
     main()
+
+
+# ==============================================================
+# P1-004: 重複検出API
+# ==============================================================
+@app.get("/api/duplicates")
+async def get_duplicates():
+    """
+    重複ファイルを検出する
+
+    アルゴリズム:
+    1. ファイル名の類似度計算（Levenshtein距離）
+    2. バージョン番号の検出（_v2, _v3, _v30など）
+    3. 最新版の判定（更新日時 + 被依存数）
+
+    Returns:
+        {
+            "groups": [
+                {
+                    "base_name": "pm_agent",
+                    "files": [
+                        {"path": "pm_agent_v2.py", "version": "v2", ...},
+                        {"path": "pm_agent_v31.py", "version": "v31", ...}
+                    ],
+                    "recommended": "pm_agent_v31.py",
+                    "delete_candidates": ["pm_agent_v2.py", "pm_agent_v3.py"]
+                }
+            ],
+            "total_duplicates": 10
+        }
+    """
+    import os
+    import re
+    from collections import defaultdict
+    from datetime import datetime
+
+    duplicate_groups = []
+    version_pattern = re.compile(r"(.+?)_v?(\d+)\.py$")
+
+    # 全Pythonファイルをスキャン
+    python_files = []
+    for root, dirs, files in os.walk("."):
+        # 除外ディレクトリ
+        dirs[:] = [d for d in dirs if d not in [".git", "__pycache__", "venv", "node_modules"]]
+
+        for file in files:
+            if file.endswith(".py"):
+                full_path = os.path.join(root, file)
+                python_files.append(full_path)
+
+    # バージョン番号でグループ化
+    grouped = defaultdict(list)
+    for filepath in python_files:
+        filename = os.path.basename(filepath)
+        match = version_pattern.match(filename)
+
+        if match:
+            base_name = match.group(1)
+            version = match.group(2)
+
+            # ファイル情報を収集
+            stat = os.stat(filepath)
+            file_info = {
+                "path": filepath,
+                "filename": filename,
+                "version": version,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "modified_timestamp": stat.st_mtime,
+            }
+
+            grouped[base_name].append(file_info)
+
+    # 2つ以上のバージョンがあるものを重複として扱う
+    for base_name, files in grouped.items():
+        if len(files) >= 2:
+            # 最新版を判定（更新日時で）
+            files_sorted = sorted(files, key=lambda x: x["modified_timestamp"], reverse=True)
+            recommended = files_sorted[0]
+            delete_candidates = files_sorted[1:]
+
+            duplicate_groups.append(
+                {
+                    "base_name": base_name,
+                    "files": files,
+                    "recommended": recommended["path"],
+                    "delete_candidates": [f["path"] for f in delete_candidates],
+                    "count": len(files),
+                }
+            )
+
+    # 重複数でソート
+    duplicate_groups.sort(key=lambda x: x["count"], reverse=True)
+
+    return {
+        "groups": duplicate_groups,
+        "total_duplicates": len(duplicate_groups),
+        "total_files": sum(g["count"] for g in duplicate_groups),
+    }
+
+
+# ==============================================================
+# P1-005: 影響範囲分析API
+# ==============================================================
+@app.get("/api/impact/{file_path:path}")
+async def get_impact_analysis(file_path: str, depth: int = 3):
+    """
+    ファイル変更時の影響範囲を分析する
+
+    アルゴリズム:
+    1. BFS探索で依存関係を辿る
+    2. 最大3階層まで追跡
+    3. 影響度スコアを計算
+    4. 推奨テストを生成
+
+    Args:
+        file_path: 分析対象ファイルパス
+        depth: 探索階層数（デフォルト3）
+
+    Returns:
+        {
+            "target_file": "sheets_manager.py",
+            "direct_impact": ["pm_agent.py", ...],  # 1階層
+            "indirect_impact": ["orchestrator.py", ...],  # 2-3階層
+            "total_impact_count": 83,
+            "recommended_tests": [...]
+        }
+    """
+    import json
+    from collections import deque
+
+    # 依存関係データをロード
+    try:
+        with open("docs/dependency_map.json", "r") as f:
+            dep_data = json.load(f)
+    except FileNotFoundError:
+        return {"error": "dependency_map.json not found"}
+
+    # BFS探索で影響範囲を計算
+    def bfs_impact(start_file, max_depth):
+        visited = set()
+        impact_by_level = {i: set() for i in range(1, max_depth + 1)}
+        queue = deque([(start_file, 0)])
+
+        while queue:
+            current_file, level = queue.popleft()
+
+            if current_file in visited or level >= max_depth:
+                continue
+
+            visited.add(current_file)
+
+            # このファイルに依存しているファイルを探す
+            for node in dep_data.get("nodes", []):
+                if node["id"] == current_file:
+                    for dependent in node.get("imported_by", []):
+                        if dependent not in visited:
+                            next_level = level + 1
+                            impact_by_level[next_level].add(dependent)
+                            queue.append((dependent, next_level))
+
+        return impact_by_level
+
+    # 影響範囲を計算
+    impact_levels = bfs_impact(file_path, depth)
+
+    # 推奨テストを生成
+    direct_impact = list(impact_levels.get(1, set()))
+    all_impact = set()
+    for level_files in impact_levels.values():
+        all_impact.update(level_files)
+
+    # 影響度が高いファイルを優先してテスト推奨
+    recommended_tests = []
+    priority_files = ["pm_agent", "task_executor", "orchestrator", "complete_engine"]
+    for pf in priority_files:
+        for impacted in all_impact:
+            if pf in impacted:
+                recommended_tests.append(
+                    {"file": impacted, "priority": "high", "reason": f"Critical component: {pf}"}
+                )
+
+    return {
+        "target_file": file_path,
+        "direct_impact": direct_impact,
+        "impact_by_level": {str(k): list(v) for k, v in impact_levels.items()},
+        "total_impact_count": len(all_impact),
+        "recommended_tests": recommended_tests[:10],  # Top 10
+    }
+
+
+# ==============================================================
+# P1-004: 重複検出API
+# ==============================================================
+@app.get("/api/duplicates")
+async def get_duplicates():
+    """
+    重複ファイルを検出する
+
+    アルゴリズム:
+    1. ファイル名の類似度計算（Levenshtein距離）
+    2. バージョン番号の検出（_v2, _v3, _v30など）
+    3. 最新版の判定（更新日時 + 被依存数）
+
+    Returns:
+        {
+            "groups": [
+                {
+                    "base_name": "pm_agent",
+                    "files": [
+                        {"path": "pm_agent_v2.py", "version": "v2", ...},
+                        {"path": "pm_agent_v31.py", "version": "v31", ...}
+                    ],
+                    "recommended": "pm_agent_v31.py",
+                    "delete_candidates": ["pm_agent_v2.py", "pm_agent_v3.py"]
+                }
+            ],
+            "total_duplicates": 10
+        }
+    """
+    import os
+    import re
+    from collections import defaultdict
+    from datetime import datetime
+
+    duplicate_groups = []
+    version_pattern = re.compile(r"(.+?)_v?(\d+)\.py$")
+
+    # 全Pythonファイルをスキャン
+    python_files = []
+    for root, dirs, files in os.walk("."):
+        # 除外ディレクトリ
+        dirs[:] = [d for d in dirs if d not in [".git", "__pycache__", "venv", "node_modules"]]
+
+        for file in files:
+            if file.endswith(".py"):
+                full_path = os.path.join(root, file)
+                python_files.append(full_path)
+
+    # バージョン番号でグループ化
+    grouped = defaultdict(list)
+    for filepath in python_files:
+        filename = os.path.basename(filepath)
+        match = version_pattern.match(filename)
+
+        if match:
+            base_name = match.group(1)
+            version = match.group(2)
+
+            # ファイル情報を収集
+            stat = os.stat(filepath)
+            file_info = {
+                "path": filepath,
+                "filename": filename,
+                "version": version,
+                "size": stat.st_size,
+                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "modified_timestamp": stat.st_mtime,
+            }
+
+            grouped[base_name].append(file_info)
+
+    # 2つ以上のバージョンがあるものを重複として扱う
+    for base_name, files in grouped.items():
+        if len(files) >= 2:
+            # 最新版を判定（更新日時で）
+            files_sorted = sorted(files, key=lambda x: x["modified_timestamp"], reverse=True)
+            recommended = files_sorted[0]
+            delete_candidates = files_sorted[1:]
+
+            duplicate_groups.append(
+                {
+                    "base_name": base_name,
+                    "files": files,
+                    "recommended": recommended["path"],
+                    "delete_candidates": [f["path"] for f in delete_candidates],
+                    "count": len(files),
+                }
+            )
+
+    # 重複数でソート
+    duplicate_groups.sort(key=lambda x: x["count"], reverse=True)
+
+    return {
+        "groups": duplicate_groups,
+        "total_duplicates": len(duplicate_groups),
+        "total_files": sum(g["count"] for g in duplicate_groups),
+    }
+
+
+# ==============================================================
+# P1-005: 影響範囲分析API
+# ==============================================================
+@app.get("/api/impact/{file_path:path}")
+async def get_impact_analysis(file_path: str, depth: int = 3):
+    """
+    ファイル変更時の影響範囲を分析する
+
+    アルゴリズム:
+    1. BFS探索で依存関係を辿る
+    2. 最大3階層まで追跡
+    3. 影響度スコアを計算
+    4. 推奨テストを生成
+
+    Args:
+        file_path: 分析対象ファイルパス
+        depth: 探索階層数（デフォルト3）
+
+    Returns:
+        {
+            "target_file": "sheets_manager.py",
+            "direct_impact": ["pm_agent.py", ...],  # 1階層
+            "indirect_impact": ["orchestrator.py", ...],  # 2-3階層
+            "total_impact_count": 83,
+            "recommended_tests": [...]
+        }
+    """
+    import json
+    from collections import deque
+
+    # 依存関係データをロード
+    try:
+        with open("docs/dependency_map.json", "r") as f:
+            dep_data = json.load(f)
+    except FileNotFoundError:
+        return {"error": "dependency_map.json not found"}
+
+    # BFS探索で影響範囲を計算
+    def bfs_impact(start_file, max_depth):
+        visited = set()
+        impact_by_level = {i: set() for i in range(1, max_depth + 1)}
+        queue = deque([(start_file, 0)])
+
+        while queue:
+            current_file, level = queue.popleft()
+
+            if current_file in visited or level >= max_depth:
+                continue
+
+            visited.add(current_file)
+
+            # このファイルに依存しているファイルを探す
+            for node in dep_data.get("nodes", []):
+                if node["id"] == current_file:
+                    for dependent in node.get("imported_by", []):
+                        if dependent not in visited:
+                            next_level = level + 1
+                            impact_by_level[next_level].add(dependent)
+                            queue.append((dependent, next_level))
+
+        return impact_by_level
+
+    # 影響範囲を計算
+    impact_levels = bfs_impact(file_path, depth)
+
+    # 推奨テストを生成
+    direct_impact = list(impact_levels.get(1, set()))
+    all_impact = set()
+    for level_files in impact_levels.values():
+        all_impact.update(level_files)
+
+    # 影響度が高いファイルを優先してテスト推奨
+    recommended_tests = []
+    priority_files = ["pm_agent", "task_executor", "orchestrator", "complete_engine"]
+    for pf in priority_files:
+        for impacted in all_impact:
+            if pf in impacted:
+                recommended_tests.append(
+                    {"file": impacted, "priority": "high", "reason": f"Critical component: {pf}"}
+                )
+
+    return {
+        "target_file": file_path,
+        "direct_impact": direct_impact,
+        "impact_by_level": {str(k): list(v) for k, v in impact_levels.items()},
+        "total_impact_count": len(all_impact),
+        "recommended_tests": recommended_tests[:10],  # Top 10
+    }
