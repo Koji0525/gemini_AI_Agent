@@ -1,0 +1,175 @@
+{
+    "export_date": "2025-11-22T23:41:07.173556",
+    "days": 1,
+    "count": 7,
+    "alerts": [
+        {
+            "id": "060d8893-680b-48bb-b0e5-e08e668cf827",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 18.1/100",
+            "details": {
+                "overall_score": 18.15,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 27.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T22:07:43.584517",
+                "calculation_time_seconds": 0.016986846923828125,
+            },
+            "created_at": "2025-11-22T22:07:43.585049",
+            "resolved": false,
+        },
+        {
+            "id": "bc516b6c-e310-4192-b399-aba76ef8a5be",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 18.1/100",
+            "details": {
+                "overall_score": 18.15,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 27.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T22:12:30.622179",
+                "calculation_time_seconds": 0.009766578674316406,
+            },
+            "created_at": "2025-11-22T22:12:30.622369",
+            "resolved": false,
+        },
+        {
+            "id": "c4849d80-03bb-458e-9a9a-67d76d2d1e6a",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 17.6/100",
+            "details": {
+                "overall_score": 17.55,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 25.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T22:17:38.548537",
+                "calculation_time_seconds": 0.009025335311889648,
+            },
+            "created_at": "2025-11-22T22:17:38.548762",
+            "resolved": false,
+        },
+        {
+            "id": "c23d7fdd-7243-4fdf-aa8c-7c1b4ed5675a",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 17.6/100",
+            "details": {
+                "overall_score": 17.55,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 25.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T22:38:04.296229",
+                "calculation_time_seconds": 0.02764129638671875,
+            },
+            "created_at": "2025-11-22T22:38:04.296554",
+            "resolved": false,
+        },
+        {
+            "id": "50fe711a-a1c9-4aac-b3ab-662b4bcccbaa",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 17.6/100",
+            "details": {
+                "overall_score": 17.55,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 25.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T22:45:30.434292",
+                "calculation_time_seconds": 0.007946968078613281,
+            },
+            "created_at": "2025-11-22T22:45:30.434469",
+            "resolved": false,
+        },
+        {
+            "id": "cd883211-184d-4aab-85ef-bdb2315fd138",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 17.6/100",
+            "details": {
+                "overall_score": 17.55,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 25.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T23:09:32.285859",
+                "calculation_time_seconds": 0.013901948928833008,
+            },
+            "created_at": "2025-11-22T23:09:32.286054",
+            "resolved": false,
+        },
+        {
+            "id": "1a0caf94-9ad4-4341-8ba5-d6d3cae1c2a0",
+            "level": "warning",
+            "title": "Low Health Score",
+            "message": "System health score is 17.6/100",
+            "details": {
+                "overall_score": 17.55,
+                "grade": "F",
+                "component_scores": {
+                    "code_quality": 25.0,
+                    "dependency_health": 12.0,
+                    "performance": 20.0,
+                    "error_rate": 15.0,
+                    "test_coverage": 8.0,
+                },
+                "recommendations": [
+                    "Dependency health needs improvement. Review hub components and isolated nodes."
+                ],
+                "calculated_at": "2025-11-22T23:15:47.271881",
+                "calculation_time_seconds": 0.008299112319946289,
+            },
+            "created_at": "2025-11-22T23:15:47.272065",
+            "resolved": false,
+        },
+    ],
+}
