@@ -366,6 +366,40 @@ async def main():
     )
 
     args = parser.parse_args()
+    # --scan-only オプションの処理
+    if args.scan_only:
+        logger.info("🔍 プロジェクトスキャンのみ実行します")
+        try:
+            # 静的解析実行
+            from .static_analyzer import StaticDependencyAnalyzer
+
+            analyzer = StaticDependencyAnalyzer()
+            dep_graph = analyzer.scan_project()
+
+            # グラフをJSONで保存
+            import json
+
+            output_path = Path(__file__).parent / "dependency_graph.json"
+            with open(output_path, "w", encoding="utf-8") as f:
+                graph_data = {
+                    "nodes": [{"id": node, **data} for node, data in dep_graph.nodes(data=True)],
+                    "edges": [
+                        {"source": u, "target": v, **data}
+                        for u, v, data in dep_graph.edges(data=True)
+                    ],
+                }
+                json.dump(graph_data, f, indent=2, ensure_ascii=False)
+
+            logger.info(f"✅ グラフを保存しました: {output_path}")
+            logger.info(f"   ノード数: {len(dep_graph.nodes)}")
+            logger.info(f"   エッジ数: {len(dep_graph.edges)}")
+            return
+        except Exception as e:
+            logger.error(f"❌ スキャン実行エラー: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return
 
     orchestrator = EnhancedObserverOrchestrator(cycle_interval=args.interval)
 

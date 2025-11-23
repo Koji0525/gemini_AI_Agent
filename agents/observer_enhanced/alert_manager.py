@@ -1,37 +1,30 @@
 """
-アラート管理
+アラート管理システム
 
-このモジュールは、システムの異常を検知し、アラートを管理します。
+このモジュールは、システムの異常状態を検知し、
+適切な通知を行います。
 
 主要機能:
-    - アラート作成
-    - アラートレベル判定 (info/warning/error/critical)
-    - アラート履歴管理
-    - 通知 (将来的にSlack/Email対応予定)
+    - ヘルススコアに基づくアラート判定
+    - 重要度レベル分類 (Low/Medium/High/Critical)
+    - 通知の送信（ログ出力）
 """
 
-import json
 import logging
-import uuid
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional
-from agents.observer_enhanced.notification_manager import NotificationManager
 
-# ロガー設定
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# ロギング設定
 logger = logging.getLogger(__name__)
 
 
-class AlertLevel(str, Enum):
+class AlertLevel(Enum):
     """アラートレベル"""
 
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
     CRITICAL = "critical"
 
 
@@ -39,219 +32,124 @@ class AlertManager:
     """
     アラート管理クラス
 
-    Attributes:
-        alerts (List[Dict]): アラート履歴
-        alert_file (Path): アラート履歴ファイル
+    システムの健全性スコアや異常イベントを監視し、
+    適切なアラートを生成・通知します。
     """
 
-    def __init__(self, alert_file: Optional[Path] = None):
+    def __init__(self):
+        """初期化"""
+        self.alert_history: List[Dict[str, Any]] = []
+        logger.info("AlertManager 初期化完了")
+
+    async def send_alert(
+        self, health_score: float, details: Optional[Dict[str, Any]] = None
+    ) -> bool:
         """
-        初期化
+        アラートを送信
 
         Args:
-            alert_file: アラート履歴ファイルパス
-        """
-        if alert_file is None:
-            alert_file = Path("logs/alerts.json")
-
-        self.alert_file = Path(alert_file)
-        self.alert_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # 既存アラートを読み込み
-        self.alerts = self._load_alerts()
-
-        
-        # 通知マネージャー初期化
-        try:
-            from agents.observer_enhanced.notification_manager import NotificationManager
-            self.notification_manager = NotificationManager()
-        except Exception as e:
-            logger.warning(f"Failed to initialize NotificationManager: {e}")
-            self.notification_manager = None
-        
-        logger.info(f"Initialized AlertManager with {len(self.alerts)} existing alerts")
-
-    def create_alert(
-        self, level: str, title: str, message: str, details: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        アラートを作成
-
-        Args:
-            level: アラートレベル ('info', 'warning', 'error', 'critical')
-            title: タイトル
-            message: メッセージ
-            details: 詳細情報 (オプション)
+            health_score: ヘルススコア (0-100)
+            details: 詳細情報
 
         Returns:
-            Dict: 作成されたアラート
+            bool: 送信成功
         """
-        alert = {
-            "id": str(uuid.uuid4()),
-            "level": level,
-            "title": title,
-            "message": message,
-            "details": details or {},
-            "created_at": datetime.now().isoformat(),
-            "resolved": False,
+        try:
+            # アラートレベル判定
+            level = self._determine_alert_level(health_score)
+
+            # アラート生成
+            alert = {
+                "timestamp": datetime.now().isoformat(),
+                "level": level.value,
+                "health_score": health_score,
+                "details": details or {},
+            }
+
+            # 履歴に追加
+            self.alert_history.append(alert)
+
+            # ログ出力
+            log_method = self._get_log_method(level)
+            log_method(
+                f"🚨 アラート発生 [{level.value.upper()}] " f"ヘルススコア: {health_score:.1f}点"
+            )
+
+            if details:
+                logger.info(f"詳細: {details}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"アラート送信エラー: {e}")
+            return False
+
+    def _determine_alert_level(self, health_score: float) -> AlertLevel:
+        """
+        ヘルススコアからアラートレベルを判定
+
+        Args:
+            health_score: ヘルススコア (0-100)
+
+        Returns:
+            AlertLevel: アラートレベル
+        """
+        if health_score >= 80:
+            return AlertLevel.LOW
+        elif health_score >= 70:
+            return AlertLevel.MEDIUM
+        elif health_score >= 60:
+            return AlertLevel.HIGH
+        else:
+            return AlertLevel.CRITICAL
+
+    def _get_log_method(self, level: AlertLevel):
+        """
+        アラートレベルに応じたログメソッドを取得
+
+        Args:
+            level: アラートレベル
+
+        Returns:
+            logging method
+        """
+        level_map = {
+            AlertLevel.LOW: logger.info,
+            AlertLevel.MEDIUM: logger.warning,
+            AlertLevel.HIGH: logger.error,
+            AlertLevel.CRITICAL: logger.critical,
         }
+        return level_map.get(level, logger.info)
 
-        self.alerts.append(alert)
-        self._save_alerts()
-        
-        # 通知送信
-        if hasattr(self, 'notification_manager') and self.notification_manager:
-            try:
-                self.notification_manager.send_alert_notification(alert)
-            except Exception as e:
-                logger.error(f"Failed to send alert notification: {e}")
-
-        # ログ出力
-        log_level = {
-            "info": logging.INFO,
-            "warning": logging.WARNING,
-            "error": logging.ERROR,
-            "critical": logging.CRITICAL,
-        }.get(level, logging.INFO)
-
-        logger.log(log_level, f"Alert created: {title} - {message}")
-
-        return alert
-
-    def get_alerts(
-        self,
-        level: Optional[str] = None,
-        resolved: Optional[bool] = None,
-        limit: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+    def get_recent_alerts(self, count: int = 10) -> List[Dict[str, Any]]:
         """
-        アラートを取得
+        最近のアラートを取得
 
         Args:
-            level: フィルター用レベル
-            resolved: 解決済みフラグでフィルター
-            limit: 最大件数
+            count: 取得件数
 
         Returns:
-            List[Dict]: アラートのリスト
+            List[Dict]: アラート一覧
         """
-        filtered = self.alerts
-
-        if level:
-            filtered = [a for a in filtered if a["level"] == level]
-
-        if resolved is not None:
-            filtered = [a for a in filtered if a["resolved"] == resolved]
-
-        # 最新順にソート
-        filtered = sorted(filtered, key=lambda x: x["created_at"], reverse=True)
-
-        if limit:
-            filtered = filtered[:limit]
-
-        return filtered
-
-    def resolve_alert(self, alert_id: str) -> bool:
-        """
-        アラートを解決済みにする
-
-        Args:
-            alert_id: アラートID
-
-        Returns:
-            bool: 成功したかどうか
-        """
-        for alert in self.alerts:
-            if alert["id"] == alert_id:
-                alert["resolved"] = True
-                alert["resolved_at"] = datetime.now().isoformat()
-                self._save_alerts()
-        
-        # 通知送信
-        if hasattr(self, 'notification_manager') and self.notification_manager:
-            try:
-                self.notification_manager.send_alert_notification(alert)
-            except Exception as e:
-                logger.error(f"Failed to send alert notification: {e}")
-                logger.info(f"Alert resolved: {alert_id}")
-                return True
-
-        logger.warning(f"Alert not found: {alert_id}")
-        return False
-
-    def get_statistics(self) -> Dict[str, Any]:
-        """
-        アラート統計を取得
-
-        Returns:
-            Dict: 統計情報
-        """
-        total = len(self.alerts)
-        unresolved = len([a for a in self.alerts if not a["resolved"]])
-
-        by_level = {
-            "info": len([a for a in self.alerts if a["level"] == "info"]),
-            "warning": len([a for a in self.alerts if a["level"] == "warning"]),
-            "error": len([a for a in self.alerts if a["level"] == "error"]),
-            "critical": len([a for a in self.alerts if a["level"] == "critical"]),
-        }
-
-        return {"total_alerts": total, "unresolved_alerts": unresolved, "by_level": by_level}
-
-    def _load_alerts(self) -> List[Dict[str, Any]]:
-        """アラート履歴を読み込み"""
-        if not self.alert_file.exists():
-            return []
-
-        try:
-            with open(self.alert_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load alerts: {e}")
-            return []
-
-    def _save_alerts(self) -> None:
-        """アラート履歴を保存"""
-        try:
-            with open(self.alert_file, "w", encoding="utf-8") as f:
-                json.dump(self.alerts, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error(f"Failed to save alerts: {e}")
+        return self.alert_history[-count:]
 
 
-def main():
-    """メイン関数 (テスト用)"""
-    print("🚨 AlertManager Test")
-
-    manager = AlertManager(Path("logs/test_alerts.json"))
-
-    # テストアラートを作成
-    alert1 = manager.create_alert(
-        level="warning", title="Test Warning", message="This is a test warning alert"
-    )
-    print(f"\n✅ Created alert: {alert1['id']}")
-
-    alert2 = manager.create_alert(
-        level="error",
-        title="Test Error",
-        message="This is a test error alert",
-        details={"error_code": "TEST001"},
-    )
-    print(f"✅ Created alert: {alert2['id']}")
-
-    # 統計を表示
-    stats = manager.get_statistics()
-    print(f"\n📊 Statistics:")
-    print(f"  Total alerts: {stats['total_alerts']}")
-    print(f"  Unresolved: {stats['unresolved_alerts']}")
-    print(f"  By level: {stats['by_level']}")
-
-    # アラートを解決
-    manager.resolve_alert(alert1["id"])
-    print(f"\n✅ Resolved alert: {alert1['id']}")
-
-    print("\n✅ AlertManager test completed")
-
-
+# テスト実行
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    async def test():
+        manager = AlertManager()
+
+        # テストアラート送信
+        test_scores = [92, 75, 65, 45]
+
+        for score in test_scores:
+            await manager.send_alert(health_score=score, details={"test": True, "score": score})
+
+        # 履歴確認
+        print("\n📊 アラート履歴:")
+        for alert in manager.get_recent_alerts():
+            print(f"  - [{alert['level'].upper()}] {alert['health_score']}点")
+
+    asyncio.run(test())
