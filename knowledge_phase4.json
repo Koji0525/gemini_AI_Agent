@@ -1,0 +1,16 @@
+,
+    {
+      "title": "エイリアスメソッドの落とし穴",
+      "category": "implementation",
+      "problem": "エイリアスメソッドが存在しない元メソッドを参照",
+      "cause": "実装の順序ミス。エイリアスを先に作り、元メソッドを忘れた",
+      "solution": [
+        "エイリアスではなく、直接実装する",
+        "元メソッドの存在を確認してからエイリアス作成",
+        "テスト駆動開発で先にテストを書く"
+      ],
+      "code_example": "def collect_metrics(self): return self.get_current_metrics()  # ← get_current_metrics()が存在しない！",
+      "correct_approach": "直接実装するか、元メソッドを先に実装する",
+      "impact": "エラー発見時間: 即座（テスト実行時）",
+      "tags": ["Python", "メソッド設計", "実装順序"]
+    }
