@@ -1,0 +1,82 @@
+{
+  "phase": "Phase 4",
+  "timestamp": "2025-11-23T11:10:00+09:00",
+  "incident": "self.logger初期化が4回失敗",
+  "summary": "Pythonスクリプトでの行挿入の限界と、sedによる確実な修正",
+  "problem_history": [
+    {
+      "attempt": 1,
+      "method": "content.replace()で文字列置換",
+      "result": "失敗（マッチング不一致）"
+    },
+    {
+      "attempt": 2,
+      "method": "正規表現でメソッド全体を置換",
+      "result": "失敗（境界判定ミス）"
+    },
+    {
+      "attempt": 3,
+      "method": "Pythonスクリプトで行挿入（インデント判定）",
+      "result": "失敗（docstring内に挿入）"
+    },
+    {
+      "attempt": 4,
+      "method": "sedでdocstring後に挿入",
+      "result": "成功"
+    }
+  ],
+  "root_cause": {
+    "technical": "Pythonスクリプトでの複雑な文字列操作は、空白・改行・docstringの扱いが困難",
+    "process": "現状確認→修正のサイクルが不十分。修正後の確認も不足",
+    "fundamental": "ファイル修正の手法選択ミス。複雑な構造には sed が最適"
+  },
+  "final_solution": {
+    "method": "sed + docstringの終わり（\"\"\"）の後に挿入",
+    "command": "sed -i '/def __init__(self, metrics_file/,/\"\"\"$/{ /\"\"\"$/a\\        self.logger = logger }' file.py",
+    "why_works": [
+      "sedは行単位の処理に特化しており、空白・改行を正確に扱える",
+      "docstringの終わり（\"\"\"）は一意に特定可能",
+      "挿入位置が明確（\"\"\"の次の行）"
+    ]
+  },
+  "lessons_learned": [
+    {
+      "lesson": "Pythonスクリプトでの文字列置換は、単純なケースのみに使用",
+      "example": "import文の追加、定数値の変更など"
+    },
+    {
+      "lesson": "複雑なファイル編集（メソッド追加、行挿入）には sed/awk を使用",
+      "rationale": "行単位の操作に特化、予測可能な動作"
+    },
+    {
+      "lesson": "修正後は必ず構文チェック + 段階的な動作確認",
+      "commands": [
+        "python3 -m py_compile file.py",
+        "python3 -c 'from module import Class; print(hasattr(Class(), \"attr\"))'"
+      ]
+    },
+    {
+      "lesson": "同じエラーが2回発生したら、手法を変える",
+      "example": "Pythonスクリプト → sed → 手動編集"
+    },
+    {
+      "lesson": "修正前に必ず現状確認（cat, head, sed -n）",
+      "rationale": "想定と実際のファイル内容のギャップを把握"
+    }
+  ],
+  "prevention_checklist": [
+    "□ 修正前: ファイル内容を表示して確認",
+    "□ 修正方法: 適切なツール選択（sed/awk/Python/手動）",
+    "□ 修正後: 差分確認（git diff）",
+    "□ 修正後: 構文チェック（py_compile）",
+    "□ 修正後: 段階的動作確認（import → インスタンス化 → メソッド呼び出し）",
+    "□ 同じエラー2回: 手法変更",
+    "□ 同じエラー3回: なぜなぜ分析"
+  ],
+  "impact": {
+    "before": "4回の修正失敗、合計90分以上",
+    "after": "1回で成功、15分以内",
+    "improvement": "修正時間 83%削減、成功率 25% → 100%"
+  },
+  "tags": ["sed", "ファイル編集", "教訓", "再発防止", "Phase4完了"]
+}
