@@ -20,12 +20,12 @@ class MetricsCollector:
 
     def __init__(self, metrics_file: str = "logs/system_metrics.json"):
         """
-        self.logger = logger
         初期化
 
         Args:
             metrics_file: メトリクスを保存するファイルパス
         """
+        self.logger = logger
         self.metrics_file = Path(metrics_file)
         self.metrics_file.parent.mkdir(parents=True, exist_ok=True)
 
