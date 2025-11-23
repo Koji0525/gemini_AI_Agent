@@ -253,3 +253,6 @@ database/
 # reports/
 # *.md は除外しない（重要ドキュメントも含まれる）
 
+# 自動生成ファイル - アーカイブ
+exports/archive/
+*.backup*
