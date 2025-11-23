@@ -15,6 +15,7 @@ from flask_cors import CORS
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from agents.observer_enhanced.dependency_analyzer import DependencyAnalyzer
 # Phase 4コンポーネントをインポート
 from agents.observer_enhanced.metrics_collector import MetricsCollector
 from agents.observer_enhanced.performance_monitor import PerformanceMonitor
@@ -34,15 +35,17 @@ CORS(app)
 # グローバルインスタンス
 metrics_collector = None
 performance_monitor = None
+dependency_analyzer = None
 
 
 def initialize_components():
     """コンポーネント初期化"""
-    global metrics_collector, performance_monitor
+    global metrics_collector, performance_monitor, dependency_analyzer
 
     try:
         metrics_collector = MetricsCollector(metrics_file="logs/web_metrics.json")
         performance_monitor = PerformanceMonitor(alert_file="logs/web_alerts.json")
+        dependency_analyzer = DependencyAnalyzer()
         logger.info("✅ Components initialized successfully")
     except Exception as e:
         logger.error(f"❌ Failed to initialize components: {e}")
@@ -159,6 +162,34 @@ def get_status():
         return jsonify({"error": "Failed to get status", "message": str(e)}), 500
 
 
+@app.route("/api/dependencies/scan", methods=["GET"])
+def scan_dependencies():
+    """依存関係スキャンAPI"""
+    try:
+        import time
+
+        start_time = time.time()
+
+        result = dependency_analyzer.scan_project()
+        result["scan_time"] = round(time.time() - start_time, 2)
+
+        return jsonify({"timestamp": datetime.now().isoformat(), "data": result})
+    except Exception as e:
+        logger.error(f"Dependency scan failed: {e}")
+        return jsonify({"error": "Failed to scan dependencies", "message": str(e)}), 500
+
+
+@app.route("/api/dependencies/impact/<path:file_path>", methods=["GET"])
+def get_impact(file_path):
+    """ファイル影響範囲分析API"""
+    try:
+        result = dependency_analyzer.find_impact(file_path)
+        return jsonify({"timestamp": datetime.now().isoformat(), "data": result})
+    except Exception as e:
+        logger.error(f"Impact analysis failed: {e}")
+        return jsonify({"error": "Failed to analyze impact", "message": str(e)}), 500
+
+
 @app.errorhandler(404)
 def not_found(error):
     """404エラーハンドラー"""
@@ -188,3 +219,73 @@ def run_server(host="0.0.0.0", port=5000, debug=False):
 
 if __name__ == "__main__":
     run_server(debug=True)
+
+
+@app.route("/dependencies")
+def dependencies_page():
+    """依存関係ページ"""
+    try:
+        return render_template("dependencies.html")
+    except Exception as e:
+        logger.error(f"Failed to render dependencies: {e}")
+        return jsonify({"error": "Dependencies page not available", "message": str(e)}), 500
+
+
+@app.route("/api/analysis/report", methods=["GET"])
+def get_comprehensive_report():
+    """包括的な分析レポートAPI"""
+    try:
+        report = dependency_analyzer.get_comprehensive_report()
+        return jsonify({"timestamp": datetime.now().isoformat(), "data": report})
+    except Exception as e:
+        logger.error(f"Comprehensive report failed: {e}")
+        return jsonify({"error": "Failed to generate report", "message": str(e)}), 500
+
+
+@app.route("/api/analysis/duplicates", methods=["GET"])
+def get_duplicates():
+    """重複ファイル検出API"""
+    try:
+        duplicates = dependency_analyzer.detect_duplicates()
+        return jsonify(
+            {"timestamp": datetime.now().isoformat(), "count": len(duplicates), "data": duplicates}
+        )
+    except Exception as e:
+        logger.error(f"Duplicate detection failed: {e}")
+        return jsonify({"error": "Failed to detect duplicates", "message": str(e)}), 500
+
+
+@app.route("/api/analysis/unused", methods=["GET"])
+def get_unused_files():
+    """未使用ファイル検出API"""
+    try:
+        unused = dependency_analyzer.detect_unused_files()
+        return jsonify(
+            {"timestamp": datetime.now().isoformat(), "count": len(unused), "data": unused}
+        )
+    except Exception as e:
+        logger.error(f"Unused file detection failed: {e}")
+        return jsonify({"error": "Failed to detect unused files", "message": str(e)}), 500
+
+
+@app.route("/api/analysis/reusable", methods=["GET"])
+def get_reusable_tools():
+    """再利用可能ツール推奨API"""
+    try:
+        reusable = dependency_analyzer.suggest_reusable_tools()
+        return jsonify(
+            {"timestamp": datetime.now().isoformat(), "count": len(reusable), "data": reusable}
+        )
+    except Exception as e:
+        logger.error(f"Reusable tools suggestion failed: {e}")
+        return jsonify({"error": "Failed to suggest reusable tools", "message": str(e)}), 500
+
+
+@app.route("/analysis")
+def analysis_page():
+    """問題検出&分析ページ"""
+    try:
+        return render_template("analysis.html")
+    except Exception as e:
+        logger.error(f"Failed to render analysis: {e}")
+        return jsonify({"error": "Analysis page not available", "message": str(e)}), 500

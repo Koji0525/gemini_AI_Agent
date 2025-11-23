@@ -1,5 +1,11 @@
 {
-    "name": "Custom Codespace",
-    "postCreateCommand": "chmod +x ./scripts/*.sh",
-    "postStartCommand": "echo '環境準備完了'"
+    "name": "gemini_AI_Agent",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "forwardPorts": [5000, 5001, 5002],
+    "portsAttributes": {
+        "5000": {"label": "Flask Dashboard", "onAutoForward": "notify"},
+        "5001": {"label": "Flask Backup 1", "onAutoForward": "silent"},
+        "5002": {"label": "Flask Backup 2", "onAutoForward": "silent"},
+    },
+    "customizations": {"vscode": {"extensions": ["ms-python.python"]}},
 }
