@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 # ロギング設定
@@ -210,6 +210,77 @@ async def root():
     }
 
 
+# グラフデータをメモリに保持
+graph_data = None
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 信号機ロジック（インライン実装）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+def calculate_signal(imported_by_count: int) -> str:
+    """被依存数から信号機を計算"""
+    if imported_by_count >= 20:
+        return "🔴"  # 高リスク
+    elif imported_by_count >= 10:
+        return "🟡"  # 中リスク
+    elif imported_by_count >= 1:
+        return "🟢"  # 低リスク
+    else:
+        return "💤"  # 未使用
+
+
+def calculate_risk_level(imported_by_count: int) -> str:
+    """リスクレベルを計算"""
+    if imported_by_count >= 20:
+        return "high"
+    elif imported_by_count >= 10:
+        return "medium"
+    elif imported_by_count >= 1:
+        return "low"
+    else:
+        return "unused"
+
+
+def analyze_signals(graph_data: dict) -> dict:
+    """全ファイルの信号機を分析"""
+    nodes = graph_data.get("nodes", [])
+
+    signal_counts = {"🔴": 0, "🟡": 0, "🟢": 0, "💤": 0}
+
+    signals_by_file = []
+
+    for node in nodes:
+        imported_by_count = len(node.get("imported_by", []))
+        signal = calculate_signal(imported_by_count)
+        risk_level = calculate_risk_level(imported_by_count)
+
+        signal_counts[signal] += 1
+
+        signals_by_file.append(
+            {
+                "path": node.get("path", ""),
+                "filename": node.get("filename", ""),
+                "imported_by_count": imported_by_count,
+                "signal": signal,
+                "risk_level": risk_level,
+            }
+        )
+
+    signals_by_file.sort(key=lambda x: x["imported_by_count"], reverse=True)
+
+    return {
+        "total_files": len(nodes),
+        "signal_counts": signal_counts,
+        "high_risk_files": [f for f in signals_by_file if f["risk_level"] == "high"],
+        "medium_risk_files": [f for f in signals_by_file if f["risk_level"] == "medium"],
+        "low_risk_files": [f for f in signals_by_file if f["risk_level"] == "low"],
+        "unused_files": [f for f in signals_by_file if f["risk_level"] == "unused"],
+        "all_files": signals_by_file,
+    }
+
+
 @app.on_event("startup")
 async def startup_event():
     """サーバー起動時の初期化"""
@@ -281,28 +352,19 @@ async def system_info():
 
 
 @app.get("/api/dependencies")
-async def get_dependencies(reload: bool = Query(False, description="強制的にデータを再読み込み")):
-    """
-    全依存関係を取得
+async def get_dependencies():
+    """依存関係データを取得（修正版）"""
+    global graph_data
 
-    Args:
-        reload: 強制的に再読み込み
+    if graph_data is None:
+        logger.warning("グラフデータが未読み込み、再読み込みします")
+        load_graph_data()
 
-    Returns:
-        Dict: 依存関係グラフ
-    """
-    try:
-        data = load_graph_data(force_reload=reload)
-        return data
-    except FileNotFoundError as e:
-        logger.error(f"Graph file not found: {e}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except ValueError as e:
-        logger.error(f"Invalid graph data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to get dependencies: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+        logger.error("グラフデータが空です")
+        return {"nodes": [], "edges": [], "metadata": {"error": "No data available"}}
+
+    return graph_data
 
 
 @app.get("/api/file/{file_path:path}")
