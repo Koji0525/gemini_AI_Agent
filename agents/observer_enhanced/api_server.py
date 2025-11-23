@@ -608,3 +608,19 @@ if __name__ == "__main__":
     print("💡 Ctrl+C で停止")
     print()
     uvicorn.run(app, host="0.0.0.0", port=5001, log_level="info")
+
+
+@app.get("/api/duplicates/summary")
+async def get_duplicate_summary():
+    """重複ファイルのサマリー情報を返す"""
+    try:
+        summary_path = PROJECT_ROOT / "docs" / "duplicate_summary.json"
+        if not summary_path.exists():
+            return {"error": "サマリーファイルが見つかりません"}
+
+        with open(summary_path, "r", encoding="utf-8") as f:
+            summary = json.load(f)
+
+        return summary
+    except Exception as e:
+        return {"error": str(e)}
