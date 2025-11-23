@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Dict, List
 
 import pytz
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def get_jst_now():
@@ -122,6 +122,55 @@ async def diagnostic():
         with open(diagnostic_file, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Diagnostic not found</h1>", status_code=404)
+
+
+@app.get("/api/duplicates")
+async def get_duplicates():
+    """重複ファイル一覧を取得する."""
+    try:
+        duplicate_file = Path(PROJECT_ROOT) / "docs" / "duplicate_files.json"
+
+        if not duplicate_file.exists():
+            return {
+                "exists": False,
+                "message": "重複ファイルデータが見つかりません",
+                "hint": "python3 scripts/analysis/duplicate_detector.py を実行してください",
+            }
+
+        with open(duplicate_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/duplicates/summary")
+async def get_duplicates_summary():
+    """重複ファイルのサマリー情報を取得する."""
+    try:
+        duplicate_file = Path(PROJECT_ROOT) / "docs" / "duplicate_files.json"
+
+        if not duplicate_file.exists():
+            return {"exists": False, "total_groups": 0, "total_duplicates": 0}
+
+        with open(duplicate_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Top 5のみ返す（パフォーマンス考慮）
+        top_groups = data.get("groups", [])[:5]
+
+        return {
+            "exists": True,
+            "total_groups": data.get("total_groups", 0),
+            "total_duplicates": data.get("total_duplicates", 0),
+            "top_groups": top_groups,
+            "analysis_time": data.get("analysis_time"),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/health")
@@ -545,7 +594,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("🚀 依存関係可視化APIサーバー (Phase 2完全版)")
     print("=" * 60)
-    print(f"📁 プロジェクトルート: {project_root}")
+    print(f"📁 プロジェクトルート: {PROJECT_ROOT}")
     print(f"📍 ダッシュボード: http://localhost:5001")
     print(f"📖 APIドキュメント: http://localhost:5001/docs")
     print(f"⏰ 起動時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
