@@ -148,7 +148,7 @@
   "tools/sheets_flow_orchestrator.py": "2392b99c92229d7c97bacc202067e709",
   "tools/sheets_validators/quick_diagnosis.py": "089df8337994b2836bf6e96b2586ca7a",
   "agents/git_agent/auto_commit_push_v10_auto.py": "866b74cad4bfcc969e5eb49fe03bafea",
-  ".quality_cache.json": "fcf59374ac704efdddfc840f143e2258",
+  ".quality_cache.json": "c040ac7461ac1f1608ce02bd74acf267",
   "agents/task_execution/enhanced_executor_v3.py": "4a1e887be73f9082e8fae500b5ca5624",
   "agents/complete_engine_ultimate.py": "bce74b246768edab2c44857392abd957",
   "core_agents/{base_name}_v{next_version:02d}{suffix}.py": "ae8eb9b3629a0ecd252ace7b38332170",
@@ -170,9 +170,9 @@
   "agents/git_agent/untracked_warning.py": "ac43f478ea3fe424689b44e50cc77922",
   "agents/observer_enhanced/health_checker.py": "3e1d201235d1d3cdb12bcb8b8e2371a4",
   "agents/observer_enhanced/impact_analyzer.py": "a9aaab8cc5e94337ef15a1b8148e6212",
-  "agents/observer_enhanced/orchestrator.py": "ede11d66de74f81f013978be144ca470",
+  "agents/observer_enhanced/orchestrator.py": "30cb1111cccfd96c7c60c67c79a32578",
   "agents/observer_enhanced/scan_config.py": "03fcddf83c2d55c91ffeb0d992c4331e",
-  "agents/observer_enhanced/alert_manager.py": "52e6d13ecf181656b82be2caba72782c",
+  "agents/observer_enhanced/alert_manager.py": "c64139bee3c259965714586281baa52b",
   "agents/observer_enhanced/__init__.py": "3d941c64d6a158159cea6daec1d90252",
   "data_models/__init__.py": "b4a12b8b3e61e05eacb989269dc9cdbb",
   "agents/observer_enhanced/static_analyzer_updated.py": "57b76c81bf41392641252783c8a27f6a",
@@ -187,5 +187,6 @@
   "agents/observer_enhanced/dependency_analyzer.py": "48345874703994f74043689bc06da73a",
   "agents/observer_enhanced/performance_monitor.py": "c0a88d830239487e874ecf9a69b16173",
   ".devcontainer/devcontainer.json": "7d84b312c36b84d9e556e35ebb1c09c9",
-  "agents/observer_enhanced/metrics_collector.py": "522a185a48c288ab04d95cd8a493e106"
+  "agents/observer_enhanced/metrics_collector.py": "522a185a48c288ab04d95cd8a493e106",
+  "agents/observer_enhanced/dependency_graph.json": "10e8f6a98f67c7954edc6e6a325dee2c"
 }
