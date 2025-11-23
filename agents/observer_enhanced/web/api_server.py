@@ -23,6 +23,10 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from agents.observer_enhanced.impact_analyzer_enhanced import bfs_impact_analysis
+from agents.observer_enhanced.duplicate_detector_enhanced import group_duplicates
 from typing import Any, Dict, List, Optional
 
 import uvicorn
@@ -281,6 +285,65 @@ def analyze_signals(graph_data: dict) -> dict:
     }
 
 
+
+def load_graph_data():
+    """グラフデータを読み込む（完全修正版）"""
+    global graph_data
+    
+    try:
+        # プロジェクトルートからの相対パスで読み込み
+        # api_server.py は agents/observer_enhanced/web/ にあるため
+        # ../../.. で プロジェクトルートに戻る
+        import os
+        from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from agents.observer_enhanced.impact_analyzer_enhanced import bfs_impact_analysis
+from agents.observer_enhanced.duplicate_detector_enhanced import group_duplicates
+        
+        # 現在のファイルの位置から相対パスを計算
+        current_dir = Path(__file__).parent
+        project_root = current_dir.parent.parent.parent
+        graph_file = project_root / "docs" / "dependency_map.json"
+        
+        logger.info(f"📂 グラフファイルパス: {graph_file}")
+        
+        if not graph_file.exists():
+            logger.error(f"❌ グラフファイルが見つかりません: {graph_file}")
+            graph_data = {"nodes": [], "edges": [], "metadata": {"error": "File not found"}}
+            return graph_data
+        
+        with open(graph_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        nodes = data.get("nodes", [])
+        edges = data.get("edges", [])
+        metadata = data.get("metadata", {})
+        
+        logger.info(f"✅ グラフデータ読み込み成功")
+        logger.info(f"   - ノード数: {len(nodes)}")
+        logger.info(f"   - エッジ数: {len(edges)}")
+        
+        graph_data = {
+            "nodes": nodes,
+            "edges": edges,
+            "metadata": metadata
+        }
+        
+        return graph_data
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ JSONデコードエラー: {e}")
+        graph_data = {"nodes": [], "edges": [], "metadata": {"error": str(e)}}
+        return graph_data
+    except Exception as e:
+        logger.error(f"❌ グラフデータ読み込みエラー: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        graph_data = {"nodes": [], "edges": [], "metadata": {"error": str(e)}}
+        return graph_data
+
+
 @app.on_event("startup")
 async def startup_event():
     """サーバー起動時の初期化"""
@@ -351,21 +414,43 @@ async def system_info():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 @app.get("/api/dependencies")
 async def get_dependencies():
-    """依存関係データを取得（修正版）"""
+    """依存関係データを取得（完全修正版）"""
     global graph_data
-
-    if graph_data is None:
-        logger.warning("グラフデータが未読み込み、再読み込みします")
-        load_graph_data()
-
-    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
-        logger.error("グラフデータが空です")
-        return {"nodes": [], "edges": [], "metadata": {"error": "No data available"}}
-
-    return graph_data
-
+    
+    try:
+        # グラフデータが未読み込みの場合は読み込む
+        if graph_data is None:
+            logger.info("グラフデータが未読み込み、読み込みます...")
+            load_graph_data()
+        
+        # データが空の場合も再読み込み
+        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+            logger.warning("グラフデータが空、再読み込みを試行...")
+            load_graph_data()
+        
+        # それでも空なら空のデータを返す
+        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+            logger.error("グラフデータの読み込みに失敗しました")
+            return {
+                "nodes": [],
+                "edges": [],
+                "metadata": {
+                    "error": "No data available",
+                    "message": "グラフデータが読み込めませんでした"
+                }
+            }
+        
+        # 正常なデータを返す
+        return graph_data
+        
+    except Exception as e:
+        logger.error(f"依存関係データ取得エラー: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"データ取得エラー: {str(e)}")
 
 @app.get("/api/file/{file_path:path}")
 async def get_file_info(file_path: str):
@@ -403,153 +488,43 @@ async def get_file_info(file_path: str):
 
 @app.get("/api/signals")
 async def get_signals():
-    """
-    全ファイルの信号機情報を取得
-
-    Returns:
-        List[Dict]: 信号機情報リスト
-    """
+    """信号機データを取得（完全修正版）"""
+    global graph_data
+    
     try:
-        data = load_graph_data()
-
-        # 被依存関係を計算
-        imported_by = calculate_imported_by(data)
-
-        # 全ノードを拡張
-        signals = []
-        for node in data.get("nodes", []):
-            enriched = enrich_node_data(node, imported_by, data)
-            signals.append(
-                {
-                    "file": enriched.get("id"),
-                    "signal": enriched.get("signal"),
-                    "risk_level": enriched.get("risk_level"),
-                    "imported_by_count": enriched.get("imported_by_count"),
-                    "imports_to_count": enriched.get("imports_to_count"),
-                }
-            )
-
-        # 危険度順にソート
-        signals.sort(key=lambda x: x["imported_by_count"], reverse=True)
-
-        return signals
-
+        # グラフデータが未読み込みの場合は読み込む
+        if graph_data is None:
+            logger.info("グラフデータが未読み込み、読み込みます...")
+            load_graph_data()
+        
+        # データが空の場合も再読み込み
+        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+            logger.warning("グラフデータが空、再読み込みを試行...")
+            load_graph_data()
+        
+        # それでも空ならエラー
+        if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+            logger.error("グラフデータの読み込みに失敗しました")
+            return {
+                "total_files": 0,
+                "signal_counts": {"🔴": 0, "🟡": 0, "🟢": 0, "💤": 0},
+                "high_risk_files": [],
+                "medium_risk_files": [],
+                "low_risk_files": [],
+                "unused_files": [],
+                "all_files": []
+            }
+        
+        # 信号機分析を実行
+        result = analyze_signals(graph_data)
+        
+        return result
+        
     except Exception as e:
-        logger.error(f"Failed to get signals: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-def detect_duplicate_files(graph_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    重複ファイルを検出
-
-    ファイル名のパターンマッチングにより、バージョン違いのファイルを検出します。
-
-    検出パターン:
-        - file_v2.py, file_v3.py, file_v30.py
-        - file_old.py, file_new.py
-        - file_backup.py, file_copy.py
-
-    Args:
-        graph_data: 依存関係グラフデータ
-
-    Returns:
-        List[Dict]: 重複ファイルグループのリスト
-    """
-    import re
-    from collections import defaultdict
-
-    nodes = graph_data.get("nodes", [])
-
-    # ファイル名からベース名を抽出するパターン
-    version_patterns = [
-        (r"(.+?)_v\d+", "version"),  # file_v2, file_v30
-        (r"(.+?)_old", "old"),  # file_old
-        (r"(.+?)_new", "new"),  # file_new
-        (r"(.+?)_backup\d*", "backup"),  # file_backup, file_backup2
-        (r"(.+?)_copy\d*", "copy"),  # file_copy, file_copy2
-        (r"(.+?)_\d{6}", "timestamp"),  # file_251123
-        (r"(.+?)\.backup", "backup_ext"),  # file.py.backup
-    ]
-
-    # ベース名でグループ化
-    base_groups = defaultdict(list)
-
-    for node in nodes:
-        file_id = node.get("id", "")
-
-        # パターンマッチング
-        for pattern, label in version_patterns:
-            match = re.match(pattern, file_id)
-            if match:
-                base_name = match.group(1)
-                base_groups[base_name].append({"file": file_id, "pattern": label, "node": node})
-                break
-
-    # 2つ以上のファイルがある場合のみ重複とみなす
-    duplicates = []
-    for base_name, files in base_groups.items():
-        if len(files) >= 2:
-            duplicates.append({"base_name": base_name, "count": len(files), "files": files})
-
-    return duplicates
-
-
-def determine_latest_version(
-    files: List[Dict[str, Any]], imported_by: Dict[str, List[str]]
-) -> Dict[str, Any]:
-    """
-    最新版を判定
-
-    判定基準:
-        1. 被依存数（多い方が現役）
-        2. 更新日時（新しい方が最新）
-        3. ファイル名（バージョン番号が大きい方）
-
-    Args:
-        files: ファイルリスト
-        imported_by: 被依存関係マップ
-
-    Returns:
-        Dict: 最新版と判定されたファイル情報
-    """
-    import re
-
-    scored_files = []
-
-    for file_info in files:
-        file_id = file_info["file"]
-        file_info["node"]
-
-        # スコア計算
-        score = 0
-
-        # 1. 被依存数（最重要）
-        imported_by_count = len(imported_by.get(file_id, []))
-        score += imported_by_count * 100
-
-        # 2. バージョン番号（v30 > v3 > v2）
-        version_match = re.search(r"_v(\d+)", file_id)
-        if version_match:
-            version_num = int(version_match.group(1))
-            score += version_num
-
-        # 3. "new" や "latest" を含む場合は加点
-        if "new" in file_id.lower() or "latest" in file_id.lower():
-            score += 50
-
-        # 4. "old" や "backup" を含む場合は減点
-        if "old" in file_id.lower() or "backup" in file_id.lower():
-            score -= 50
-
-        scored_files.append({**file_info, "score": score, "imported_by_count": imported_by_count})
-
-    # スコアでソート
-    scored_files.sort(key=lambda x: x["score"], reverse=True)
-
-    return scored_files[0] if scored_files else None
-
-
+        logger.error(f"信号機データ取得エラー: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"信号機データ取得エラー: {str(e)}")
 @app.get("/api/duplicates")
 async def get_duplicates():
     """
@@ -1142,3 +1117,33 @@ async def get_impact_analysis(file_path: str, depth: int = 3):
         "total_impact_count": len(all_impact),
         "recommended_tests": recommended_tests[:10],  # Top 10
     }
+
+
+@app.get("/api/impact_enhanced/{file_path:path}")
+async def get_impact_enhanced(file_path: str, depth: int = 3):
+    """影響範囲分析（強化版）"""
+    global graph_data
+    
+    if graph_data is None:
+        load_graph_data()
+    
+    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+        raise HTTPException(status_code=500, detail="グラフデータが読み込めません")
+    
+    result = bfs_impact_analysis(graph_data, file_path, max_depth=depth)
+    return result
+
+
+@app.get("/api/duplicates_enhanced")
+async def get_duplicates_enhanced():
+    """重複ファイル検出（強化版）"""
+    global graph_data
+    
+    if graph_data is None:
+        load_graph_data()
+    
+    if graph_data is None or len(graph_data.get("nodes", [])) == 0:
+        raise HTTPException(status_code=500, detail="グラフデータが読み込めません")
+    
+    result = group_duplicates(graph_data)
+    return result
