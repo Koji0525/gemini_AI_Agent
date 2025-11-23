@@ -1,47 +1,47 @@
 /**
- * 依存関係可視化ダッシュボード JavaScript
- * 
- * 修正内容:
- * - 検索機能改善: モジュール名→ファイルパス自動変換
- * - 日本時間（JST）表示
- * - 更新ボタンUI改善
+ * 依存関係可視化ダッシュボード JavaScript (修正版2)
+ * サーバーからJSTで受信するため、変換不要
  */
 
 const API_BASE = window.location.origin;
-
-let graphData = null;
-let svg = null;
-let zoom = null;
 
 function debugLog(message, data = null) {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ${message}`, data || '');
 }
 
-// 日本時間（JST）フォーマット
+// サーバーから受信したISO形式の時刻をそのまま表示
 function formatJST(isoString) {
-    const date = new Date(isoString);
-    const jstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
-    const year = jstDate.getUTCFullYear();
-    const month = String(jstDate.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(jstDate.getUTCDate()).padStart(2, '0');
-    const hour = String(jstDate.getUTCHours()).padStart(2, '0');
-    const minute = String(jstDate.getUTCMinutes()).padStart(2, '0');
-    const second = String(jstDate.getUTCSeconds()).padStart(2, '0');
-    return `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+    try {
+        const date = new Date(isoString);
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hour = String(date.getHours()).padStart(2, '0');
+        const minute = String(date.getMinutes()).padStart(2, '0');
+        const second = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+    } catch (e) {
+        console.error('時刻変換エラー:', e);
+        return '--';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     debugLog('🚀 ダッシュボード初期化開始');
     
     document.getElementById('refresh-btn').addEventListener('click', loadAllData);
-    document.getElementById('zoom-in-btn').addEventListener('click', () => zoomGraph(1.2));
-    document.getElementById('zoom-out-btn').addEventListener('click', () => zoomGraph(0.8));
-    document.getElementById('reset-btn').addEventListener('click', resetGraph);
     document.getElementById('search-btn').addEventListener('click', searchImpact);
+    document.getElementById('risk-search-btn').addEventListener('click', searchRiskScore);
     
     document.getElementById('search-input').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') searchImpact();
+    });
+    
+    document.getElementById('risk-search-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchRiskScore();
     });
     
     await loadAllData();
@@ -52,20 +52,27 @@ async function loadAllData() {
         updateStatus('読み込み中...', 'loading');
         debugLog('📡 データ取得開始');
         
-        const [healthData, statsData, nodesData, edgesData] = await Promise.all([
+        const [healthData, statsData] = await Promise.all([
             fetchAPI('/api/health'),
-            fetchAPI('/api/stats'),
-            fetchAPI('/api/nodes'),
-            fetchAPI('/api/edges')
+            fetchAPI('/api/stats')
         ]);
         
-        debugLog('✅ 全データ取得成功');
+        const [hiddenDeps, cycles, breakingChanges] = await Promise.all([
+            fetchAPI('/api/hidden-dependencies/summary'),
+            fetchAPI('/api/cycles'),
+            fetchAPI('/api/breaking-changes')
+        ]);
+        
+        debugLog('✅ 全データ取得成功', {
+            health: healthData.status,
+            timestamp: healthData.timestamp
+        });
         
         updateStats(statsData);
         displayTopModules(statsData.top_depended_modules || []);
-        
-        graphData = prepareGraphData(nodesData, edgesData, statsData);
-        drawGraph(graphData);
+        displayHiddenDependencies(hiddenDeps);
+        displayCircularDependencies(cycles);
+        displayBreakingChanges(breakingChanges);
         
         updateStatus('オンライン', 'online');
         updateTimestamp(healthData.timestamp);
@@ -81,10 +88,7 @@ async function loadAllData() {
 
 async function fetchAPI(endpoint) {
     const url = `${API_BASE}${endpoint}`;
-    debugLog(`📡 API呼び出し: ${url}`);
-    
     const response = await fetch(url);
-    debugLog(`📥 レスポンス: ${response.status}`, url);
     
     if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -123,200 +127,156 @@ function displayTopModules(modules) {
         <div class="module-item" onclick="searchModuleByName('${moduleName}')" style="cursor: pointer;" title="クリックして影響範囲を検索">
             <span class="module-rank">${index + 1}.</span>
             <span class="module-name">${moduleName}</span>
-            <span class="module-count">${count}回参照</span>
+            <span class="module-count">${count}回参照 ⚠️</span>
         </div>
     `}).join('');
 }
 
-// モジュール名をクリックして検索
 window.searchModuleByName = function(moduleName) {
     debugLog('🔍 モジュール名から検索:', moduleName);
     document.getElementById('search-input').value = moduleName;
     searchImpact();
 }
 
-function prepareGraphData(nodesData, edgesData, statsData) {
-    const topModules = (statsData?.top_depended_modules || [])
-        .slice(0, 50)
-        .map(item => item[0]);
+function displayHiddenDependencies(data) {
+    const stats = data.statistics || {};
     
-    const nodes = (nodesData?.nodes || [])
-        .filter(node => topModules.includes(node.id) || node.import_count > 0)
-        .slice(0, 100);
+    document.getElementById('hidden-deps-badge').textContent = 
+        `${stats.files_with_hidden_deps || 0}ファイル`;
+    document.getElementById('env-vars-count').textContent = 
+        `${stats.unique_env_vars || 0}個`;
+    document.getElementById('file-ops-count').textContent = 
+        `${stats.unique_files_accessed || 0}個`;
+    document.getElementById('commands-count').textContent = 
+        `${stats.unique_commands || 0}個`;
     
-    const nodeIds = new Set(nodes.map(n => n.id));
-    
-    const edges = (edgesData?.edges || [])
-        .filter(edge => nodeIds.has(edge.source) && nodeIds.has(edge.target));
-    
-    return { nodes, edges };
+    const topEnvVars = data.top_env_vars || [];
+    const envVarsList = document.getElementById('top-env-vars');
+    envVarsList.innerHTML = topEnvVars.slice(0, 5).map(item => 
+        `<li><span>${item.name}</span><span>${item.count}回</span></li>`
+    ).join('');
 }
 
-function drawGraph(data) {
-    debugLog('🎨 グラフ描画開始');
+function displayCircularDependencies(data) {
+    const stats = data.statistics || {};
+    const totalCycles = stats.total_cycles || 0;
     
-    const container = document.getElementById('graph-container');
-    container.innerHTML = '';
+    document.getElementById('cycles-badge').textContent = `${totalCycles}個`;
     
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const statusDiv = document.getElementById('cycles-status');
+    const listDiv = document.getElementById('cycles-list');
     
-    svg = d3.select('#graph-container')
-        .append('svg')
-        .attr('width', width)
-        .attr('height', height);
+    if (totalCycles === 0) {
+        statusDiv.className = 'status-message';
+        statusDiv.innerHTML = '<span class="status-icon">✅</span><span>循環依存なし（健全）</span>';
+        listDiv.innerHTML = '';
+    } else {
+        statusDiv.className = 'status-message warning';
+        statusDiv.innerHTML = `<span class="status-icon">⚠️</span><span>${totalCycles}個の循環依存を検出</span>`;
+    }
+}
+
+function displayBreakingChanges(data) {
+    const stats = data.statistics || {};
+    const totalChanges = stats.total_changes || 0;
     
-    zoom = d3.zoom()
-        .scaleExtent([0.1, 4])
-        .on('zoom', (event) => {
-            g.attr('transform', event.transform);
-        });
+    document.getElementById('breaking-badge').textContent = `${totalChanges}個`;
     
-    svg.call(zoom);
+    const statusDiv = document.getElementById('breaking-status');
     
-    const g = svg.append('g');
+    if (totalChanges === 0) {
+        statusDiv.className = 'status-message';
+        statusDiv.innerHTML = '<span class="status-icon">✅</span><span>最近の破壊的変更なし</span>';
+    } else {
+        statusDiv.className = 'status-message warning';
+        statusDiv.innerHTML = `<span class="status-icon">⚠️</span><span>${totalChanges}個の破壊的変更を検出</span>`;
+    }
+}
+
+async function searchRiskScore() {
+    const query = document.getElementById('risk-search-input').value.trim();
+    if (!query) {
+        alert('ファイルパスを入力してください');
+        return;
+    }
     
-    const simulation = d3.forceSimulation(data.nodes)
-        .force('link', d3.forceLink(data.edges).id(d => d.id).distance(100))
-        .force('charge', d3.forceManyBody().strength(-300))
-        .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(30));
+    const resultsContainer = document.getElementById('risk-result');
+    resultsContainer.innerHTML = '<p>🔍 分析中...</p>';
     
-    const link = g.append('g')
-        .selectAll('line')
-        .data(data.edges)
-        .join('line')
-        .attr('stroke', '#94a3b8')
-        .attr('stroke-width', 1)
-        .attr('stroke-opacity', 0.6);
-    
-    const node = g.append('g')
-        .selectAll('circle')
-        .data(data.nodes)
-        .join('circle')
-        .attr('r', d => Math.min(5 + d.import_count * 0.5, 20))
-        .attr('fill', d => {
-            if (d.import_count >= 5) return '#ef4444';
-            if (d.import_count >= 2) return '#f59e0b';
-            return '#10b981';
-        })
-        .attr('stroke', '#fff')
-        .attr('stroke-width', 2)
-        .call(drag(simulation));
-    
-    node.append('title')
-        .text(d => `${d.label}\nインポート数: ${d.import_count}`);
-    
-    const label = g.append('g')
-        .selectAll('text')
-        .data(data.nodes.filter(d => d.import_count > 3))
-        .join('text')
-        .text(d => d.label)
-        .attr('font-size', 10)
-        .attr('dx', 15)
-        .attr('dy', 4);
-    
-    simulation.on('tick', () => {
-        link
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
+    try {
+        const data = await fetchAPI(`/api/risk-score/${encodeURIComponent(query)}`);
         
-        node
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
+        if (!data.exists) {
+            resultsContainer.innerHTML = '<p>⚠️ ファイルが見つかりませんでした</p>';
+            return;
+        }
         
-        label
-            .attr('x', d => d.x)
-            .attr('y', d => d.y);
-    });
-}
-
-function drag(simulation) {
-    function dragstarted(event) {
-        if (!event.active) simulation.alphaTarget(0.3).restart();
-        event.subject.fx = event.subject.x;
-        event.subject.fy = event.subject.y;
-    }
-    
-    function dragged(event) {
-        event.subject.fx = event.x;
-        event.subject.fy = event.y;
-    }
-    
-    function dragended(event) {
-        if (!event.active) simulation.alphaTarget(0);
-        event.subject.fx = null;
-        event.subject.fy = null;
-    }
-    
-    return d3.drag()
-        .on('start', dragstarted)
-        .on('drag', dragged)
-        .on('end', dragended);
-}
-
-function zoomGraph(factor) {
-    if (svg && zoom) {
-        svg.transition().duration(300).call(zoom.scaleBy, factor);
-    }
-}
-
-function resetGraph() {
-    if (svg && zoom) {
-        svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+        const riskClass = data.risk_level;
+        const levelEmoji = {
+            'critical': '🔴',
+            'high': '🟠',
+            'medium': '🟡',
+            'low': '🟢',
+            'minimal': '🔵'
+        }[riskClass] || '⚪';
+        
+        resultsContainer.innerHTML = `
+            <div class="risk-card ${riskClass}">
+                <h4>${data.file}</h4>
+                <div class="risk-score">${levelEmoji} ${data.risk_score}/100</div>
+                <div class="risk-level">リスクレベル: ${data.risk_level.toUpperCase()}</div>
+                
+                <div class="risk-factors">
+                    <h4>リスク要因:</h4>
+                    ${Object.entries(data.risk_factors || {}).filter(([k,v]) => v > 0).map(([key, value]) => 
+                        `<div class="risk-factor"><span>${key}</span><span>${value}点</span></div>`
+                    ).join('')}
+                </div>
+                
+                <div class="recommendations">
+                    <h4>推奨事項:</h4>
+                    <ul>
+                        ${(data.recommendations || []).map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        resultsContainer.innerHTML = `<p>❌ エラー: ${error.message}</p>`;
     }
 }
 
 async function searchImpact() {
     const query = document.getElementById('search-input').value.trim();
-    if (!query) return;
+    if (!query) {
+        alert('モジュール名を入力してください');
+        return;
+    }
     
     const resultsContainer = document.getElementById('search-results');
     resultsContainer.innerHTML = '<p>🔍 検索中...</p>';
     
-    debugLog('🔍 検索開始:', query);
-    
     try {
-        // モジュール名（ドット区切り）をファイルパス（スラッシュ区切り）に変換
         const moduleToPath = query.replace(/\./g, '/');
-        
-        // 複数のパスパターンを試行
         const possiblePaths = [
-            `${moduleToPath}.py`,              // tools.sheets_manager → tools/sheets_manager.py
-            `${query}.py`,                      // そのまま.py追加
-            `tools/${query}.py`,               // tools配下
-            `agents/${query}.py`,              // agents配下
-            `core_agents/${query}.py`,         // core_agents配下
-            `${moduleToPath}`,                 // 拡張子なし
+            `${moduleToPath}.py`,
+            `${query}.py`,
         ];
-        
-        debugLog('🔍 試行パス:', possiblePaths);
         
         for (const path of possiblePaths) {
             try {
-                const data = await fetchAPI(`/api/impact/${path}`);
-                debugLog(`✅ 見つかりました: ${path}`, data);
+                const data = await fetchAPI(`/api/impact/${encodeURIComponent(path)}`);
                 
                 if (data.exists) {
                     displaySearchResults(data);
                     return;
                 }
             } catch (e) {
-                debugLog(`❌ 見つかりません: ${path}`);
                 continue;
             }
         }
         
-        resultsContainer.innerHTML = `
-            <p>⚠️ ファイルが見つかりませんでした</p>
-            <p style="font-size: 0.9em; color: #666;">
-                検索: "${query}"<br>
-                試行したパス:<br>
-                ${possiblePaths.map(p => `• ${p}`).join('<br>')}
-            </p>
-        `;
+        resultsContainer.innerHTML = `<p>⚠️ ファイルが見つかりませんでした</p>`;
         
     } catch (error) {
         resultsContainer.innerHTML = `<p>❌ エラー: ${error.message}</p>`;
@@ -329,36 +289,27 @@ function displaySearchResults(data) {
     const impactClass = data.impact_level === 'high' ? 'high-impact' :
                        data.impact_level === 'medium' ? 'medium-impact' : 'low-impact';
     
+    const note = data.direct_dependents_count !== data.file_info?.import_count ? 
+        `<p style="color: #f80; font-size: 0.9em;">⚠️ 注意: 統計データ(${data.file_info?.import_count || 'N/A'})と実際の依存数(${data.direct_dependents_count})に差があります</p>` : '';
+    
     container.innerHTML = `
         <div class="result-card ${impactClass}">
             <h3>📄 ${data.file}</h3>
             <p><strong>影響レベル:</strong> ${data.impact_description}</p>
-            <p><strong>このファイルに依存:</strong> ${data.direct_dependents_count}個のファイル</p>
-            <p><strong>このファイルが依存:</strong> ${data.dependencies_count}個のファイル</p>
+            <p><strong>実際の依存ファイル数:</strong> ${data.direct_dependents_count}個</p>
+            ${note}
             ${data.direct_dependents && data.direct_dependents.length > 0 ? `
                 <details open>
-                    <summary><strong>このファイルに依存しているファイル (${data.direct_dependents.length}個)</strong></summary>
+                    <summary><strong>依存しているファイル一覧 (${data.direct_dependents.length}個)</strong></summary>
                     <ul style="max-height: 300px; overflow-y: auto;">
-                        ${data.direct_dependents.slice(0, 20).map(dep => 
+                        ${data.direct_dependents.slice(0, 30).map(dep => 
                             `<li><code>${dep.file || dep}</code></li>`
                         ).join('')}
-                        ${data.direct_dependents.length > 20 ? 
-                            `<li><em>...他 ${data.direct_dependents.length - 20}個</em></li>` : ''}
+                        ${data.direct_dependents.length > 30 ? 
+                            `<li><em>...他 ${data.direct_dependents.length - 30}個</em></li>` : ''}
                     </ul>
                 </details>
             ` : '<p><em>他のファイルからの依存はありません</em></p>'}
-            ${data.dependencies && data.dependencies.length > 0 ? `
-                <details>
-                    <summary><strong>このファイルが依存しているモジュール (${data.dependencies.length}個)</strong></summary>
-                    <ul style="max-height: 300px; overflow-y: auto;">
-                        ${data.dependencies.slice(0, 20).map(dep => 
-                            `<li><code>${dep}</code></li>`
-                        ).join('')}
-                        ${data.dependencies.length > 20 ? 
-                            `<li><em>...他 ${data.dependencies.length - 20}個</em></li>` : ''}
-                    </ul>
-                </details>
-            ` : ''}
         </div>
     `;
 }
@@ -372,6 +323,7 @@ function updateStatus(text, status) {
 function updateTimestamp(timestamp) {
     const jstTime = formatJST(timestamp);
     document.getElementById('timestamp').textContent = `更新: ${jstTime} (JST)`;
+    console.log('⏰ サーバータイムスタンプ:', timestamp, '→ 表示:', jstTime);
 }
 
 function showError(message) {
@@ -380,11 +332,6 @@ function showError(message) {
         <div style="padding: 20px; background: #fee; border-radius: 8px; color: #c00;">
             <h3>⚠️ エラーが発生しました</h3>
             <p>${message}</p>
-            <button onclick="location.reload()" style="margin-top: 10px; padding: 10px 20px; cursor: pointer;">
-                🔄 再読み込み
-            </button>
         </div>
     `;
 }
-
-debugLog('✅ ダッシュボードスクリプト読み込み完了');

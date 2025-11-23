@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>依存関係可視化ダッシュボード - Phase 2対応版</title>
+    <title>依存関係可視化ダッシュボード - Phase 2修正版</title>
     <link rel="stylesheet" href="/static/css/dashboard.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -106,14 +105,16 @@
                 <!-- リスクスコア -->
                 <div class="phase2-card">
                     <div class="card-header">
-                        <h3>�� リスクスコア分析</h3>
+                        <h3>📊 リスクスコア分析</h3>
                     </div>
                     <div class="card-body">
                         <div class="risk-search">
-                            <input type="text" id="risk-search-input" placeholder="ファイルパス入力..." value="tools/sheets_manager.py">
+                            <input type="text" id="risk-search-input" placeholder="例: tools/sheets_manager.py" value="tools/sheets_manager.py">
                             <button id="risk-search-btn" class="btn">分析</button>
                         </div>
-                        <div id="risk-result" class="risk-result"></div>
+                        <div id="risk-result" class="risk-result">
+                            <p style="color: #666; font-size: 0.9em;">ファイルパスを入力して「分析」ボタンを押してください</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -128,24 +129,12 @@
             <section class="panel">
                 <h2>🔎 影響範囲検索</h2>
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="モジュール名またはファイルパス...">
+                    <input type="text" id="search-input" placeholder="モジュール名（例: tools.sheets_manager）">
                     <button id="search-btn" class="btn">検索</button>
                 </div>
                 <div id="search-results" class="search-results"></div>
             </section>
         </div>
-
-        <section class="panel graph-panel">
-            <div class="graph-header">
-                <h2>📊 依存関係グラフ（上位50モジュール）</h2>
-                <div class="graph-controls">
-                    <button id="zoom-in-btn" class="btn btn-sm">🔍 拡大</button>
-                    <button id="zoom-out-btn" class="btn btn-sm">🔍 縮小</button>
-                    <button id="reset-btn" class="btn btn-sm">🔄 リセット</button>
-                </div>
-            </div>
-            <div id="graph-container" class="graph-container"></div>
-        </section>
     </div>
 
     <script src="/static/js/dashboard.js"></script>
