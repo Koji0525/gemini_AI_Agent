@@ -1,183 +1,253 @@
 """
-影響範囲分析器
+影響範囲分析モジュール
 
-このモジュールは、コード変更の影響範囲を分析します。
+目的:
+- ファイル変更時の影響範囲をBFS探索で分析
+- 3階層までの依存先を追跡
+- 変更の危険度を評価
 
-主要機能:
-    - 変更ファイルの影響範囲計算
-    - テスト推奨の生成
-    - リスク評価
+設計方針:
+- 既存のdependency_graph.jsonを読み込み
+- NetworkXでグラフ処理
+- REST APIから呼び出し可能
 """
 
-import logging
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List
 
-try:
-    from .graph_db import SystemGraphDB
-except ImportError:
-    import sys
-
-    sys.path.insert(0, str(Path(__file__).parent))
-    from graph_db import SystemGraphDB
-
-# ロガー設定
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+import networkx as nx
 
 
 class ImpactAnalyzer:
-    """
-    影響範囲分析器
+    """影響範囲分析器"""
 
-    Attributes:
-        graph_db: システムグラフDB
-    """
-
-    def __init__(self, graph_db: Optional[SystemGraphDB] = None):
+    def __init__(self, graph_data: Dict[str, Any] = None):
         """
         初期化
 
         Args:
-            graph_db: システムグラフDB (Noneの場合は新規作成)
+            graph_data: 依存関係グラフデータ（nodes, edgesを含む辞書）
         """
-        self.graph_db = graph_db if graph_db else SystemGraphDB()
-        logger.info("Initialized ImpactAnalyzer")
+        self.graph = nx.DiGraph()
 
-    def analyze_component_change(self, component_id: str, depth: int = 3) -> Dict[str, Any]:
+        if graph_data:
+            self._build_graph(graph_data)
+
+    def _build_graph(self, graph_data: Dict[str, Any]):
         """
-        コンポーネント変更の影響を分析
+        依存関係グラフを構築
 
         Args:
-            component_id: 変更対象コンポーネント
-            depth: 探索深さ
+            graph_data: {"nodes": [...], "edges": [...]}
+        """
+        # ノードを追加
+        for node in graph_data.get("nodes", []):
+            node_id = node.get("id")
+            if node_id:
+                self.graph.add_node(node_id, **node)
+
+        # エッジを追加（依存関係）
+        for edge in graph_data.get("edges", []):
+            source = edge.get("source")
+            target = edge.get("target")
+            if source and target:
+                # source が target に依存（source imports target）
+                self.graph.add_edge(source, target, **edge)
+
+    def analyze_impact(self, file_path: str, max_depth: int = 3) -> Dict[str, Any]:
+        """
+        影響範囲を分析（BFS探索）
+
+        Args:
+            file_path: 変更対象ファイル
+            max_depth: 探索深さ（デフォルト3階層）
 
         Returns:
-            Dict: 影響分析レポート
+            {
+                "target": "tools/sheets_manager.py",
+                "total_affected": 83,
+                "by_depth": {
+                    "1": [list of files],
+                    "2": [list of files],
+                    "3": [list of files]
+                },
+                "risk_level": "high",
+                "recommended_tests": [list]
+            }
         """
-        logger.info(f"Analyzing impact of changes to '{component_id}'")
+        if file_path not in self.graph:
+            return {
+                "target": file_path,
+                "error": "File not found in dependency graph",
+                "total_affected": 0,
+                "by_depth": {},
+                "risk_level": "unknown",
+            }
 
-        # 影響範囲を計算
-        direct_impact = self.graph_db.get_impact_range(component_id, depth=1)
-        full_impact = self.graph_db.get_impact_range(component_id, depth=depth)
-        reverse_impact = self.graph_db.get_reverse_impact_range(component_id, depth=depth)
+        # BFS探索で影響を受けるファイルを収集
+        affected_by_depth = self._bfs_reverse_dependencies(file_path, max_depth)
 
-        # リスクレベルを計算
-        risk_level = self._calculate_risk_level(
-            len(direct_impact), len(full_impact), len(reverse_impact)
-        )
+        # 総影響ファイル数
+        all_affected = set()
+        for depth_files in affected_by_depth.values():
+            all_affected.update(depth_files)
 
-        # テスト推奨を生成
-        recommended_tests = self._generate_test_recommendations(
-            component_id, direct_impact, full_impact
-        )
+        # リスクレベル判定
+        risk_level = self._calculate_risk_level(len(all_affected))
 
-        report = {
-            "component_id": component_id,
+        # 推奨テスト
+        recommended_tests = self._recommend_tests(file_path, affected_by_depth)
+
+        return {
+            "target": file_path,
+            "total_affected": len(all_affected),
+            "by_depth": affected_by_depth,
             "risk_level": risk_level,
-            "impact_summary": {
-                "direct_dependencies": len(direct_impact),
-                "total_affected_components": len(full_impact),
-                "reverse_dependencies": len(reverse_impact),
-            },
-            "affected_components": {
-                "direct": list(direct_impact),
-                "full": list(full_impact),
-                "reverse": list(reverse_impact),
-            },
             "recommended_tests": recommended_tests,
+            "critical_files": self._identify_critical_files(affected_by_depth),
         }
 
-        logger.info(
-            f"Impact analysis completed: {len(full_impact)} components affected (risk: {risk_level})"
-        )
-
-        return report
-
-    def _calculate_risk_level(self, direct_count: int, full_count: int, reverse_count: int) -> str:
+    def _bfs_reverse_dependencies(self, start_node: str, max_depth: int) -> Dict[str, List[str]]:
         """
-        リスクレベルを計算
+        BFS探索で逆依存関係を追跡
 
-        Args:
-            direct_count: 直接依存数
-            full_count: 全影響範囲
-            reverse_count: 逆依存数
+        逆依存: start_nodeを変更すると影響を受けるファイル
 
         Returns:
-            str: リスクレベル ('low', 'medium', 'high', 'critical')
+            {"1": [depth1_files], "2": [depth2_files], "3": [depth3_files]}
         """
-        # スコア計算
-        score = (direct_count * 2) + full_count + (reverse_count * 1.5)
+        result = {str(i): [] for i in range(1, max_depth + 1)}
+        visited = {start_node}
+        queue = [(start_node, 0)]  # (node, depth)
 
-        if score >= 50:
-            return "critical"
-        elif score >= 30:
-            return "high"
-        elif score >= 15:
-            return "medium"
-        else:
+        while queue:
+            current_node, depth = queue.pop(0)
+
+            if depth >= max_depth:
+                continue
+
+            # このノードに依存しているノードを探す
+            # graph.predecessors() = current_nodeをimportしているノード
+            for dependent in self.graph.predecessors(current_node):
+                if dependent not in visited:
+                    visited.add(dependent)
+                    next_depth = depth + 1
+                    result[str(next_depth)].append(dependent)
+                    queue.append((dependent, next_depth))
+
+        return result
+
+    def _calculate_risk_level(self, affected_count: int) -> str:
+        """
+        影響ファイル数からリスクレベルを判定
+
+        Args:
+            affected_count: 影響を受けるファイル数
+
+        Returns:
+            "low" | "medium" | "high" | "critical"
+        """
+        if affected_count == 0:
+            return "none"
+        elif affected_count < 5:
             return "low"
+        elif affected_count < 20:
+            return "medium"
+        elif affected_count < 50:
+            return "high"
+        else:
+            return "critical"
 
-    def _generate_test_recommendations(
-        self, component_id: str, direct_impact: Set[str], full_impact: Set[str]
+    def _recommend_tests(
+        self, target_file: str, affected_by_depth: Dict[str, List[str]]
     ) -> List[str]:
         """
-        テスト推奨を生成
+        推奨テストを生成
 
         Args:
-            component_id: 変更対象
-            direct_impact: 直接影響
-            full_impact: 全影響
+            target_file: 変更対象
+            affected_by_depth: 階層別影響ファイル
 
         Returns:
-            List[str]: テスト推奨のリスト
+            推奨テストのリスト
         """
-        recommendations = []
+        tests = []
 
-        # 変更対象自体のテスト
-        recommendations.append(f"Unit test for {component_id}")
+        # 1. 変更対象ファイル自体のテスト
+        tests.append(f"Unit test: {target_file}")
 
-        # 直接依存のテスト
-        for component in list(direct_impact)[:5]:  # 最大5個
-            recommendations.append(f"Integration test: {component_id} -> {component}")
+        # 2. 直接依存（depth=1）のテスト
+        depth1_files = affected_by_depth.get("1", [])
+        if depth1_files:
+            # 重要度が高いものを優先（agents/配下など）
+            critical_depth1 = [f for f in depth1_files if "agents/" in f or "core_agents/" in f]
+            for f in critical_depth1[:3]:  # 上位3つ
+                tests.append(f"Integration test: {f}")
 
-        # 影響範囲が大きい場合
-        if len(full_impact) > 10:
-            recommendations.append("E2E test covering main workflows")
+        # 3. 全体テスト
+        total_affected = sum(len(files) for files in affected_by_depth.values())
+        if total_affected > 10:
+            tests.append("E2E test: Full system test recommended")
 
-        return recommendations
+        return tests
 
+    def _identify_critical_files(self, affected_by_depth: Dict[str, List[str]]) -> List[str]:
+        """
+        重要ファイルを特定（agents/配下など）
 
-def main():
-    """メイン関数 (テスト用)"""
-    print("🔍 ImpactAnalyzer Test")
+        Args:
+            affected_by_depth: 階層別影響ファイル
 
-    analyzer = ImpactAnalyzer()
+        Returns:
+            重要ファイルのリスト
+        """
+        critical_patterns = ["agents/", "core_agents/", "task_executor/", "browser_control/"]
 
-    # テスト用のコンポーネントを追加
-    analyzer.graph_db.add_component(
-        "test_component_a", {"file": "test_a.py", "lines": 100, "type": "agent"}
-    )
-    analyzer.graph_db.add_component(
-        "test_component_b", {"file": "test_b.py", "lines": 200, "type": "tool"}
-    )
-    analyzer.graph_db.add_dependency("test_component_a", "test_component_b", "import")
+        critical_files = []
+        for depth_files in affected_by_depth.values():
+            for file in depth_files:
+                if any(pattern in file for pattern in critical_patterns):
+                    critical_files.append(file)
 
-    # 影響分析を実行
-    report = analyzer.analyze_component_change("test_component_a")
-
-    print(f"\n📊 Impact Analysis Report:")
-    print(f"  Component: {report['component_id']}")
-    print(f"  Risk Level: {report['risk_level']}")
-    print(f"  Affected Components: {report['impact_summary']['total_affected_components']}")
-    print(f"\n  Recommended Tests:")
-    for test in report["recommended_tests"]:
-        print(f"    - {test}")
-
-    print("\n✅ ImpactAnalyzer test completed")
+        return list(set(critical_files))  # 重複除去
 
 
+def analyze_file_impact(
+    file_path: str, graph_data: Dict[str, Any], max_depth: int = 3
+) -> Dict[str, Any]:
+    """
+    影響範囲分析の便利関数
+
+    Args:
+        file_path: 変更対象ファイル
+        graph_data: 依存関係グラフデータ
+        max_depth: 探索深さ
+
+    Returns:
+        影響範囲分析結果
+    """
+    analyzer = ImpactAnalyzer(graph_data)
+    return analyzer.analyze_impact(file_path, max_depth)
+
+
+# テスト実行用
 if __name__ == "__main__":
-    main()
+    import sys
+
+    # dependency_graph.jsonを読み込み
+    graph_file = Path(__file__).parent / "web" / "dependency_graph.json"
+
+    if not graph_file.exists():
+        print(f"❌ {graph_file} が見つかりません")
+        sys.exit(1)
+
+    with open(graph_file, "r") as f:
+        graph_data = json.load(f)
+
+    # テスト: sheets_manager.py の影響範囲
+    test_file = "tools/sheets_manager.py"
+    print(f"🔍 影響範囲分析: {test_file}")
+
+    result = analyze_file_impact(test_file, graph_data)
+    print(json.dumps(result, indent=2, ensure_ascii=False))

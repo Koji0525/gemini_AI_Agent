@@ -556,5 +556,149 @@ def main():
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
 
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Phase 1-004: 影響範囲API
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+def analyze_impact_range(
+    target_file: str, graph_data: Dict[str, Any], max_depth: int = 3
+) -> Dict[str, Any]:
+    """
+    影響範囲を分析（BFS探索で3階層）
+
+    Args:
+        target_file: 変更対象ファイル（例: "agents/pm_agent.py"）
+        graph_data: 依存関係グラフデータ
+        max_depth: 探索深さ（デフォルト: 3階層）
+
+    Returns:
+        Dict: 影響範囲分析結果
+    """
+    from collections import deque
+
+    import networkx as nx
+
+    # NetworkXグラフを再構築
+    G = nx.DiGraph()
+
+    # ノードを追加
+    for node in graph_data.get("nodes", []):
+        G.add_node(node["id"], **node)
+
+    # エッジを追加
+    for edge in graph_data.get("edges", []):
+        G.add_edge(edge["source"], edge["target"], **edge)
+
+    # 対象ファイルを正規化
+    target_normalized = target_file
+    for node in G.nodes():
+        if node.endswith(target_file) or target_file in node:
+            target_normalized = node
+            break
+
+    if target_normalized not in G.nodes():
+        return {
+            "target": target_file,
+            "found": False,
+            "error": f"ファイルが見つかりません: {target_file}",
+            "direct_impact": [],
+            "indirect_impact": {},
+            "total_impact": 0,
+        }
+
+    # BFS探索で影響範囲を抽出
+    visited = set()
+    impact_by_depth = {}
+    queue = deque([(target_normalized, 0)])  # (ノード, 深さ)
+
+    while queue:
+        current, depth = queue.popleft()
+
+        if current in visited or depth > max_depth:
+            continue
+
+        visited.add(current)
+
+        # この深さの影響先を記録
+        if depth > 0:  # 自分自身は除外
+            if depth not in impact_by_depth:
+                impact_by_depth[depth] = []
+            impact_by_depth[depth].append(current)
+
+        # 次の階層（このファイルに依存しているファイル）
+        if depth < max_depth:
+            for neighbor in G.predecessors(current):  # predecessors = 依存元
+                if neighbor not in visited:
+                    queue.append((neighbor, depth + 1))
+
+    # 直接影響（1階層）
+    direct_impact = impact_by_depth.get(1, [])
+
+    # 影響度スコア計算
+    impact_scores = {}
+    for file in visited:
+        if file == target_normalized:
+            continue
+
+        # スコア = 被依存数 × 100 + ファイル行数
+        node_data = G.nodes[file]
+        imported_by_count = len(node_data.get("imported_by", []))
+        lines = node_data.get("lines", 0)
+
+        impact_scores[file] = imported_by_count * 100 + lines
+
+    # スコア順にソート
+    sorted_impact = sorted(impact_scores.items(), key=lambda x: x[1], reverse=True)
+
+    # テスト推奨（影響度上位10ファイル）
+    recommended_tests = [
+        {"file": file, "score": score, "reason": f"影響度スコア: {score}（被依存数×100 + 行数）"}
+        for file, score in sorted_impact[:10]
+    ]
+
+    return {
+        "target": target_normalized,
+        "found": True,
+        "direct_impact": direct_impact,
+        "indirect_impact": impact_by_depth,
+        "total_impact": len(visited) - 1,  # 自分自身を除く
+        "impact_scores": dict(sorted_impact[:20]),  # 上位20件
+        "recommended_tests": recommended_tests,
+        "max_depth": max_depth,
+    }
+
+
+@app.get("/api/impact/{file_path:path}")
+async def get_impact_range(file_path: str, max_depth: int = 3):
+    """
+    影響範囲分析
+
+    Args:
+        file_path: 変更対象ファイル（例: agents/pm_agent.py）
+        max_depth: 探索深さ（デフォルト: 3）
+
+    Returns:
+        Dict: 影響範囲分析結果
+    """
+    try:
+        # dependency_graph.json を読み込み
+        json_path = Path(__file__).parent / "dependency_graph.json"
+
+        if not json_path.exists():
+            return {"error": "dependency_graph.json が見つかりません", "target": file_path}
+
+        with open(json_path, "r", encoding="utf-8") as f:
+            graph_data = json.load(f)
+
+        # 影響範囲を分析
+        result = analyze_impact_range(file_path, graph_data, max_depth)
+
+        return result
+
+    except Exception as e:
+        return {"error": str(e), "target": file_path}
+
+
 if __name__ == "__main__":
     main()
