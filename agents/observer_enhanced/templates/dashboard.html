@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observer Enhanced - Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .status { padding: 15px; margin: 20px 0; border-radius: 4px; background: #e3f2fd; border-left: 4px solid #2196f3; }
+        .api-list { margin-top: 30px; }
+        .api-item { padding: 10px; margin: 10px 0; background: #f8f9fa; border-radius: 4px; font-family: monospace; }
+        .success { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Observer Enhanced Dashboard</h1>
+        <div class="status">
+            <p class="success">✅ Webサーバー起動成功</p>
+            <p>Phase 5 スクリプト1: Flask Webサーバー実装完了</p>
+        </div>
+        <h2>📡 利用可能なAPI</h2>
+        <div class="api-list">
+            <div class="api-item">GET /api/health - システム健全性チェック</div>
+            <div class="api-item">GET /api/metrics - 最新メトリクス取得</div>
+            <div class="api-item">GET /api/alerts - アラート一覧取得</div>
+            <div class="api-item">GET /api/status - 統合ステータス取得</div>
+        </div>
+        <h2>📊 次のステップ</h2>
+        <p>Phase 5 スクリプト2で完全なダッシュボード（Chart.js統合）を実装予定</p>
+    </div>
+</body>
+</html>
