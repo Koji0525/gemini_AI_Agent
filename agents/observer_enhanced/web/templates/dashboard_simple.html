@@ -469,9 +469,176 @@
             user-select: none;
         }
 
+    
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           Phase 4: メトリクスダッシュボードスタイル
+           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .metric-item {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-item:hover {
+            transform: translateY(-3px);
+            background: #f3f4f6;
+        }
+        
+        .metric-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-value.warning {
+            color: #f59e0b;
+        }
+        
+        .metric-value.critical {
+            color: #ef4444;
+        }
+        
+        .metric-unit {
+            font-size: 0.5em;
+            color: #999;
+        }
+        
+        .metric-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .metric-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        
+        .metric-bar-fill.healthy {
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+        }
+        
+        .metric-bar-fill.warning {
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+        }
+        
+        .metric-bar-fill.critical {
+            background: linear-gradient(90deg, #f87171, #ef4444);
+        }
+        
+        .performance-status {
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin: 15px 0;
+        }
+        
+        .status-badge.healthy {
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            color: white;
+        }
+        
+        .status-badge.warning {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+        }
+        
+        .status-badge.critical {
+            background: linear-gradient(135deg, #f87171, #ef4444);
+            color: white;
+        }
+        
+        .issues-list {
+            margin-top: 15px;
+            text-align: left;
+        }
+        
+        .issue-item {
+            padding: 10px;
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .warning-item {
+            background: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+
+    
+        /* エクスポートボタン */
+        .export-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .export-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+        }
+        
+        .export-btn:active {
+            transform: translateY(0);
+        }
+
     </style>
 </head>
 <body>
+
+        <!-- エクスポートボタン -->
+        <div class="export-controls" style="margin: 20px 0;">
+            <button onclick="exportData('traces')" class="export-btn">
+                📥 トレースエクスポート
+            </button>
+            <button onclick="exportData('graph')" class="export-btn">
+                📥 グラフエクスポート
+            </button>
+            <button onclick="exportData('alerts')" class="export-btn">
+                📥 アラートエクスポート
+            </button>
+        </div>
+
     <div class="container">
         <!-- ヘッダー -->
         <div class="header">
@@ -500,6 +667,32 @@
                     <p>データ読み込み中...</p>
                 </div>
             </div>
+
+            
+            <!-- システムメトリクスカード（P4-004） -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-icon">⚡</span>
+                    システムメトリクス
+                </div>
+                <div id="metricsCard" class="loading">
+                    <div class="spinner"></div>
+                    <p>データ読み込み中...</p>
+                </div>
+            </div>
+
+            <!-- パフォーマンスステータスカード（P4-004） -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-icon">🎯</span>
+                    パフォーマンスステータス
+                </div>
+                <div id="performanceCard" class="loading">
+                    <div class="spinner"></div>
+                    <p>データ読み込み中...</p>
+                </div>
+            </div>
+
 
             <!-- アラートリスト（P2-003） -->
             <div class="card">
@@ -569,7 +762,34 @@
 
     
     <!-- D3.js CDN（P3-001） -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js">
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // エクスポート機能
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        function exportData(type) {
+            let url;
+            
+            switch(type) {
+                case 'traces':
+                    url = '/api/export/traces?format=json&hours=24';
+                    break;
+                case 'graph':
+                    url = '/api/export/graph?format=json';
+                    break;
+                case 'alerts':
+                    url = '/api/export/alerts?format=json&days=7';
+                    break;
+                default:
+                    console.error('Unknown export type:', type);
+                    return;
+            }
+            
+            window.location.href = url;
+            console.log('Export started:', type);
+        }
+
+    </script>
     
     <script>
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -838,6 +1058,33 @@
         
         // グラフ初期読み込み
         loadGraph();
+    
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // エクスポート機能
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        function exportData(type) {
+            let url;
+            
+            switch(type) {
+                case 'traces':
+                    url = '/api/export/traces?format=json&hours=24';
+                    break;
+                case 'graph':
+                    url = '/api/export/graph?format=json';
+                    break;
+                case 'alerts':
+                    url = '/api/export/alerts?format=json&days=7';
+                    break;
+                default:
+                    console.error('Unknown export type:', type);
+                    return;
+            }
+            
+            window.location.href = url;
+            console.log('Export started:', type);
+        }
+
     </script>
 
     <script>
@@ -998,7 +1245,9 @@
             await Promise.all([
                 loadHealthScore(),
                 loadAlerts(),
-                loadTraces()
+                loadTraces(),
+                loadMetrics(),
+                loadPerformanceStatus()
             ]);
         }
         
@@ -1007,6 +1256,33 @@
         
         // 10秒ごとに自動更新（P2-005）
         setInterval(loadAllData, 10000);
+    
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // エクスポート機能
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        function exportData(type) {
+            let url;
+            
+            switch(type) {
+                case 'traces':
+                    url = '/api/export/traces?format=json&hours=24';
+                    break;
+                case 'graph':
+                    url = '/api/export/graph?format=json';
+                    break;
+                case 'alerts':
+                    url = '/api/export/alerts?format=json&days=7';
+                    break;
+                default:
+                    console.error('Unknown export type:', type);
+                    return;
+            }
+            
+            window.location.href = url;
+            console.log('Export started:', type);
+        }
+
     </script>
 </body>
 </html>
