@@ -13,11 +13,12 @@ echo ""
 
 python3 << PYTHON
 import sys
+
 sys.path.insert(0, '/workspaces/gemini_AI_Agent')
 
-from tools.sheets_manager import GoogleSheetsManager
-from agents.robust_task_selector import RobustTaskSelector
 from agents.complete_engine_ultimate import CompleteEngineUltimate
+from agents.robust_task_selector import RobustTaskSelector
+from tools.sheets_manager import GoogleSheetsManager
 
 sheets = GoogleSheetsManager()
 selector = RobustTaskSelector(sheets)
@@ -62,3 +63,4 @@ print(f"\n✅ 実行完了: {success_count}/{len(selected_tasks)}件成功")
 
 PYTHON
 
+# Test marker 1763858018
