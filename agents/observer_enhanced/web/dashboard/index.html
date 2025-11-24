@@ -169,6 +169,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#history">
+                    <i class="fas fa-history"></i> 変更履歴
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#api">
                     <i class="fas fa-code"></i> API
                 </a>
@@ -238,6 +243,39 @@
                 </ul>
             </div>
 
+
+            <!-- 変更履歴タブ -->
+            <div class="tab-pane fade" id="history">
+                <h3><i class="fas fa-history"></i> 依存関係の変更履歴</h3>
+                
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="alert alert-info">
+                            <strong><i class="fas fa-info-circle"></i> 変更履歴とは？</strong><br>
+                            AIがファイルを変更した際の依存関係の変化を追跡します。<br>
+                            どのファイルが追加/削除され、どの依存関係が変わったかを確認できます。
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100" onclick="createSnapshot()">
+                            <i class="fas fa-camera"></i> 現在の状態を保存
+                        </button>
+                    </div>
+                </div>
+
+                <h4>スナップショット一覧</h4>
+                <div class="file-list" id="snapshotList">
+                    <p class="text-muted">読み込み中...</p>
+                </div>
+
+                <h4 class="mt-4">変更サマリー</h4>
+                <div id="changesSummary">
+                    <p class="text-muted">スナップショットを選択してください</p>
+                </div>
+
+                <h4 class="mt-4">詳細な変更</h4>
+                <div id="changesDetail"></div>
+            </div>
             <!-- APIタブ -->
             <div class="tab-pane fade" id="api">
                 <h3>利用可能なAPI</h3>
@@ -378,6 +416,153 @@
                 (filtered.length > 20 ? `<p class="text-muted mt-2">他 ${filtered.length - 20} 件...</p>` : '');
         });
         
+
+        // スナップショット一覧を読み込み
+        async function loadSnapshots() {
+            try {
+                const response = await fetch('/api/snapshots');
+                const data = await response.json();
+                
+                const snapshotListDiv = document.getElementById('snapshotList');
+                
+                if (!data.snapshots || data.snapshots.length === 0) {
+                    snapshotListDiv.innerHTML = '<p class="text-muted">スナップショットがありません。「現在の状態を保存」をクリックして作成してください。</p>';
+                    return;
+                }
+                
+                const snapshotsHtml = data.snapshots.map(snapshot => {
+                    const date = new Date(snapshot.timestamp);
+                    return `
+                        <div class="file-item" onclick="loadChanges('${snapshot.filename}')">
+                            <strong><i class="fas fa-camera"></i> ${snapshot.filename}</strong><br>
+                            <small class="text-muted">${date.toLocaleString('ja-JP')}</small><br>
+                            <small>${(snapshot.size / 1024).toFixed(2)} KB</small>
+                        </div>
+                    `;
+                }).join('');
+                
+                snapshotListDiv.innerHTML = snapshotsHtml;
+            } catch (error) {
+                console.error('スナップショット読み込みエラー:', error);
+            }
+        }
+        
+        // 変更を読み込み
+        async function loadChanges(snapshotFilename) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/changes?snapshot_filename=${snapshotFilename}`);
+                const data = await response.json();
+                
+                // サマリー表示
+                const summaryDiv = document.getElementById('changesSummary');
+                summaryDiv.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="alert alert-success">
+                                <strong>追加</strong><br>
+                                <span class="h3">${data.summary.added_files_count}</span> ファイル<br>
+                                <span class="h3">${data.summary.added_edges_count}</span> 依存関係
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-danger">
+                                <strong>削除</strong><br>
+                                <span class="h3">${data.summary.removed_files_count}</span> ファイル<br>
+                                <span class="h3">${data.summary.removed_edges_count}</span> 依存関係
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-warning">
+                                <strong>変更</strong><br>
+                                <span class="h3">${data.summary.changed_files_count}</span> ファイル
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="alert alert-info">
+                                <strong>比較対象</strong><br>
+                                <small>${data.compared_snapshot}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // 詳細表示
+                const detailDiv = document.getElementById('changesDetail');
+                let detailHtml = '';
+                
+                if (data.added_files && data.added_files.length > 0) {
+                    detailHtml += '<h5 class="text-success"><i class="fas fa-plus-circle"></i> 追加されたファイル</h5>';
+                    detailHtml += data.added_files.slice(0, 10).map(file => `
+                        <div class="file-item">
+                            <strong>${file.filename}</strong><br>
+                            <small class="text-muted">${file.path}</small>
+                        </div>
+                    `).join('');
+                }
+                
+                if (data.removed_files && data.removed_files.length > 0) {
+                    detailHtml += '<h5 class="text-danger mt-3"><i class="fas fa-minus-circle"></i> 削除されたファイル</h5>';
+                    detailHtml += data.removed_files.slice(0, 10).map(file => `
+                        <div class="file-item">
+                            <strong>${file.filename}</strong><br>
+                            <small class="text-muted">${file.path}</small>
+                        </div>
+                    `).join('');
+                }
+                
+                if (data.changed_files && data.changed_files.length > 0) {
+                    detailHtml += '<h5 class="text-warning mt-3"><i class="fas fa-edit"></i> 変更されたファイル</h5>';
+                    detailHtml += data.changed_files.slice(0, 10).map(change => `
+                        <div class="file-item">
+                            <strong>${change.file.filename}</strong><br>
+                            <small class="text-muted">${change.file.path}</small><br>
+                            ${change.added_imports.length > 0 ? `<small class="text-success">追加: ${change.added_imports.length}個</small> ` : ''}
+                            ${change.removed_imports.length > 0 ? `<small class="text-danger">削除: ${change.removed_imports.length}個</small>` : ''}
+                        </div>
+                    `).join('');
+                }
+                
+                detailDiv.innerHTML = detailHtml || '<p class="text-muted">変更はありません</p>';
+                
+            } catch (error) {
+                console.error('変更読み込みエラー:', error);
+                alert('変更の読み込みに失敗しました');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // スナップショットを作成
+        async function createSnapshot() {
+            if (!confirm('現在の状態をスナップショットとして保存しますか？')) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/snapshot', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`スナップショットを作成しました: ${data.snapshot_file}`);
+                    loadSnapshots();
+                }
+            } catch (error) {
+                console.error('スナップショット作成エラー:', error);
+                alert('スナップショットの作成に失敗しました');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 変更履歴タブが開かれた時にスナップショットを読み込む
+        document.querySelector('a[href="#history"]').addEventListener('shown.bs.tab', function() {
+            loadSnapshots();
+        });
+
         // ページ読み込み時にデータ取得
         window.addEventListener('load', loadData);
         

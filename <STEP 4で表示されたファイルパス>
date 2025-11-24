@@ -1,0 +1,24 @@
+
+    def convert_to_pm_tasks_format(self, tasks_detailed):
+        """Gemini APIの出力をpm_tasks形式に変換"""
+        pm_tasks = []
+        priority_map = {"高": "high", "中": "medium", "低": "low"}
+        
+        for task in tasks_detailed:
+            task_name = task.get("task_name", "")
+            task_desc = task.get("description", "")
+            full_description = f"{task_name}\n{task_desc}" if task_name else task_desc
+            
+            priority_raw = task.get("priority", "medium")
+            priority = priority_map.get(priority_raw, priority_raw.lower())
+            
+            pm_tasks.append({
+                "description": full_description,
+                "required_role": "autonomous_agent",
+                "priority": priority,
+                "estimated_time": "未定",
+                "dependencies": "",
+                "execution_type": "automated"
+            })
+        
+        return pm_tasks
