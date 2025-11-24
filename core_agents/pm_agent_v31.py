@@ -3,29 +3,21 @@ PMAgent v2 - Project Management Agent
 GeminiTaskBreakdownAgentV2統合版
 """
 
-import sys
-import os
-import logging
-from typing import Dict, Any, Optional, List
 import asyncio
+import logging
+import os
+import sys
+from typing import Any, Dict, List, Optional
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
-from tools.sheets_manager import GoogleSheetsManager
-from tools.safe_sheets_wrapper import SafeSheetsWrapper
-from configuration.sheets_schema import (
-    PROJECT_GOAL_SCHEMA,
-    PM_TASKS_SCHEMA,
-    get_schema,
-    row_to_dict,
-    dict_to_row,
-)
-
 # GeminiTaskBreakdownAgentV2をインポート
-from agents.pm_agent.task_breakdown_gemini import (
-    GeminiTaskBreakdownAgent as GeminiTaskBreakdownAgentV2,
-)
+from agents.pm_agent.task_breakdown_gemini import \
+    GeminiTaskBreakdownAgent as GeminiTaskBreakdownAgentV2
+from configuration.sheets_schema import get_schema, row_to_dict
+from tools.safe_sheets_wrapper import SafeSheetsWrapper
+from tools.sheets_manager import GoogleSheetsManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -137,6 +129,7 @@ class PMAgentV2:
             tasks_detailed = await self.task_breakdown_agent.generate_tasks_for_goal(
                 goal_id=goal_id,
                 goal_description=goal_desc,
+                num_tasks=8,
                 use_knowledge=True,  # ナレッジベース参照を有効化
             )
 
@@ -147,11 +140,15 @@ class PMAgentV2:
             # pm_tasksスキーマ形式に変換
             pm_tasks = self.task_breakdown_agent.convert_to_pm_tasks_format(tasks_detailed)
 
+            # parent_goal_idを全タスクに設定
+            for task in pm_tasks:
+                task["parent_goal_id"] = goal_id
+
             logger.info(f"✅ {len(pm_tasks)}個のタスクを生成しました")
 
             # タスク一覧を表示
             for i, task in enumerate(pm_tasks, 1):
-                logger.info(f"   {i}. {task['task_id']}: {task['description'][:60]}...")
+                logger.info(f"   {i}. {task['description'][:60]}...")
 
             return pm_tasks
 
@@ -172,19 +169,56 @@ class PMAgentV2:
         try:
             logger.info(f"📝 {len(tasks)}個のタスクをpm_tasksに書き込み中...")
 
-            # schemas定義に従って行データに変換
-            task_rows = [dict_to_row("pm_tasks", task) for task in tasks]
+            # 既存タスクの最大IDを取得
+            existing_tasks_data = self.sheets.safe_read("pm_tasks!A:A")
+            max_task_id = 0
 
-            # SafeSheetsWrapperで安全に追記
-            for i, task_row in enumerate(task_rows, 1):
+            if existing_tasks_data:
+                for row in existing_tasks_data[1:]:  # ヘッダーをスキップ
+                    if row and len(row) > 0:
+                        try:
+                            task_id_num = int(row[0])
+                            if task_id_num > max_task_id:
+                                max_task_id = task_id_num
+                        except (ValueError, TypeError):
+                            pass
+
+            logger.info(f"✅ 既存タスクの最大ID: {max_task_id}")
+            next_task_id = max_task_id + 1
+
+            # 各タスクを書き込み
+            for i, task in enumerate(tasks, 1):
+                # task_idとparent_goal_idを設定
+                task_id = str(next_task_id)
+                parent_goal_id = str(task.get("parent_goal_id", ""))
+
+                # pm_tasksスキーマに従って行データを作成
+                task_row = [
+                    task_id,  # A: task_id
+                    parent_goal_id,  # B: parent_goal_id
+                    task.get("description", ""),  # C: description
+                    task.get("required_role", "autonomous_agent"),  # D: required_role
+                    "pending",  # E: status（必ずpending）
+                    task.get("priority", "medium"),  # F: priority
+                    task.get("estimated_time", "未定"),  # G: estimated_time
+                    task.get("dependencies", ""),  # H: dependencies
+                    "",  # I: created_at（空欄）
+                    "",  # J: batch_id（空欄）
+                    "",  # K: detail_file_path（空欄）
+                    "",  # L: blank（空欄）
+                    task.get("execution_type", "automated"),  # M: execution_type
+                ]
+
+                # 書き込み
                 success = self.sheets.safe_append("pm_tasks", [task_row])
 
                 if success:
-                    logger.info(f"  ✅ タスク {i}/{len(task_rows)} 書き込み完了")
+                    logger.info(f"  ✅ タスク {i}/{len(tasks)} 書き込み完了（ID: {task_id}）")
+                    next_task_id += 1
                 else:
-                    logger.warning(f"  ⚠️ タスク {i}/{len(task_rows)} 書き込み失敗")
+                    logger.warning(f"  ⚠️ タスク {i}/{len(tasks)} 書き込み失敗")
 
-            logger.info("✅ すべてのタスク書き込み完了")
+            logger.info(f"✅ {len(tasks)}個のタスク書き込み完了")
 
         except Exception as e:
             logger.error(f"❌ タスク書き込みエラー: {e}")

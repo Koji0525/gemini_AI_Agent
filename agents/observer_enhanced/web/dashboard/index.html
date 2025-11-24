@@ -3,120 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>依存関係可視化ダッシュボード v1.0</title>
-    
-    <!-- Bootstrap 5 CDN -->
+    <title>依存関係可視化システム</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="static/css/style.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1400px;
+        }
+        .header {
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .signal-badge {
+            font-size: 1.2rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 5px;
+            font-weight: bold;
+        }
+        .high-risk { background: #ff4757; color: white; }
+        .medium-risk { background: #ffa502; color: white; }
+        .low-risk { background: #2ed573; color: white; }
+        .unused { background: #747d8c; color: white; }
+        .file-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .file-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .file-item:hover {
+            background: #f8f9fa;
+        }
+        .file-path {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .api-link {
+            display: block;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            background: #f8f9fa;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.2s;
+        }
+        .api-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-spinner {
+            font-size: 3rem;
+            color: white;
+        }
+    </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <header class="py-3 mb-4 border-bottom">
-            <div class="d-flex align-items-center">
-                <h1 class="h3 me-auto">🔍 依存関係可視化ダッシュボード</h1>
-                <span class="badge bg-success">Phase 1完了</span>
-            </div>
-        </header>
+    <!-- ローディングオーバーレイ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+    </div>
 
-        <!-- ナビゲーションタブ -->
-        <ul class="nav nav-tabs mb-4" id="dashboardTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
-                        data-bs-target="#overview" type="button">
-                    �� 概要
-                </button>
+    <div class="container">
+        <!-- ヘッダー -->
+        <div class="header">
+            <h1><i class="fas fa-project-diagram"></i> 依存関係可視化システム</h1>
+            <p class="text-muted mb-0">Phase 0-3 完全版 | リアルタイム更新</p>
+        </div>
+
+        <!-- 統計カード -->
+        <div class="row" id="stats">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-file-code"></i> 総ファイル数</div>
+                    <div class="stat-value" id="totalFiles">-</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-link"></i> 依存関係</div>
+                    <div class="stat-value" id="totalEdges">-</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-exclamation-triangle"></i> 高リスク</div>
+                    <div class="stat-value" id="highRisk">-</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fas fa-ban"></i> 未使用</div>
+                    <div class="stat-value" id="unused">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- タブ -->
+        <ul class="nav nav-tabs mt-4" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#overview">
+                    <i class="fas fa-chart-pie"></i> 概要
+                </a>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="duplicates-tab" data-bs-toggle="tab" 
-                        data-bs-target="#duplicates" type="button">
-                    📁 重複検出
-                </button>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#search">
+                    <i class="fas fa-search"></i> ファイル検索
+                </a>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="impact-tab" data-bs-toggle="tab" 
-                        data-bs-target="#impact" type="button">
-                    🎯 影響範囲
-                </button>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#risks">
+                    <i class="fas fa-shield-alt"></i> リスク評価
+                </a>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="search-tab" data-bs-toggle="tab" 
-                        data-bs-target="#search" type="button">
-                    🔎 ファイル検索
-                </button>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#api">
+                    <i class="fas fa-code"></i> API
+                </a>
             </li>
         </ul>
 
         <!-- タブコンテンツ -->
-        <div class="tab-content" id="dashboardTabsContent">
+        <div class="tab-content mt-3">
             <!-- 概要タブ -->
-            <div class="tab-pane fade show active" id="overview" role="tabpanel">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">総ファイル数</h5>
-                                <p class="display-4" id="total-files">-</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">重複ファイル</h5>
-                                <p class="display-4 text-warning" id="duplicate-count">-</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">高リスクファイル</h5>
-                                <p class="display-4 text-danger" id="high-risk-count">-</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">シェルスクリプト</h5>
-                                <p class="display-4" id="shell-count">282</p>
-                            </div>
-                        </div>
-                    </div>
+            <div class="tab-pane fade show active" id="overview">
+                <h3>信号機統計</h3>
+                <div id="signalStats" class="mb-4">
+                    <span class="signal-badge high-risk"><i class="fas fa-circle"></i> <span id="redCount">-</span></span>
+                    <span class="signal-badge medium-risk"><i class="fas fa-circle"></i> <span id="yellowCount">-</span></span>
+                    <span class="signal-badge low-risk"><i class="fas fa-circle"></i> <span id="greenCount">-</span></span>
+                    <span class="signal-badge unused"><i class="fas fa-circle"></i> <span id="grayCount">-</span></span>
                 </div>
+
+                <h3>高リスクファイル（トップ10）</h3>
+                <div class="file-list" id="highRiskFiles"></div>
             </div>
 
-            <!-- 重複検出タブ -->
-            <div class="tab-pane fade" id="duplicates" role="tabpanel">
-                <h4>🔍 重複ファイルグループ</h4>
-                <div id="duplicates-content">
-                    <p class="text-muted">読み込み中...</p>
+            <!-- 検索タブ -->
+            <div class="tab-pane fade" id="search">
+                <h3>ファイル検索</h3>
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="ファイル名で検索...">
+                    </div>
                 </div>
+
+                <div class="alert alert-info">
+                    <strong>検索のヒント:</strong> ファイル名の一部を入力してください（例: sheets_manager）
+                </div>
+
+                <div id="searchResults"></div>
             </div>
 
-            <!-- 影響範囲タブ -->
-            <div class="tab-pane fade" id="impact" role="tabpanel">
-                <h4>🎯 影響範囲分析</h4>
-                <div class="mb-3">
-                    <input type="text" class="form-control" id="impact-file-input" 
-                           placeholder="ファイルパスを入力 (例: agents/pm_agent.py)">
-                    <button class="btn btn-primary mt-2" onclick="analyzeImpact()">分析開始</button>
+            <!-- リスク評価タブ -->
+            <div class="tab-pane fade" id="risks">
+                <h3>リスク評価基準</h3>
+                <div class="alert alert-danger">
+                    <strong><i class="fas fa-circle text-danger"></i> 高リスク</strong>: 20個以上のファイルから参照<br>
+                    <small>変更時は慎重に。広範囲への影響があります。</small>
                 </div>
-                <div id="impact-result"></div>
+                <div class="alert alert-warning">
+                    <strong><i class="fas fa-circle text-warning"></i> 中リスク</strong>: 10-19個のファイルから参照<br>
+                    <small>変更前にテストを実行してください。</small>
+                </div>
+                <div class="alert alert-success">
+                    <strong><i class="fas fa-circle text-success"></i> 低リスク</strong>: 1-9個のファイルから参照<br>
+                    <small>比較的安全に変更できます。</small>
+                </div>
+                <div class="alert alert-secondary">
+                    <strong><i class="fas fa-circle text-secondary"></i> 未使用</strong>: どこからも参照されていません<br>
+                    <small>削除を検討できます。</small>
+                </div>
+
+                <h4>推奨事項</h4>
+                <ul>
+                    <li><i class="fas fa-check-circle text-success"></i> 高リスクファイルは慎重に変更</li>
+                    <li><i class="fas fa-check-circle text-success"></i> 変更前にテストを実行</li>
+                    <li><i class="fas fa-check-circle text-success"></i> 未使用ファイルは削除を検討</li>
+                    <li><i class="fas fa-check-circle text-success"></i> 定期的に依存関係を見直す</li>
+                </ul>
             </div>
 
-            <!-- ファイル検索タブ -->
-            <div class="tab-pane fade" id="search" role="tabpanel">
-                <h4>🔎 ファイル検索</h4>
-                <input type="text" class="form-control mb-3" id="file-search-input" 
-                       placeholder="ファイル名を入力..." onkeyup="searchFiles()">
-                <div id="search-results"></div>
+            <!-- APIタブ -->
+            <div class="tab-pane fade" id="api">
+                <h3>利用可能なAPI</h3>
+                <p class="text-muted">以下のAPIエンドポイントが利用可能です。クリックして直接アクセスできます。</p>
+
+                <a href="/api/dependencies" target="_blank" class="api-link">
+                    <strong><i class="fas fa-link"></i> GET /api/dependencies</strong><br>
+                    <small>依存関係データを取得（1363ノード、17024エッジ）</small>
+                </a>
+
+                <a href="/api/signals" target="_blank" class="api-link">
+                    <strong><i class="fas fa-traffic-light"></i> GET /api/signals</strong><br>
+                    <small>信号機データを取得（リスク評価付き）</small>
+                </a>
+
+                <a href="/docs" target="_blank" class="api-link">
+                    <strong><i class="fas fa-book"></i> GET /docs</strong><br>
+                    <small>Swagger UI（API仕様書、インタラクティブ）</small>
+                </a>
+
+                <a href="/redoc" target="_blank" class="api-link">
+                    <strong><i class="fas fa-file-alt"></i> GET /redoc</strong><br>
+                    <small>ReDoc（API仕様書、読みやすい形式）</small>
+                </a>
+
+                <div class="alert alert-info mt-3">
+                    <strong><i class="fas fa-info-circle"></i> API使用例:</strong><br>
+                    <code>curl http://localhost:8001/api/dependencies | jq</code>
+                </div>
             </div>
         </div>
+
+        <footer class="mt-5 text-center text-muted">
+            <small>
+                <i class="fas fa-heart text-danger"></i> 
+                依存関係可視化システム v1.0.0 | 
+                Phase 0-3 完了 | 
+                最終更新: <span id="lastUpdate">-</span>
+            </small>
+        </footer>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="static/js/dashboard.js"></script>
+    <script>
+        let allFiles = [];
+
+        // ローディング表示
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // データ読み込み
+        async function loadData() {
+            showLoading();
+            
+            try {
+                // 依存関係データ
+                const depsResponse = await fetch('/api/dependencies');
+                const depsData = await depsResponse.json();
+                
+                document.getElementById('totalFiles').textContent = depsData.nodes.length;
+                document.getElementById('totalEdges').textContent = depsData.edges.length;
+                
+                // 信号機データ
+                const signalsResponse = await fetch('/api/signals');
+                const signalsData = await signalsResponse.json();
+                
+                allFiles = signalsData.all_files || [];
+                
+                document.getElementById('highRisk').textContent = signalsData.signal_counts['🔴'] || 0;
+                document.getElementById('unused').textContent = signalsData.signal_counts['💤'] || 0;
+                
+                document.getElementById('redCount').textContent = signalsData.signal_counts['🔴'] || 0;
+                document.getElementById('yellowCount').textContent = signalsData.signal_counts['🟡'] || 0;
+                document.getElementById('greenCount').textContent = signalsData.signal_counts['🟢'] || 0;
+                document.getElementById('grayCount').textContent = signalsData.signal_counts['💤'] || 0;
+                
+                // 高リスクファイル
+                const highRiskFiles = signalsData.high_risk_files.slice(0, 10);
+                const fileListHtml = highRiskFiles.map(file => `
+                    <div class="file-item">
+                        <strong>${file.signal} ${file.filename}</strong><br>
+                        <div class="file-path">${file.path}</div>
+                        <small class="text-danger">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            被依存数: ${file.imported_by_count}
+                        </small>
+                    </div>
+                `).join('');
+                
+                document.getElementById('highRiskFiles').innerHTML = fileListHtml || '<p class="text-muted">高リスクファイルはありません</p>';
+                
+                // 最終更新時刻
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = now.toLocaleString('ja-JP');
+                
+            } catch (error) {
+                console.error('データ読み込みエラー:', error);
+                alert('データの読み込みに失敗しました。APIサーバーが動作しているか確認してください。');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 検索機能
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (query.length < 2) {
+                resultsDiv.innerHTML = '<p class="text-muted">2文字以上入力してください</p>';
+                return;
+            }
+            
+            const filtered = allFiles.filter(file => 
+                file.filename.toLowerCase().includes(query) || 
+                file.path.toLowerCase().includes(query)
+            );
+            
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-muted">該当するファイルが見つかりません</p>';
+                return;
+            }
+            
+            const searchHtml = filtered.slice(0, 20).map(file => `
+                <div class="file-item">
+                    <strong>${file.signal} ${file.filename}</strong><br>
+                    <div class="file-path">${file.path}</div>
+                    <small>被依存数: ${file.imported_by_count}</small>
+                </div>
+            `).join('');
+            
+            resultsDiv.innerHTML = searchHtml + 
+                (filtered.length > 20 ? `<p class="text-muted mt-2">他 ${filtered.length - 20} 件...</p>` : '');
+        });
+        
+        // ページ読み込み時にデータ取得
+        window.addEventListener('load', loadData);
+        
+        // 30秒ごとに自動更新
+        setInterval(loadData, 30000);
+    </script>
 </body>
 </html>
