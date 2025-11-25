@@ -363,3 +363,134 @@ def import_from_json(self, data):
     self.graph = json_graph.node_link_graph(data)
     self._invalidate_cache()
     return True
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # テスト互換性メソッド（Phase 6 - networkx API使用）
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def get_component(self, component_id: str):
+        """コンポーネント情報を取得（networkx API）"""
+        if component_id in self.graph.nodes:
+            return self.graph.nodes[component_id]
+        return None
+
+    def update_component(self, component_id: str, attributes: dict) -> bool:
+        """コンポーネント属性を更新（networkx API）"""
+        if component_id in self.graph.nodes:
+            self.graph.nodes[component_id].update(attributes)
+            return True
+        return False
+
+    def remove_component(self, component_id: str) -> bool:
+        """コンポーネントを削除（networkx API）"""
+        if component_id in self.graph.nodes:
+            self.graph.remove_node(component_id)
+            return True
+        return False
+
+    def list_components(self):
+        """すべてのコンポーネントをリスト（networkx API）"""
+        return [{"id": node_id, **self.graph.nodes[node_id]} for node_id in self.graph.nodes]
+
+    def get_dependency(self, source: str, target: str):
+        """依存関係情報を取得（networkx API）"""
+        if self.graph.has_edge(source, target):
+            return self.graph.edges[source, target]
+        return None
+
+    def remove_dependency(self, source: str, target: str) -> bool:
+        """依存関係を削除（networkx API）"""
+        if self.graph.has_edge(source, target):
+            self.graph.remove_edge(source, target)
+            return True
+        return False
+
+    def get_impact_range(self, component_id: str, depth: int = 1, direction: str = "out"):
+        """影響範囲を取得（既存メソッドのエイリアス）"""
+        return self.get_impact_scope(component_id, depth, direction)
+
+    def get_shortest_path(self, source: str, target: str):
+        """最短パスを取得（networkx API）"""
+        import networkx as nx
+
+        try:
+            return nx.shortest_path(self.graph, source, target)
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            return None
+
+    def find_cycles(self):
+        """循環依存を検出（networkx API）"""
+        import networkx as nx
+
+        try:
+            cycles = list(nx.simple_cycles(self.graph))
+            return cycles
+        except Exception:
+            return []
+
+    def get_statistics(self):
+        """グラフ統計情報を取得（networkx API）"""
+        num_nodes = self.graph.number_of_nodes()
+        num_edges = self.graph.number_of_edges()
+        return {
+            "total_nodes": num_nodes,
+            "total_edges": num_edges,
+            "avg_dependencies": num_edges / max(num_nodes, 1),
+        }
+
+    def get_most_dependent(self, limit: int = 5):
+        """最も依存されているコンポーネントを取得（networkx API）"""
+        # in_degree = 依存されている数
+        in_degrees = dict(self.graph.in_degree())
+        sorted_nodes = sorted(in_degrees.items(), key=lambda x: -x[1])[:limit]
+
+        return [{"id": node_id, "dependency_count": count} for node_id, count in sorted_nodes]
+
+    def get_most_depending(self, limit: int = 5):
+        """最も多く依存しているコンポーネントを取得（networkx API）"""
+        # out_degree = 依存している数
+        out_degrees = dict(self.graph.out_degree())
+        sorted_nodes = sorted(out_degrees.items(), key=lambda x: -x[1])[:limit]
+
+        return [{"id": node_id, "depending_count": count} for node_id, count in sorted_nodes]
+
+    def export_to_json(self, filepath: str = None):
+        """JSONにエクスポート（networkx API）"""
+        import json
+
+        import networkx as nx
+
+        # networkxグラフをnode_link形式に変換
+        data = nx.node_link_data(self.graph)
+        json_str = json.dumps(data, indent=2, ensure_ascii=False)
+
+        if filepath:
+            try:
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(json_str)
+            except Exception as e:
+                print(f"エクスポートエラー: {e}")
+
+        return json_str
+
+    def import_from_json(self, filepath: str = None, json_str: str = None):
+        """JSONからインポート（networkx API）"""
+        import json
+
+        import networkx as nx
+
+        try:
+            if filepath:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            elif json_str:
+                data = json.loads(json_str)
+            else:
+                return False
+
+            # node_link形式からグラフに変換
+            self.graph = nx.node_link_graph(data, directed=True)
+            return True
+        except Exception as e:
+            print(f"インポートエラー: {e}")
+            return False

@@ -62,7 +62,7 @@ class EpicOrchestrator:
 
     Attributes:
         sheets_manager: Google Sheetsマネージャー
-        knowledge_wrapper: ナレッジラッパー
+        knowledge_manager: ナレッジマネージャー
         pm_agent: PMAgentV33Epic（Phase 1）
         task_executor: TaskExecutorV4SubTask（Phase 2）
         progress_analyzer: ProgressAnalyzer（F11）
@@ -72,29 +72,29 @@ class EpicOrchestrator:
         data_accessor: BaseDataAccessor
     """
 
-    def __init__(self, sheets_manager: Any, knowledge_wrapper: Any, api_key: Optional[str] = None):
+    def __init__(self, sheets_manager: Any, knowledge_manager: Any, api_key: Optional[str] = None):
         """
         初期化
 
         Args:
             sheets_manager: Google Sheetsマネージャー
-            knowledge_wrapper: ナレッジラッパー
+            knowledge_manager: ナレッジマネージャー
             api_key: Gemini APIキー
         """
         self.sheets_manager = sheets_manager
-        self.knowledge_wrapper = knowledge_wrapper
+        self.knowledge_manager = knowledge_manager
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
 
         # Phase 1: Epic分解エージェント
         self.pm_agent = PMAgentV33Epic(
-            sheets_manager=sheets_manager, knowledge_wrapper=knowledge_wrapper, api_key=self.api_key
+            sheets_manager=sheets_manager, knowledge_manager=knowledge_manager
         )
 
         # Phase 2: Sub-task実行エージェント
         self.task_executor = TaskExecutorV4SubTask()
 
         # Phase 3: 統合機能
-        self.progress_analyzer = ProgressAnalyzer(sheets_manager=sheets_manager)
+        self.progress_analyzer = ProgressAnalyzer()
         self.code_integrator = CodeIntegrator()
         self.dependency_resolver = DependencyResolverV2()
         self.integration_tester = IntegrationTesterV2()
