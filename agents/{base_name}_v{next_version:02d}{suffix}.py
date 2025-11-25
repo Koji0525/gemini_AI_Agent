@@ -28,7 +28,7 @@ class TaskExecutor:
         self.output_base_dir.mkdir(exist_ok=True)
         self.sequence_counter = {}
 
-    @trace(caller="TaskExecutor")
+    @trace(caller="TaskExecutor", callee="execute_task")
     def execute_task(self, task_data: dict) -> dict:
         """
         タスク実行

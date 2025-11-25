@@ -153,39 +153,3 @@ if __name__ == "__main__":
             print(f"  - [{alert['level'].upper()}] {alert['health_score']}点")
 
     asyncio.run(test())
-
-    def get_alerts(
-        self,
-        level: Optional[str] = None,
-        limit: Optional[int] = None,
-        since: Optional[datetime] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        アラートを取得
-
-        Args:
-            level: アラートレベルフィルタ（'error', 'warning', 'info'）
-            limit: 取得件数制限
-            since: この日時以降のアラートのみ
-
-        Returns:
-            アラートリスト
-        """
-        alerts = self.alerts.copy()
-
-        # レベルフィルタ
-        if level:
-            alerts = [a for a in alerts if a.get("level") == level]
-
-        # 日時フィルタ
-        if since:
-            alerts = [a for a in alerts if datetime.fromisoformat(a.get("timestamp", "")) >= since]
-
-        # 新しい順にソート
-        alerts.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-
-        # 件数制限
-        if limit:
-            alerts = alerts[:limit]
-
-        return alerts
