@@ -14,8 +14,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from tools.sheets_manager import GoogleSheetsManager
 from configuration.config_loader import get_config
+from tools.sheets_manager import GoogleSheetsManager
 
 
 def create_knowledge_base_sheet(sheets_manager: GoogleSheetsManager):
@@ -64,7 +64,7 @@ def create_knowledge_base_sheet(sheets_manager: GoogleSheetsManager):
                 'config["GEMINI_TIMEOUT"] = 60',
                 "gemini,timeout,network",
             ]
-            sheet.append_row(sample_data)
+            sheet.append_rows(sample_data)
             print(f"✅ サンプルデータ追加")
         else:
             print(f"ℹ️  {SHEET_NAME}既に正しく設定済み")
@@ -110,7 +110,7 @@ def create_learning_patterns_sheet(sheets_manager: GoogleSheetsManager):
                 "92.5",
                 "2025-10-29 11:30:00",
             ]
-            sheet.append_row(sample_data)
+            sheet.append_rows(sample_data)
             print(f"✅ サンプルデータ追加")
         else:
             print(f"ℹ️  {SHEET_NAME}既に正しく設定済み")
@@ -160,7 +160,7 @@ def create_success_recipes_sheet(sheets_manager: GoogleSheetsManager):
                 "8.9",
                 "平均実行時間: 3分45秒",
             ]
-            sheet.append_row(sample_data)
+            sheet.append_rows(sample_data)
             print(f"✅ サンプルデータ追加")
         else:
             print(f"ℹ️  {SHEET_NAME}既に正しく設定済み")
@@ -184,7 +184,8 @@ def main():
     # SheetsManager初期化
     print("📊 GoogleSheetsManager初期化中...")
     sheets_manager = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("SERVICE_ACCOUNT_FILE"),
     )
     print("✅ 初期化完了")
     print()

@@ -3,12 +3,13 @@
 import sys
 from pathlib import Path
 
-project_root = Path(__file__).resolve().parent
+# 修正: parent.parent でプロジェクトルートを取得
+project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 from agents.task_execution.high_quality_executor_v6 import \
     HighQualityExecutorV6
-from tools.base_data_accessor import BaseDataAccessor
+from tools.google_sheets_manager import GoogleSheetsManager
 
 
 def main():
@@ -17,56 +18,36 @@ def main():
     print("=" * 60)
 
     try:
-        accessor = BaseDataAccessor()
+        # GoogleSheetsManager を使用（BaseDataAccessor の代わり）
+        sheets_mgr = GoogleSheetsManager()
 
-        tasks = accessor.read_sheet_as_dicts(
-            "pm_tasks", filter_func=lambda t: t.get("status") == "pending"
-        )
+        # pending タスクを取得（正しいメソッド名を使用）
+        all_tasks = sheets_mgr.read_pm_tasks()
+        pending_tasks = [t for t in all_tasks if t.get("status") == "pending"][:1]
 
-        if not tasks:
-            print("✅ pendingタスクなし")
+        if not pending_tasks:
+            print("⚠️ 実行可能なタスクがありません")
             return
 
-        task = tasks[0]
+        task = pending_tasks[0]
+        print(f"\n📋 タスク実行開始")
+        print(f"   ID: {task.get('task_id', 'N/A')}")
+        print(f"   内容: {task.get('description', 'N/A')[:100]}...")
 
-        print(f"\n📋 実行タスク:")
-        print(f"  ID: {task.get('task_id')}")
-        print(f"  説明: {task.get('description', '')[:100]}...")
-
+        # 実行
         executor = HighQualityExecutorV6()
-        result = executor.execute_task(
-            task_id=task.get("task_id"),
-            task_description=task.get("description", ""),
-            required_role=task.get("required_role", "general"),
-        )
+        result = executor.execute_task(task)
 
-        if result["status"] == "success":
-            task_id = task.get("task_id")
-            tasks_data = accessor.read_sheet_as_dicts("pm_tasks")
-
-            for i, t in enumerate(tasks_data, start=2):
-                if t.get("task_id") == task_id:
-                    accessor.sheets.update_range(f"pm_tasks!E{i}", [["completed"]])
-                    break
-
-            print(f"\n{'='*60}")
-            print(f"✅ タスク完了")
-            print(f"{'='*60}")
-            print(f"📦 ファイル数: {result.get('file_count', 0)}")
-            print(f"📊 品質: {result.get('final_quality_score', 0)}/100")
-
-            if "completeness" in result:
-                comp = result["completeness"]
-                print(f"\n機能完全性: {comp['quality_score']}/100")
-                print(f"  問題点: {len(comp['issues'])}件")
-
-            print(f"{'='*60}")
+        print(f"\n✅ 実行完了")
+        print(f"   ステータス: {result.get('status', 'unknown')}")
+        print(f"   出力: {result.get('output_file', 'N/A')}")
 
     except Exception as e:
-        print(f"\n❌ エラー: {e}")
+        print(f"\n❌ エラー発生: {e}")
         import traceback
 
         traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

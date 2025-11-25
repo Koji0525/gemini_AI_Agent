@@ -4,14 +4,15 @@ retry_historyシート作成スクリプト（修正版）
 GoogleSheetsManagerの実際の構造に対応
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from tools.sheets_manager import GoogleSheetsManager
-from dotenv import load_dotenv
 import gspread
+from dotenv import load_dotenv
+
+from tools.sheets_manager import GoogleSheetsManager
 
 # .envファイル読み込み
 load_dotenv()
@@ -75,7 +76,7 @@ def create_retry_history_sheet():
                 "duration_sec",
             ]
 
-            sheet.append_row(headers)
+            sheet.append_rows(headers)
 
             # ヘッダー行をフォーマット
             sheet.format(

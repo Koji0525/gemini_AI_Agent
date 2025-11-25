@@ -18,7 +18,7 @@ DEPRECATED_METHODS = {
             "reason": "メソッド名が不明確",
             "migration": """
 # Before:
-self.sheets.write_data('pm_tasks', [[data]])
+self.sheets.update_range('pm_tasks', [[data]])
 
 # After (更新の場合):
 self.sheets.update_range('pm_tasks!A2:Z2', [[data]])
@@ -33,7 +33,7 @@ self.sheets.append_rows('pm_tasks', [[data]])
             "reason": "メソッド統一",
             "migration": """
 # Before:
-self.sheets.append_row('pm_tasks', [data])
+self.sheets.append_rows('pm_tasks', [data])
 
 # After:
 self.sheets.append_rows('pm_tasks', [[data]])
@@ -47,7 +47,7 @@ self.sheets.append_rows('pm_tasks', [[data]])
             "reason": "BaseDataAccessorは読み取り専用",
             "migration": """
 # Before:
-accessor.write_rows('pm_tasks', rows)
+accessor.sheets.append_rows('pm_tasks', rows)
 
 # After:
 accessor.sheets.append_rows('pm_tasks', rows)

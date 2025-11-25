@@ -4,12 +4,13 @@ Quality_Score判定 → 改善案生成 → 自動再実行
 要件定義書v3.0 Section 4.1.2準拠
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
+
 from tools.sheets_validator import SheetsValidator
 
 
@@ -130,7 +131,7 @@ class QualityFeedbackLoop:
         }
 
         row = self.validator.create_valid_row("task_execution_log", log_data)
-        self.sheets.append_row("task_execution_log", row)
+        self.sheets.append_rows("task_execution_log", row)
         print(f"  📝 改善メモ記録: {note}")
 
     async def _generate_improvement(self, task, result):
@@ -194,7 +195,7 @@ class QualityFeedbackLoop:
         is_valid, message = self.validator.validate_before_write("pm_tasks", row)
 
         if is_valid:
-            self.sheets.append_row("pm_tasks", row)
+            self.sheets.append_rows("pm_tasks", row)
             print(f"  ✅ 再実行タスク作成: {retry_task_data['task_id']}")
         else:
             print(f"  ❌ 再実行タスク作成失敗: {message}")
@@ -203,6 +204,7 @@ class QualityFeedbackLoop:
 # テスト用コード
 if __name__ == "__main__":
     import asyncio
+
     from tools.sheets_manager import GoogleSheetsManager
 
     async def test_quality_feedback():

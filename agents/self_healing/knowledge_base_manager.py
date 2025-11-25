@@ -272,7 +272,7 @@ class KnowledgeBaseManager:
             row = pattern.to_row(headers)
 
             # 追加
-            sheet.append_row(row)
+            sheet.append_rows(row)
 
             print(f"✅ パターン保存: {pattern.description[:50]}...")
             return True

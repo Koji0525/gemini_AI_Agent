@@ -5,11 +5,11 @@
 - ナレッジベースからの事前検索
 """
 
-import time
 import asyncio
-from datetime import datetime
-from typing import Dict, Any
 import sys
+import time
+from datetime import datetime
+from typing import Any, Dict
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
@@ -158,7 +158,7 @@ class KBIntegratedTaskExecutor:
                 "TRUE" if measurement.get("fix_applied") else "FALSE",
             ]
 
-            self.sheets.append_row("task_execution_log", log_row)
+            self.sheets.append_rows("task_execution_log", log_row)
             print("📝 実行ログを保存しました")
 
         except Exception as e:

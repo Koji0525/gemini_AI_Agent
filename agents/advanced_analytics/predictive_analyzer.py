@@ -4,17 +4,17 @@ Predictive Analyzer v1.0
 """
 
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import ConfigLoader
 from agents.advanced_analytics.execution_analyzer import ExecutionAnalyzer
 from agents.advanced_analytics.pattern_learner import PatternLearner
+from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class PredictiveAnalyzer:
@@ -196,7 +196,7 @@ class PredictiveAnalyzer:
                         "",
                         "",
                     ]
-                    worksheet.append_row(row)
+                    worksheet.append_rows(row)
 
             # 失敗パターンを保存
             if patterns.get("failure_patterns"):
@@ -220,7 +220,7 @@ class PredictiveAnalyzer:
                         "",
                         "",
                     ]
-                    worksheet.append_row(row)
+                    worksheet.append_rows(row)
 
             print("   ✅ パターンを保存しました")
             return True

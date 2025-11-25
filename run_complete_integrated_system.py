@@ -6,17 +6,18 @@
 - aggressive モードデフォルト
 """
 import asyncio
-import sys
 import os
-from pathlib import Path
+import sys
 from datetime import datetime
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Dict, Optional
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ["DISPLAY"] = ":1"
 
-from configuration.config_loader import get_spreadsheet_id, get_service_account_file
 from browser_control.browser_controller import BrowserController
+from configuration.config_loader import (get_service_account_file,
+                                         get_spreadsheet_id)
 from tools.sheets_manager import GoogleSheetsManager
 
 # 既存エージェントのインポート（存在する場合）
@@ -109,7 +110,9 @@ class CompleteIntegratedExecutor:
             print("\n⚠️  既存エージェントが見つかりません")
             print("   Gemini統合モードで動作します")
 
-    async def log_task_execution(self, task_id: int, agent_name: str, status: str, output: str = "", error: str = ""):
+    async def log_task_execution(
+        self, task_id: int, agent_name: str, status: str, output: str = "", error: str = ""
+    ):
         """task_execution_log シートにログ記録"""
 
         try:
@@ -139,7 +142,7 @@ class CompleteIntegratedExecutor:
         """task_execution_log に直接書き込み"""
 
         try:
-            import gspread
+            pass
 
             spreadsheet = self.sheets.gc.open_by_key(get_spreadsheet_id())
 
@@ -148,10 +151,13 @@ class CompleteIntegratedExecutor:
                 log_sheet = spreadsheet.worksheet("task_execution_log")
             except:
                 # シートが存在しない場合は作成
-                log_sheet = spreadsheet.add_worksheet(title="task_execution_log", rows=1000, cols=10)
+                log_sheet = spreadsheet.add_worksheet(
+                    title="task_execution_log", rows=1000, cols=10
+                )
                 # ヘッダー設定
                 log_sheet.update(
-                    "A1:G1", [["task_id", "agent", "status", "output", "error", "timestamp", "executed_at"]]
+                    "A1:G1",
+                    [["task_id", "agent", "status", "output", "error", "timestamp", "executed_at"]],
                 )
 
             # データ追加
@@ -165,7 +171,7 @@ class CompleteIntegratedExecutor:
                 data.get("executed_at", ""),
             ]
 
-            log_sheet.append_row(row_data)
+            log_sheet.append_rows(row_data)
             print(f"   📝 ログ直接書き込み完了")
 
         except Exception as e:
@@ -212,7 +218,13 @@ class CompleteIntegratedExecutor:
         # タスク実行
         print("\n[3/6] タスク実行開始...")
 
-        results = {"total": len(pending), "success": 0, "failed": 0, "details": [], "start_time": datetime.now()}
+        results = {
+            "total": len(pending),
+            "success": 0,
+            "failed": 0,
+            "details": [],
+            "start_time": datetime.now(),
+        }
 
         for i, task in enumerate(pending, 1):
             task_id = task.get("task_id")
@@ -233,7 +245,9 @@ class CompleteIntegratedExecutor:
 
             try:
                 # ステータス更新: in_progress
-                await self.sheets.update_task_status(task_id=task_id, status="in_progress", sheet_name="pm_tasks")
+                await self.sheets.update_task_status(
+                    task_id=task_id, status="in_progress", sheet_name="pm_tasks"
+                )
 
                 # タスク実行
                 if agent and hasattr(agent, "execute_task"):
@@ -248,11 +262,15 @@ class CompleteIntegratedExecutor:
 
                 # 結果に応じてステータス更新
                 if success:
-                    await self.sheets.update_task_status(task_id=task_id, status="completed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="completed", sheet_name="pm_tasks"
+                    )
                     results["success"] += 1
                     print(f"✅ 完了")
                 else:
-                    await self.sheets.update_task_status(task_id=task_id, status="failed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="failed", sheet_name="pm_tasks"
+                    )
                     results["failed"] += 1
                     print(f"❌ 失敗")
 
@@ -265,7 +283,9 @@ class CompleteIntegratedExecutor:
                     error=error if not success else "",
                 )
 
-                results["details"].append({"task_id": task_id, "role": role, "agent": agent_name, "success": success})
+                results["details"].append(
+                    {"task_id": task_id, "role": role, "agent": agent_name, "success": success}
+                )
 
                 # レート制限
                 if i < len(pending):
@@ -275,9 +295,13 @@ class CompleteIntegratedExecutor:
             except Exception as e:
                 print(f"❌ エラー: {e}")
 
-                await self.sheets.update_task_status(task_id=task_id, status="failed", sheet_name="pm_tasks")
+                await self.sheets.update_task_status(
+                    task_id=task_id, status="failed", sheet_name="pm_tasks"
+                )
 
-                await self.log_task_execution(task_id=task_id, agent_name=agent_name, status="failed", error=str(e))
+                await self.log_task_execution(
+                    task_id=task_id, agent_name=agent_name, status="failed", error=str(e)
+                )
 
                 results["failed"] += 1
 
@@ -338,12 +362,14 @@ async def main():
     print("🎯 完全統合システム（既存エージェント対応）")
     print("=" * 70)
 
-    sheets = GoogleSheetsManager(spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file())
+    sheets = GoogleSheetsManager(
+        spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file()
+    )
 
     async with BrowserController(download_folder="./downloads") as browser:
         executor = CompleteIntegratedExecutor(sheets, browser, rate_limit=10)  # aggressive モード
 
-        results = await executor.execute_all_pending()
+        await executor.execute_all_pending()
 
     print("\n📋 完了")
     print(f"Google Sheets: https://docs.google.com/spreadsheets/d/{get_spreadsheet_id()}")

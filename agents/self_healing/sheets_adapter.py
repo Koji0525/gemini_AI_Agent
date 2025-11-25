@@ -4,9 +4,10 @@ Week 5: retry_history用のSheetsアダプター（最終修正版）
 GoogleSheetsManagerの実際の構造に完全対応
 """
 
-from typing import Dict, List, Any
-from datetime import datetime
 import uuid
+from datetime import datetime
+from typing import Any, Dict, List
+
 import gspread
 
 
@@ -129,7 +130,7 @@ class SheetsAdapter:
                 f"{duration:.2f}",
             ]
 
-            sheet.append_row(row_data)
+            sheet.append_rows(row_data)
             return True
 
         except Exception as e:

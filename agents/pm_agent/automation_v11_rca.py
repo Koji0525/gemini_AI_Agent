@@ -20,19 +20,12 @@ v10 からの変更:
 
 
 import asyncio
-
 import sys
-
-from datetime import datetime, timedelta
-
-from pathlib import Path
-
 import traceback
-
-from typing import List, Dict, Any
-
 from collections import Counter
-
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List
 
 # プロジェクトルートをパスに追加
 
@@ -41,19 +34,13 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
-from agents.pm_agent.task_breakdown_gemini import GeminiTaskBreakdownAgent
-
-from agents.pm_agent.task_registration import TaskRegistrationAgent
-
-from agents.pm_agent.task_exporter import TaskExportAgent
-
 from agents.error_analyzer import ErrorAnalyzer
-
-from tools.sheets_manager import GoogleSheetsManager
-
+from agents.pm_agent.task_breakdown_gemini import GeminiTaskBreakdownAgent
+from agents.pm_agent.task_exporter import TaskExportAgent
+from agents.pm_agent.task_registration import TaskRegistrationAgent
 from browser_control.browser_controller import BrowserController
-
 from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class RCAEngine:
@@ -197,7 +184,10 @@ class RCAEngine:
 
         else:
 
-            suggestions = [f"{most_common_type}エラーが{count}件発生しています", "→ 詳細な分析が必要です"]
+            suggestions = [
+                f"{most_common_type}エラーが{count}件発生しています",
+                "→ 詳細な分析が必要です",
+            ]
 
         return suggestions
 
@@ -296,7 +286,9 @@ class ErrorHandler:
 
             error_type = self.error_analyzer.classify_error(str(error))
 
-            spreadsheet = self.error_analyzer.sheets_manager.gc.open_by_key(self.error_analyzer.spreadsheet_id)
+            spreadsheet = self.error_analyzer.sheets_manager.gc.open_by_key(
+                self.error_analyzer.spreadsheet_id
+            )
 
             worksheet = spreadsheet.worksheet("error_analysis")
 
@@ -322,7 +314,7 @@ class ErrorHandler:
                 "medium",
             ]
 
-            worksheet.append_row(new_row)
+            worksheet.append_rows(new_row)
 
             print(f"  📝 エラー記録: error_id={next_error_id}, type={error_type}")
 
@@ -372,7 +364,7 @@ async def retry_async(func, max_retries=3, delay=2):
 
             return await func()
 
-        except Exception as e:
+        except Exception:
 
             if attempt < max_retries - 1:
 
@@ -600,7 +592,9 @@ async def process_goal(
 
         print(f"✅ 目標{goal_id}: {len(generated_tasks)}個のタスクを生成")
 
-        export_path = task_exporter.export_tasks(goal_id=goal_id, goal_title=goal_title, tasks=generated_tasks)
+        export_path = task_exporter.export_tasks(
+            goal_id=goal_id, goal_title=goal_title, tasks=generated_tasks
+        )
 
         registered_count = await task_registration.register_tasks(
             goal_id=goal_id, tasks=generated_tasks, detail_file_path=export_path
@@ -676,7 +670,10 @@ async def execute_task_with_timeout(
 
 
 async def execute_tasks_parallel(
-    tasks: List[Dict[str, Any]], browser: BrowserController, error_handler: ErrorHandler, max_concurrent: int = 3
+    tasks: List[Dict[str, Any]],
+    browser: BrowserController,
+    error_handler: ErrorHandler,
+    max_concurrent: int = 3,
 ) -> List[Dict[str, Any]]:
     """タスクを並列実行"""
 
@@ -693,7 +690,9 @@ async def execute_tasks_parallel(
             print(f"  🔄 タスク#{task_id}: {task_name[:30]}...")
 
             result = await retry_async(
-                lambda: execute_task_with_timeout(task, browser, error_handler, timeout=60), max_retries=2, delay=3
+                lambda: execute_task_with_timeout(task, browser, error_handler, timeout=60),
+                max_retries=2,
+                delay=3,
             )
 
             status = "✅" if result.get("success") else "❌"
@@ -702,7 +701,9 @@ async def execute_tasks_parallel(
 
             return result
 
-    results = await asyncio.gather(*[execute_with_semaphore(task) for task in tasks], return_exceptions=True)
+    results = await asyncio.gather(
+        *[execute_with_semaphore(task) for task in tasks], return_exceptions=True
+    )
 
     processed_results = []
 
@@ -854,7 +855,9 @@ async def main():
 
             print()
 
-            task_results = await execute_tasks_parallel(pending_tasks, browser, error_handler, max_concurrent=3)
+            task_results = await execute_tasks_parallel(
+                pending_tasks, browser, error_handler, max_concurrent=3
+            )
 
             for result in task_results:
 

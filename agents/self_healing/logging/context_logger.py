@@ -4,11 +4,12 @@ ContextLogger: 判断プロセス・コンテキスト記録システム
 エラーだけでなく、「なぜその判断をしたのか」を記録し、
 自律エージェントが過去の経験から学習できるようにする。
 """
-from datetime import datetime
-from typing import Dict, Any, List, Optional
 import json
-import traceback
 import platform
+import traceback
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import psutil
 
 
@@ -162,9 +163,11 @@ class ContextLogger:
             row = context.to_row(headers)
 
             # 追加
-            sheet.append_row(row)
+            sheet.append_rows(row)
 
-            print(f"✅ コンテキスト記録: {context.error_type} - {context.modification_reason[:30]}...")
+            print(
+                f"✅ コンテキスト記録: {context.error_type} - {context.modification_reason[:30]}..."
+            )
             return True
 
         except Exception as e:
@@ -173,7 +176,10 @@ class ContextLogger:
             return False
 
     def search_similar_contexts(
-        self, error_type: Optional[str] = None, learning_tags: Optional[List[str]] = None, limit: int = 5
+        self,
+        error_type: Optional[str] = None,
+        learning_tags: Optional[List[str]] = None,
+        limit: int = 5,
     ) -> List[Dict[str, Any]]:
         """
         類似のコンテキストを検索

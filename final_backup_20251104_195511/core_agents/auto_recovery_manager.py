@@ -8,8 +8,8 @@ Phase 3: システム堅牢化
 """
 import asyncio
 import time
-from typing import Dict, Optional, Any
 from enum import Enum
+from typing import Any, Dict, Optional
 
 
 class RecoveryLevel(Enum):
@@ -269,7 +269,7 @@ class AutoRecoveryManager:
         }
 
         try:
-            await self.sheets.append_row("recovery_log", list(log_entry.values()))
+            await self.sheets.append_rows("recovery_log", list(log_entry.values()))
         except:
             pass  # ログ記録失敗は無視
 

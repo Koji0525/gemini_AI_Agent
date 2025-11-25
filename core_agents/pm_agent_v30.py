@@ -3,23 +3,20 @@ PM Agent v30 - タスク管理エージェント
 import文構文エラー修正版
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# 標準ライブラリ
-import json
-import logging
 import asyncio
-from pathlib import Path
-from typing import Dict, Optional
+# 標準ライブラリ
+import logging
 from datetime import datetime
 
+from configuration.spreadsheet_schema import get_column_names
 # プロジェクト内モジュール
 from tools.sheets_manager import GoogleSheetsManager
 from tools.sheets_validator import SheetsValidator
-from configuration.spreadsheet_schema import get_column_names
 
 
 # Phase 3: execution_type判定機能
@@ -119,7 +116,7 @@ class PMAgent:
             }
 
             # スプレッドシートに追加
-            self.sheets.append_row("pm_tasks", list(row_data.values()))
+            self.sheets.append_rows("pm_tasks", list(row_data.values()))
 
             self.logger.info(f"✅ タスク作成成功: {task_id}")
             return {"success": True, "task_id": task_id}

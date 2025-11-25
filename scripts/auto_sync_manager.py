@@ -10,9 +10,10 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from configuration.config_loader import ConfigLoader
 import gspread
 from google.oauth2.service_account import Credentials
+
+from configuration.config_loader import ConfigLoader
 
 
 class AutoSyncManager:
@@ -128,7 +129,7 @@ class AutoSyncManager:
             ]
 
             # ダッシュボードに追加
-            dashboard_sheet.append_row(new_row)
+            dashboard_sheet.append_rows(new_row)
             print("✅ 進捗データをダッシュボードに同期しました")
 
             return True

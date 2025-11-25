@@ -3,20 +3,21 @@ AB Testing Engine v1.0
 改善提案の効果をA/Bテストで検証
 """
 
-import sys
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
 import json
 import math
-from scipy import stats
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
+from scipy import stats
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.sheets_manager import GoogleSheetsManager
 from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class ABTestingEngine:
@@ -28,7 +29,11 @@ class ABTestingEngine:
         self.min_sample_size = 30  # 最小サンプルサイズ
 
     async def create_experiment(
-        self, suggestion_id: str, variant_a_description: str, variant_b_description: str, metric: str = "success_rate"
+        self,
+        suggestion_id: str,
+        variant_a_description: str,
+        variant_b_description: str,
+        metric: str = "success_rate",
     ) -> Dict[str, Any]:
         """A/Bテスト実験を作成"""
 
@@ -54,7 +59,9 @@ class ABTestingEngine:
 
         return experiment
 
-    def calculate_sample_size(self, baseline_rate: float, expected_improvement: float, power: float = 0.8) -> int:
+    def calculate_sample_size(
+        self, baseline_rate: float, expected_improvement: float, power: float = 0.8
+    ) -> int:
         """必要なサンプルサイズを計算"""
 
         # 効果量の計算
@@ -105,7 +112,9 @@ class ABTestingEngine:
         b_success_rate = sum(b_results) / len(b_results) if b_results else 0
 
         # 改善率
-        improvement = ((b_success_rate - a_success_rate) / a_success_rate * 100) if a_success_rate > 0 else 0
+        improvement = (
+            ((b_success_rate - a_success_rate) / a_success_rate * 100) if a_success_rate > 0 else 0
+        )
 
         # 統計的検定（二項検定）
         if len(a_results) > 0 and len(b_results) > 0:
@@ -203,7 +212,12 @@ class ABTestingEngine:
             }
 
         # 判定アイコン
-        decision_icon = {"adopt_b": "✅", "adopt_b_cautiously": "⚠️", "keep_a": "❌", "continue_testing": "🔄"}
+        decision_icon = {
+            "adopt_b": "✅",
+            "adopt_b_cautiously": "⚠️",
+            "keep_a": "❌",
+            "continue_testing": "🔄",
+        }
 
         print(f"   {decision_icon.get(decision['decision'], '❓')} 判定: {decision['decision']}")
         print(f"   理由: {decision['reason']}")
@@ -237,7 +251,7 @@ class ABTestingEngine:
                 decision["decision"],
             ]
 
-            worksheet.append_row(row)
+            worksheet.append_rows(row)
 
             print(f"   ✅ 実験結果を保存しました")
             return True
@@ -261,7 +275,9 @@ class ABTestingEngine:
 
         return variant_a, variant_b
 
-    def print_experiment_summary(self, experiment: Dict[str, Any], analysis: Dict[str, Any], decision: Dict[str, Any]):
+    def print_experiment_summary(
+        self, experiment: Dict[str, Any], analysis: Dict[str, Any], decision: Dict[str, Any]
+    ):
         """実験結果のサマリーを表示"""
 
         print("\n" + "=" * 70)
@@ -285,10 +301,17 @@ class ABTestingEngine:
 
         print(f"\n  改善率: {analysis['improvement']:+.2f}%")
         print(f"  p値: {analysis['p_value']}")
-        print(f"  統計的有意性: {'✅ 有意' if analysis['is_significant'] else '❌ 非有意'} (α={self.alpha})")
+        print(
+            f"  統計的有意性: {'✅ 有意' if analysis['is_significant'] else '❌ 非有意'} (α={self.alpha})"
+        )
 
         print(f"\n🎯 判定:")
-        decision_icon = {"adopt_b": "✅", "adopt_b_cautiously": "⚠️", "keep_a": "❌", "continue_testing": "🔄"}
+        decision_icon = {
+            "adopt_b": "✅",
+            "adopt_b_cautiously": "⚠️",
+            "keep_a": "❌",
+            "continue_testing": "🔄",
+        }
         print(f"  {decision_icon.get(decision['decision'], '❓')} {decision['decision']}")
         print(f"  理由: {decision['reason']}")
         print(f"  推奨: {decision['recommendation']}")
@@ -303,7 +326,8 @@ async def main():
     # 設定読み込み
     config = ConfigLoader()
     sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE"),
     )
 
     # ABテストエンジン
@@ -329,7 +353,9 @@ async def main():
     baseline_rate = 0.898
     improvement = 0.06  # 6%改善
 
-    variant_a_data, variant_b_data = ab_engine.simulate_experiment(baseline_rate, improvement, sample_size=100)
+    variant_a_data, variant_b_data = ab_engine.simulate_experiment(
+        baseline_rate, improvement, sample_size=100
+    )
 
     experiment1["variant_a_results"] = variant_a_data
     experiment1["variant_b_results"] = variant_b_data

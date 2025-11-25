@@ -6,12 +6,11 @@
 ナレッジベース用のスプレッドシートに統合
 """
 
-import sys
 import os
 import re
+import sys
 from datetime import datetime
-from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
@@ -182,7 +181,7 @@ class ConversationLogImporter:
                     task["error_count"],
                     task["retry_count"],
                 ]
-                task_sheet.append_row(row)
+                task_sheet.append_rows(row)
 
             print(f"   ✅ {len(parsed_data['task_logs'])}件追加")
 
@@ -196,8 +195,14 @@ class ConversationLogImporter:
             retry_sheet = self.spreadsheet.worksheet("retry_log")
 
             for retry in parsed_data["retry_logs"]:
-                row = [retry["timestamp"], retry["task_id"], retry["attempt"], retry["error"], retry["strategy"]]
-                retry_sheet.append_row(row)
+                row = [
+                    retry["timestamp"],
+                    retry["task_id"],
+                    retry["attempt"],
+                    retry["error"],
+                    retry["strategy"],
+                ]
+                retry_sheet.append_rows(row)
 
             print(f"   ✅ {len(parsed_data['retry_logs'])}件追加")
 
@@ -227,7 +232,7 @@ class ConversationLogImporter:
                     ctx["lessons_learned"],
                     ctx["pattern_id"],
                 ]
-                context_sheet.append_row(row)
+                context_sheet.append_rows(row)
 
             print(f"   ✅ {len(parsed_data['context_logs'])}件追加")
 
@@ -240,13 +245,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="会話ログインポーター")
     parser.add_argument("files", nargs="+", help=".txtファイルのパス")
-    parser.add_argument("--dry-run", action="store_true", help="パース結果のみ表示（インポートしない）")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="パース結果のみ表示（インポートしない）"
+    )
 
     args = parser.parse_args()
 
     # GoogleSheetsManager初期化
     sheets = GoogleSheetsManager(
-        spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="configuration/service_account.json"
+        spreadsheet_id=os.getenv("SPREADSHEET_ID"),
+        service_account_file="configuration/service_account.json",
     )
 
     importer = ConversationLogImporter(sheets)

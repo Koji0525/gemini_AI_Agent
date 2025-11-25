@@ -8,9 +8,10 @@ v1.1 - task_execution_logシートに正しく記録
 """
 
 import sys
-import gspread
-from typing import Dict, Any
 from datetime import datetime
+from typing import Any, Dict
+
+import gspread
 
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 from tools.sheets_manager import GoogleSheetsManager
@@ -63,7 +64,7 @@ class WPAgentLogger:
                     "Quality_Score",
                     "Quality_description",
                 ]
-                log_sheet.append_row(headers)
+                log_sheet.append_rows(headers)
 
             # 次のlog_idを取得
             all_values = log_sheet.get_all_values()
@@ -84,7 +85,7 @@ class WPAgentLogger:
             ]
 
             # 行を追加
-            log_sheet.append_row(row)
+            log_sheet.append_rows(row)
 
             print(f"✅ task_execution_logシート 行{next_log_id} に記録完了")
             return True
@@ -122,7 +123,9 @@ class WPAgentLogger:
             if result["success"]:
                 summary = f"カスタム投稿タイプ '{spec.post_type}' のPHPコード生成成功。{spec.plural_name}。"
             else:
-                summary = f"カスタム投稿タイプ '{spec.post_type}' の作成失敗。{result.get('message', '')}"
+                summary = (
+                    f"カスタム投稿タイプ '{spec.post_type}' の作成失敗。{result.get('message', '')}"
+                )
 
             summary = summary[:100]
 
@@ -136,7 +139,9 @@ class WPAgentLogger:
                     f"階層構造: {'あり' if spec.hierarchical else 'なし'}。"
                 )
             else:
-                quality_description = f"カスタム投稿タイプの作成に失敗: {result.get('message', '不明なエラー')}"
+                quality_description = (
+                    f"カスタム投稿タイプの作成に失敗: {result.get('message', '不明なエラー')}"
+                )
 
             # ログデータ構築（task_execution_log形式）
             log_data = {
@@ -193,7 +198,9 @@ class WPAgentLogger:
             # output_summary生成（100文字以内）
             tax_type = "階層型" if spec.hierarchical else "非階層型"
             if result["success"]:
-                summary = f"カスタムタクソノミー '{spec.taxonomy}' ({tax_type}) のPHPコード生成成功。"
+                summary = (
+                    f"カスタムタクソノミー '{spec.taxonomy}' ({tax_type}) のPHPコード生成成功。"
+                )
             else:
                 summary = f"カスタムタクソノミー '{spec.taxonomy}' の作成失敗。{result.get('message', '')}"
 
@@ -208,7 +215,9 @@ class WPAgentLogger:
                     f"対象投稿タイプ: {', '.join(spec.post_types)}。"
                 )
             else:
-                quality_description = f"カスタムタクソノミーの作成に失敗: {result.get('message', '不明なエラー')}"
+                quality_description = (
+                    f"カスタムタクソノミーの作成に失敗: {result.get('message', '不明なエラー')}"
+                )
 
             # ログデータ構築（task_execution_log形式）
             log_data = {

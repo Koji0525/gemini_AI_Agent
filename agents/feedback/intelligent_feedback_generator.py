@@ -3,20 +3,20 @@ Intelligent Feedback Generator v1.0
 AIが具体的で実行可能な改善提案を生成
 """
 
-import sys
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime
 import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import ConfigLoader
 from agents.advanced_analytics.execution_analyzer import ExecutionAnalyzer
 from agents.advanced_analytics.pattern_learner import PatternLearner
 from browser_control.gemini_api_client import GeminiAPIClient
+from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class IntelligentFeedbackGenerator:
@@ -65,7 +65,9 @@ class IntelligentFeedbackGenerator:
 
         return prioritized_suggestions
 
-    def _identify_improvement_areas(self, analysis: Dict[str, Any], patterns: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _identify_improvement_areas(
+        self, analysis: Dict[str, Any], patterns: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """改善領域を特定"""
 
         areas = []
@@ -232,7 +234,9 @@ class IntelligentFeedbackGenerator:
                 "generated_by": "System",
             }
 
-    def _calculate_roi(self, category: str, difficulty: str, current_value: float, target_value: float) -> float:
+    def _calculate_roi(
+        self, category: str, difficulty: str, current_value: float, target_value: float
+    ) -> float:
         """ROI（投資対効果）スコアを計算"""
 
         # カテゴリ別の重要度
@@ -245,7 +249,9 @@ class IntelligentFeedbackGenerator:
         improvement = abs(target_value - current_value) if target_value > 0 else 50
 
         # ROI = (重要度 × 改善幅) / コスト
-        roi = (category_weight.get(category, 0.7) * improvement) / difficulty_cost.get(difficulty, 2.0)
+        roi = (category_weight.get(category, 0.7) * improvement) / difficulty_cost.get(
+            difficulty, 2.0
+        )
 
         return round(roi, 2)
 
@@ -301,11 +307,13 @@ class IntelligentFeedbackGenerator:
                     suggestion.get("generated_by", "AI"),
                     "",  # approved_by
                     "",  # approved_at
-                    json.dumps(suggestion.get("implementation_steps", []), ensure_ascii=False)[:500],
+                    json.dumps(suggestion.get("implementation_steps", []), ensure_ascii=False)[
+                        :500
+                    ],
                     "",  # result
                 ]
 
-                worksheet.append_row(row)
+                worksheet.append_rows(row)
 
             print(f"✅ {len(suggestions)}件の提案を保存しました")
             return True
@@ -322,10 +330,14 @@ class IntelligentFeedbackGenerator:
         print("=" * 70 + "\n")
 
         for i, sug in enumerate(suggestions, 1):
-            priority_icon = "🔴" if sug["priority"] == "高" else "🟡" if sug["priority"] == "中" else "🟢"
+            priority_icon = (
+                "🔴" if sug["priority"] == "高" else "🟡" if sug["priority"] == "中" else "🟢"
+            )
 
             print(f"{i}. {priority_icon} {sug['title']}")
-            print(f"   優先度: {sug['priority']} | カテゴリ: {sug['category']} | ROI: {sug['roi_score']}")
+            print(
+                f"   優先度: {sug['priority']} | カテゴリ: {sug['category']} | ROI: {sug['roi_score']}"
+            )
             print(f"   難易度: {sug['implementation_difficulty']}")
             print(f"\n   📝 説明:")
             print(f"   {sug['description']}")
@@ -352,7 +364,8 @@ async def main():
     # 設定読み込み
     config = ConfigLoader()
     sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE"),
     )
 
     # Gemini API クライアント

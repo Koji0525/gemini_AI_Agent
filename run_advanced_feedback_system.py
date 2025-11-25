@@ -7,18 +7,18 @@
 - 進捗レポート
 """
 import asyncio
-import sys
 import os
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
-import gspread
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ["DISPLAY"] = ":1"
 
-from configuration.config_loader import get_spreadsheet_id, get_service_account_file
 from browser_control.browser_controller import BrowserController
+from configuration.config_loader import (get_service_account_file,
+                                         get_spreadsheet_id)
 from tools.sheets_manager import GoogleSheetsManager
 
 # WordPressエージェント（インポートエラー対策）
@@ -30,7 +30,8 @@ except:
     HAS_WP_AGENT = False
 
 try:
-    from wordpress.wp_dev.wp_requirements_agent import WordPressRequirementsAgent
+    from wordpress.wp_dev.wp_requirements_agent import \
+        WordPressRequirementsAgent
 
     HAS_WP_REQ_AGENT = True
 except:
@@ -119,7 +120,13 @@ class AdvancedFeedbackExecutor:
                 return {"total": 0, "completed": 0, "failed": 0}
 
             # 統計
-            stats = {"total": len(all_data) - 1, "completed": 0, "failed": 0, "by_agent": {}, "recent_failures": []}
+            stats = {
+                "total": len(all_data) - 1,
+                "completed": 0,
+                "failed": 0,
+                "by_agent": {},
+                "recent_failures": [],
+            }
 
             for row in all_data[1:]:
                 if len(row) > 7:
@@ -224,7 +231,7 @@ class AdvancedFeedbackExecutor:
                 status,
             ]
 
-            log_sheet.append_row(row)
+            log_sheet.append_rows(row)
             print(f"   ✅ task_execution_log 記録 (log_id: {next_log_id})")
             return True
 
@@ -290,7 +297,9 @@ class AdvancedFeedbackExecutor:
         report += "3. 完了タスクの品質確認\n"
 
         # ファイル保存
-        report_path = self.output_dir / f"progress_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        report_path = (
+            self.output_dir / f"progress_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        )
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report)
 
@@ -309,7 +318,7 @@ class AdvancedFeedbackExecutor:
         await self.load_project_goal()
 
         # [2] 実行履歴分析
-        history_stats = await self.analyze_execution_history()
+        await self.analyze_execution_history()
 
         # [3] タスク読み込み
         print("\n[3/7] タスク読み込み...")
@@ -346,7 +355,13 @@ class AdvancedFeedbackExecutor:
         # [6] タスク実行
         print("\n[6/7] タスク実行開始...")
 
-        results = {"total": len(pending), "success": 0, "failed": 0, "details": [], "start_time": datetime.now()}
+        results = {
+            "total": len(pending),
+            "success": 0,
+            "failed": 0,
+            "details": [],
+            "start_time": datetime.now(),
+        }
 
         for i, task in enumerate(pending, 1):
             task_id = task.get("task_id")
@@ -372,7 +387,9 @@ class AdvancedFeedbackExecutor:
 
             try:
                 # in_progress
-                await self.sheets.update_task_status(task_id=task_id, status="in_progress", sheet_name="pm_tasks")
+                await self.sheets.update_task_status(
+                    task_id=task_id, status="in_progress", sheet_name="pm_tasks"
+                )
 
                 # タスク実行
                 if agent and hasattr(agent, "execute_task"):
@@ -382,15 +399,21 @@ class AdvancedFeedbackExecutor:
                     output = result.get("output", "")
                 else:
                     print(f"   🤖 Gemini統合 ({role})")
-                    success, output, error = await self._execute_with_gemini(task, role, dependency_output)
+                    success, output, error = await self._execute_with_gemini(
+                        task, role, dependency_output
+                    )
 
                 # ステータス更新
                 if success:
-                    await self.sheets.update_task_status(task_id=task_id, status="completed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="completed", sheet_name="pm_tasks"
+                    )
                     results["success"] += 1
                     print(f"✅ 完了")
                 else:
-                    await self.sheets.update_task_status(task_id=task_id, status="failed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="failed", sheet_name="pm_tasks"
+                    )
                     results["failed"] += 1
                     print(f"❌ 失敗")
 
@@ -438,7 +461,9 @@ class AdvancedFeedbackExecutor:
 
         return results
 
-    async def _execute_with_gemini(self, task: Dict, role: str, dependency_output: Optional[str] = None):
+    async def _execute_with_gemini(
+        self, task: Dict, role: str, dependency_output: Optional[str] = None
+    ):
         """Gemini実行"""
 
         task_id = task.get("task_id")
@@ -509,7 +534,9 @@ async def main():
     print("  ✅ dependencies活用")
     print("  ✅ 進捗レポート自動生成")
 
-    sheets = GoogleSheetsManager(spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file())
+    sheets = GoogleSheetsManager(
+        spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file()
+    )
 
     async with BrowserController(download_folder="./downloads") as browser:
         executor = AdvancedFeedbackExecutor(sheets, browser)

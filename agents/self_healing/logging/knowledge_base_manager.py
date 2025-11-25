@@ -5,9 +5,9 @@ KnowledgeBaseManager: 統合ナレッジベース管理
 全ての実行ログを統合し、パターンを抽出して学習データを蓄積する。
 AIがAIを進化させる自己強化ループの中核。
 """
-from datetime import datetime
-from typing import Dict, Any, List
 import logging
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 import json
@@ -272,7 +272,7 @@ class KnowledgeBaseManager:
             row = pattern.to_row(headers)
 
             # 追加
-            sheet.append_row(row)
+            sheet.append_rows(row)
 
             print(f"✅ パターン保存: {pattern.description[:50]}...")
             return True

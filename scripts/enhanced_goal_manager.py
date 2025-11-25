@@ -9,9 +9,10 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from configuration.config_loader import ConfigLoader
 import gspread
 from google.oauth2.service_account import Credentials
+
+from configuration.config_loader import ConfigLoader
 
 
 class EnhancedGoalManager:
@@ -39,8 +40,10 @@ class EnhancedGoalManager:
 
             headers = goals_data[0]
             status_idx = headers.index("status") if "status" in headers else -1
-            description_idx = headers.index("goal_description") if "goal_description" in headers else -1
-            created_idx = headers.index("created_at") if "created_at" in headers else -1
+            description_idx = (
+                headers.index("goal_description") if "goal_description" in headers else -1
+            )
+            headers.index("created_at") if "created_at" in headers else -1
 
             # ステータス分析
             status_count = {}
@@ -51,7 +54,11 @@ class EnhancedGoalManager:
                     continue
 
                 status = row[status_idx].strip().lower() if row[status_idx] else ""
-                description = row[description_idx] if description_idx != -1 and len(row) > description_idx else ""
+                description = (
+                    row[description_idx]
+                    if description_idx != -1 and len(row) > description_idx
+                    else ""
+                )
 
                 # ステータスカウント
                 status_count[status] = status_count.get(status, 0) + 1
@@ -131,7 +138,9 @@ class EnhancedGoalManager:
 
             headers = goals_data[0]
             goal_id_idx = headers.index("goal_id") if "goal_id" in headers else -1
-            description_idx = headers.index("goal_description") if "goal_description" in headers else -1
+            description_idx = (
+                headers.index("goal_description") if "goal_description" in headers else -1
+            )
             status_idx = headers.index("status") if "status" in headers else -1
             created_idx = headers.index("created_at") if "created_at" in headers else -1
 
@@ -184,7 +193,7 @@ class EnhancedGoalManager:
             ]
 
             # ダッシュボードに追加
-            dashboard_sheet.append_row(new_row)
+            dashboard_sheet.append_rows(new_row)
             print("✅ 新しい進捗行をダッシュボードに追加しました")
             print(f"📝 追加内容: {new_row[:3]}...")  # 最初の3要素のみ表示
 

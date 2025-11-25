@@ -3,11 +3,12 @@
 拡張版Progress Dashboard Updater - 進捗計算を改善
 """
 
+import asyncio
 import os
 import sys
-import asyncio
-import gspread
 from datetime import datetime
+
+import gspread
 from google.oauth2.service_account import Credentials
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -26,7 +27,9 @@ class EnhancedProgressUpdater:
     def setup_gspread(self):
         """gspreadをセットアップ"""
         scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-        credentials = Credentials.from_service_account_file(self.service_account_file, scopes=scopes)
+        credentials = Credentials.from_service_account_file(
+            self.service_account_file, scopes=scopes
+        )
         self.gc = gspread.authorize(credentials)
         self.spreadsheet = self.gc.open_by_key(self.spreadsheet_id)
         print("✅ Google Sheetsに接続")
@@ -116,8 +119,12 @@ class EnhancedProgressUpdater:
                 if status == "active":
                     goal = {
                         "row": row_num,
-                        "id": row[id_idx] if id_idx != -1 and len(row) > id_idx else f"row_{row_num}",
-                        "title": row[title_idx] if title_idx != -1 and len(row) > title_idx else "N/A",
+                        "id": (
+                            row[id_idx] if id_idx != -1 and len(row) > id_idx else f"row_{row_num}"
+                        ),
+                        "title": (
+                            row[title_idx] if title_idx != -1 and len(row) > title_idx else "N/A"
+                        ),
                         "status": status,
                     }
                     active_goals.append(goal)
@@ -188,7 +195,9 @@ class EnhancedProgressUpdater:
 
             print(f"\n🎯 Activeゴール詳細:")
             for i, goal in enumerate(analysis["active_goals"], 1):
-                title_preview = goal["title"][:80] + "..." if len(goal["title"]) > 80 else goal["title"]
+                title_preview = (
+                    goal["title"][:80] + "..." if len(goal["title"]) > 80 else goal["title"]
+                )
                 print(f"   {i}. [{goal['id']}] {title_preview}")
 
             # ここで実際のスプレッドシート更新を実装
@@ -230,8 +239,8 @@ class EnhancedProgressUpdater:
                     "Completion Rate %",
                     "Active Goal IDs",
                 ]
-                worksheet.append_row(headers)
-                worksheet.append_row(new_row)
+                worksheet.append_rows(headers)
+                worksheet.append_rows(new_row)
                 print("✅ ダッシュボードを新規作成しました")
 
         except Exception as e:

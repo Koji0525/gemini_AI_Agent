@@ -6,10 +6,10 @@ conversation_* シートからパターンを抽出し、
 knowledge_baseに統合する
 """
 
-import sys
 import os
-from typing import List, Dict, Any
+import sys
 from collections import Counter
+from typing import Dict, List
 
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
@@ -40,7 +40,7 @@ class ConversationLearningPipeline:
             print("⚠️  データなし")
             return []
 
-        headers = data[0]
+        data[0]
         rows = data[1:]
 
         # エラーをカテゴリ別に集計
@@ -209,7 +209,7 @@ class ConversationLearningPipeline:
                 "",  # notes
             ]
 
-            kb_sheet.append_row(row)
+            kb_sheet.append_rows(row)
             print(f"   ✅ {pattern['knowledge_type']}: {kb_id}")
 
         print()
@@ -255,7 +255,8 @@ class ConversationLearningPipeline:
 
 if __name__ == "__main__":
     sheets = GoogleSheetsManager(
-        spreadsheet_id=os.getenv("SPREADSHEET_ID"), service_account_file="configuration/service_account.json"
+        spreadsheet_id=os.getenv("SPREADSHEET_ID"),
+        service_account_file="configuration/service_account.json",
     )
 
     pipeline = ConversationLearningPipeline(sheets)

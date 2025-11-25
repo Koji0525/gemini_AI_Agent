@@ -5,18 +5,19 @@
 - Sheets: サマリーとメタデータ
 """
 import asyncio
-import sys
-import os
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional
 import hashlib
+import os
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Optional
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ["DISPLAY"] = ":1"
 
-from configuration.config_loader import get_spreadsheet_id, get_service_account_file
 from browser_control.browser_controller import BrowserController
+from configuration.config_loader import (get_service_account_file,
+                                         get_spreadsheet_id)
 from tools.sheets_manager import GoogleSheetsManager
 
 # WordPressエージェント
@@ -78,7 +79,12 @@ class HybridStorageExecutor:
 
         print(f"\n   💾 ハイブリッド保存開始...")
 
-        result = {"github_path": "", "sheets_log_id": "", "output_hash": "", "output_length": len(full_output)}
+        result = {
+            "github_path": "",
+            "sheets_log_id": "",
+            "output_hash": "",
+            "output_length": len(full_output),
+        }
 
         # [1] GitHub保存（完全な出力）
         try:
@@ -140,7 +146,7 @@ class HybridStorageExecutor:
                 status,  # status
             ]
 
-            log_sheet.append_row(row)
+            log_sheet.append_rows(row)
 
             result["sheets_log_id"] = str(next_log_id)
 
@@ -249,7 +255,13 @@ class HybridStorageExecutor:
         # タスク実行
         print("\n[3/5] タスク実行開始...")
 
-        results = {"total": len(pending), "success": 0, "failed": 0, "details": [], "start_time": datetime.now()}
+        results = {
+            "total": len(pending),
+            "success": 0,
+            "failed": 0,
+            "details": [],
+            "start_time": datetime.now(),
+        }
 
         for i, task in enumerate(pending, 1):
             task_id = task.get("task_id")
@@ -274,7 +286,9 @@ class HybridStorageExecutor:
 
             try:
                 # in_progress
-                await self.sheets.update_task_status(task_id=task_id, status="in_progress", sheet_name="pm_tasks")
+                await self.sheets.update_task_status(
+                    task_id=task_id, status="in_progress", sheet_name="pm_tasks"
+                )
 
                 # タスク実行
                 if agent and hasattr(agent, "execute_task"):
@@ -284,15 +298,21 @@ class HybridStorageExecutor:
                     output = result.get("output", "")
                 else:
                     print(f"   🤖 Gemini統合 ({role})")
-                    success, output, error = await self._execute_with_gemini(task, role, dependency_output)
+                    success, output, error = await self._execute_with_gemini(
+                        task, role, dependency_output
+                    )
 
                 # ステータス更新
                 if success:
-                    await self.sheets.update_task_status(task_id=task_id, status="completed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="completed", sheet_name="pm_tasks"
+                    )
                     results["success"] += 1
                     print(f"✅ 完了")
                 else:
-                    await self.sheets.update_task_status(task_id=task_id, status="failed", sheet_name="pm_tasks")
+                    await self.sheets.update_task_status(
+                        task_id=task_id, status="failed", sheet_name="pm_tasks"
+                    )
                     results["failed"] += 1
                     print(f"❌ 失敗")
 
@@ -346,7 +366,9 @@ class HybridStorageExecutor:
 
         return results
 
-    async def _execute_with_gemini(self, task: Dict, role: str, dependency_output: Optional[str] = None):
+    async def _execute_with_gemini(
+        self, task: Dict, role: str, dependency_output: Optional[str] = None
+    ):
         """Gemini実行"""
 
         task_id = task.get("task_id")
@@ -404,7 +426,9 @@ async def main():
     print("  ✅ 検索性と可読性の両立")
     print("  ✅ コラボレーション対応")
 
-    sheets = GoogleSheetsManager(spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file())
+    sheets = GoogleSheetsManager(
+        spreadsheet_id=get_spreadsheet_id(), service_account_file=get_service_account_file()
+    )
 
     async with BrowserController(download_folder="./downloads") as browser:
         executor = HybridStorageExecutor(sheets, browser)

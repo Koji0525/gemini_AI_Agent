@@ -3,19 +3,19 @@ Code Generator v1.0
 改善提案を実際のコードに自動変換
 """
 
-import sys
-from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-import json
 import ast
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
 
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.sheets_manager import GoogleSheetsManager
-from configuration.config_loader import ConfigLoader
 from browser_control.gemini_api_client import GeminiAPIClient
+from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class CodeGenerator:
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                 generated_code.get("validation_message", ""),
             ]
 
-            worksheet.append_row(row)
+            worksheet.append_rows(row)
 
             print(f"   ✅ コードを保存しました")
             return True
@@ -188,7 +188,9 @@ if __name__ == "__main__":
             print(f"   ❌ 保存エラー: {e}")
             return False
 
-    async def save_code_to_file(self, generated_code: Dict[str, Any], base_dir: Path = None) -> bool:
+    async def save_code_to_file(
+        self, generated_code: Dict[str, Any], base_dir: Path = None
+    ) -> bool:
         """生成されたコードをファイルに保存"""
 
         if base_dir is None:
@@ -259,7 +261,8 @@ async def main():
     # 設定読み込み
     config = ConfigLoader()
     sheets = GoogleSheetsManager(
-        spreadsheet_id=config.get("SPREADSHEET_ID"), service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE")
+        spreadsheet_id=config.get("SPREADSHEET_ID"),
+        service_account_file=config.get("GOOGLE_SERVICE_ACCOUNT_FILE"),
     )
 
     # Gemini APIクライアント

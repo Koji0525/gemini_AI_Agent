@@ -10,10 +10,11 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from configuration.config_loader import ConfigLoader
-from configuration.sync_settings import *
 import gspread
 from google.oauth2.service_account import Credentials
+
+from configuration.config_loader import ConfigLoader
+from configuration.sync_settings import *
 
 
 class ConfigurableSyncManager:
@@ -44,7 +45,7 @@ class ConfigurableSyncManager:
 
             if len(data) > self.max_rows:
                 # ヘッダーを保持して古いデータを削除
-                headers = data[0]
+                data[0]
                 keep_data = data[:1] + data[-(self.max_rows - 1) :]  # 最新のデータを保持
                 dashboard_sheet.clear()
                 dashboard_sheet.update(values=keep_data, range_name="A1:P" + str(len(keep_data)))
@@ -68,11 +69,15 @@ class ConfigurableSyncManager:
 
             # 統計計算
             active_goals = [
-                row for row in goals_data[1:] if len(row) > 2 and row[2].lower() in ["active", "実行中", "in progress"]
+                row
+                for row in goals_data[1:]
+                if len(row) > 2 and row[2].lower() in ["active", "実行中", "in progress"]
             ]
 
             total_tasks = len(tasks_data) - 1 if len(tasks_data) > 1 else 0
-            completed_tasks = sum(1 for row in tasks_data[1:] if len(row) > 4 and row[4].lower() == "completed")
+            completed_tasks = sum(
+                1 for row in tasks_data[1:] if len(row) > 4 and row[4].lower() == "completed"
+            )
             progress_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
 
             # 新しい行を作成
@@ -96,7 +101,7 @@ class ConfigurableSyncManager:
             ]
 
             # データ追加
-            dashboard_sheet.append_row(new_row)
+            dashboard_sheet.append_rows(new_row)
 
             # クリーンアップ
             self.cleanup_old_data()

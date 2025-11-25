@@ -5,16 +5,16 @@
 """
 import asyncio
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.sheets_manager import GoogleSheetsManager
 from browser_control.browser_controller import BrowserController
 from configuration.config_loader import ConfigLoader
+from tools.sheets_manager import GoogleSheetsManager
 
 
 class DesignIntegratedPMAgent:
@@ -63,7 +63,8 @@ class DesignIntegratedPMAgent:
             "design_info": {
                 "site_type": design.get("site_type"),
                 "site_name": design.get("site_name"),
-                "components": len(design.get("custom_post_types", [])) + len(design.get("taxonomies", [])),
+                "components": len(design.get("custom_post_types", []))
+                + len(design.get("taxonomies", [])),
             },
             "tasks_generated": len(tasks),
             "registration_result": registration_result,
@@ -241,9 +242,11 @@ class DesignIntegratedPMAgent:
                 design_sheet = spreadsheet.worksheet("wordpress_designs")
             except:
                 # シートがなければ作成
-                design_sheet = spreadsheet.add_worksheet(title="wordpress_designs", rows=1000, cols=20)
+                design_sheet = spreadsheet.add_worksheet(
+                    title="wordpress_designs", rows=1000, cols=20
+                )
                 # ヘッダー行を設定
-                design_sheet.append_row(
+                design_sheet.append_rows(
                     [
                         "design_id",
                         "goal_id",
@@ -257,7 +260,7 @@ class DesignIntegratedPMAgent:
                 )
 
             # 設計図を追加
-            design_sheet.append_row(
+            design_sheet.append_rows(
                 [
                     f"design_{int(datetime.now().timestamp())}",
                     goal_info.get("id", "unknown"),
