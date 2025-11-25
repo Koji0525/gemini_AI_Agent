@@ -1,415 +1,321 @@
-#!/usr/bin/env python3
 """
-EpicOrchestrator: Epic全体の管理・オーケストレーション
-
-Phase 4で実装。Epic→Story→Sub-taskの完全な自律実行を実現。
-Phase 1-3で実装した全機能を統合し、適切なタイミングで呼び出す。
-
-【主要機能】
-1. Epic読み込み→Story分解→Sub-task実行の全自動化
-2. F11-F14の適切なタイミングでの呼び出し
-3. 進捗可視化とエラーハンドリング
-4. CompleteEngineとの後方互換性維持
-
-【設計方針】
-- 既存システム（CompleteEngine）を破壊しない
-- Phase 1-3の成果を100%活用
-- 段階的な実行と検証
-- エラー時の自動復旧
-
-作成日: 2025-11-25
-バージョン: 1.0.0
+EpicOrchestrator - Epicレベルのオーケストレーションを担当
+既存のCompleteEngineと連携し、複数Epicの管理を可能にする
 """
 
+import asyncio
 import logging
 import os
 import sys
-import traceback
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-# プロジェクトルートをパスに追加
-project_root = Path(__file__).parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# 既存システムとの互換性を維持
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agents.integration.code_integrator_v2 import CodeIntegrator
-from agents.integration.dependency_resolver_v2 import \
-    DependencyResolver as DependencyResolverV2
-from agents.integration.integration_tester_v2 import \
-    IntegrationTester as IntegrationTesterV2
-# Phase 3: 統合機能
-from agents.integration.progress_analyzer_v2 import ProgressAnalyzer
-# Phase 2: Sub-task実行
-from agents.task_executor_v4_subtask import TaskExecutorV4SubTask
-# Phase 1: Epic分解
+from agents.integration.progress_analyzer_v2 import ProgressAnalyzerV2
 from core_agents.pm_agent_v33_epic import PMAgentV33Epic
-# 既存コンポーネント
 from tools.base_data_accessor import BaseDataAccessor
 
-# ロガー設定
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
+class EpicOrchestrator(BaseDataAccessor):
+    """Epicレベルのオーケストレーションを管理"""
 
-class EpicOrchestrator:
-    """
-    Epic全体のオーケストレーション
+    def __init__(self, sheets_manager=None):
+        super().__init__(sheets_manager)
+        self.pm_agent = PMAgentV33Epic(sheets_manager)
+        self.progress_analyzer = ProgressAnalyzerV2()
+        self.logger = logging.getLogger(__name__)
 
-    Epic→Story→Sub-taskの完全な自律実行を管理。
-    Phase 1-3で実装した全機能を統合。
+        # 実行統計
+        self.stats = {"epics_processed": 0, "stories_generated": 0, "last_run": None}
 
-    Attributes:
-        sheets_manager: Google Sheetsマネージャー
-        knowledge_manager: ナレッジマネージャー
-        pm_agent: PMAgentV33Epic（Phase 1）
-        task_executor: TaskExecutorV4SubTask（Phase 2）
-        progress_analyzer: ProgressAnalyzer（F11）
-        code_integrator: CodeIntegrator（F12）
-        dependency_resolver: DependencyResolverV2（F13）
-        integration_tester: IntegrationTesterV2（F14）
-        data_accessor: BaseDataAccessor
-    """
-
-    def __init__(self, sheets_manager: Any, knowledge_manager: Any, api_key: Optional[str] = None):
+    async def run_epic_cycle(self) -> Dict[str, Any]:
         """
-        初期化
-
-        Args:
-            sheets_manager: Google Sheetsマネージャー
-            knowledge_manager: ナレッジマネージャー
-            api_key: Gemini APIキー
-        """
-        self.sheets_manager = sheets_manager
-        self.knowledge_manager = knowledge_manager
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-
-        # Phase 1: Epic分解エージェント
-        self.pm_agent = PMAgentV33Epic(
-            sheets_manager=sheets_manager, knowledge_manager=knowledge_manager
-        )
-
-        # Phase 2: Sub-task実行エージェント
-        self.task_executor = TaskExecutorV4SubTask()
-
-        # Phase 3: 統合機能
-        self.progress_analyzer = ProgressAnalyzer()
-        self.code_integrator = CodeIntegrator()
-        self.dependency_resolver = DependencyResolverV2()
-        self.integration_tester = IntegrationTesterV2()
-
-        # データアクセサー
-        self.data_accessor = BaseDataAccessor(sheets_manager=sheets_manager)
-
-        logger.info("✅ EpicOrchestrator 初期化完了")
-
-    def execute_epic_flow(self, epic_id: str, dry_run: bool = False) -> Dict[str, Any]:
-        """
-        Epic全体のフロー実行
-
-        Epic読み込み → Story分解 → Sub-task実行 → 統合 → テスト
-
-        Args:
-            epic_id: Epic ID
-            dry_run: ドライラン（実際の実行はしない）
+        Epic管理サイクルの実行
 
         Returns:
-            実行結果の辞書
-            {
-                'epic_id': str,
-                'status': 'success' | 'partial' | 'failed',
-                'stories_completed': int,
-                'stories_total': int,
-                'integration_results': Dict,
-                'errors': List[str],
-                'execution_time': float
-            }
+            Dict: 実行結果の統計
         """
-        start_time = datetime.now()
-        result = {
-            "epic_id": epic_id,
-            "status": "in_progress",
-            "stories_completed": 0,
-            "stories_total": 0,
-            "integration_results": {},
-            "errors": [],
-            "execution_time": 0.0,
-        }
-
         try:
-            logger.info(f"🚀 Epic実行開始: {epic_id}")
+            self.logger.info("Epicオーケストレーションサイクル開始")
+            self.stats["last_run"] = datetime.now().isoformat()
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ1: Epic情報の取得
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            epic_data = self._get_epic_data(epic_id)
-            if not epic_data:
-                raise ValueError(f"Epic {epic_id} が見つかりません")
+            # 1. Epicの分解とStory生成
+            epic_result = await self.pm_agent.process_epics()
 
-            logger.info(f"✅ Epic取得: {epic_data.get('goal_description', '')[:50]}...")
+            # 2. 進捗分析
+            progress_result = await self.analyze_epic_progress()
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ2: Story分解（Phase 1）
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            if dry_run:
-                logger.info("🔍 [DRY RUN] Story分解スキップ")
-                stories = self._get_existing_stories(epic_id)
-            else:
-                stories = self._decompose_epic_to_stories(epic_data)
+            # 3. リソース最適化
+            optimization_result = await self.optimize_resource_allocation()
 
-            result["stories_total"] = len(stories)
-            logger.info(f"✅ Story分解完了: {len(stories)}件")
+            # 統計更新
+            self.stats["epics_processed"] += 1 if epic_result else 0
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ3: 各Storyの実行
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            for i, story in enumerate(stories, 1):
-                logger.info(f"📝 Story {i}/{len(stories)} 実行中...")
+            result = {
+                "success": epic_result and progress_result and optimization_result,
+                "epic_processing": epic_result,
+                "progress_analysis": progress_result,
+                "resource_optimization": optimization_result,
+                "timestamp": self.stats["last_run"],
+                "next_scheduled_run": self._calculate_next_run(),
+            }
 
-                story_result = self._execute_story(story, dry_run=dry_run)
+            self.logger.info("Epicオーケストレーションサイクル完了")
+            return result
 
-                if story_result["status"] == "success":
-                    result["stories_completed"] += 1
-                else:
-                    result["errors"].append(
-                        f"Story {story.get('story_id')}: {story_result.get('error')}"
+        except Exception as e:
+            self.logger.error(f"Epicオーケストレーション中にエラー: {e}")
+            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+
+    async def analyze_epic_progress(self) -> Dict[str, Any]:
+        """Epicレベルの進捗分析"""
+        try:
+            self.logger.info("Epic進捗分析開始")
+
+            # 全Epicの進捗を分析
+            epics = self.read_sheet_as_dicts("project_goal")
+            active_epics = [e for e in epics if e.get("status") in ["active", "in_progress"]]
+
+            progress_report = {
+                "total_epics": len(active_epics),
+                "epic_details": [],
+                "overall_progress": 0,
+                "bottlenecks": [],
+                "recommendations": [],
+            }
+
+            total_progress = 0
+            for epic in active_epics:
+                epic_id = epic.get("id")
+                epic_progress = await self._analyze_single_epic_progress(epic_id)
+
+                progress_report["epic_details"].append(epic_progress)
+                total_progress += epic_progress.get("completion_rate", 0)
+
+                # ボトルネックの検出
+                if epic_progress.get("bottleneck_detected", False):
+                    progress_report["bottlenecks"].append(
+                        {
+                            "epic_id": epic_id,
+                            "issue": epic_progress.get("bottleneck_reason", "Unknown"),
+                            "severity": epic_progress.get("bottleneck_severity", "medium"),
+                        }
                     )
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ4: F11 進捗分析
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            progress = self._analyze_progress(epic_id)
-            result["progress"] = progress
-            logger.info(f"📊 進捗分析: {progress.get('completion_rate', 0):.1f}%")
+            # 全体進捗率の計算
+            if active_epics:
+                progress_report["overall_progress"] = total_progress / len(active_epics)
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ5: 統合が必要か判定
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            if progress.get("ready_for_integration", False):
-                logger.info("🔧 統合処理開始...")
-                integration_result = self._integrate_epic(epic_id, dry_run=dry_run)
-                result["integration_results"] = integration_result
+            # 推奨アクションの生成
+            progress_report["recommendations"] = await self._generate_recommendations(
+                progress_report
+            )
 
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            # ステップ6: 最終ステータス判定
-            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            if result["stories_completed"] == result["stories_total"]:
-                result["status"] = "success"
-            elif result["stories_completed"] > 0:
-                result["status"] = "partial"
-            else:
-                result["status"] = "failed"
-
-            # 実行時間
-            execution_time = (datetime.now() - start_time).total_seconds()
-            result["execution_time"] = execution_time
-
-            logger.info(f"✅ Epic実行完了: {result['status']} ({execution_time:.1f}秒)")
+            self.logger.info(f"Epic進捗分析完了: 進捗率 {progress_report['overall_progress']:.1f}%")
+            return progress_report
 
         except Exception as e:
-            logger.error(f"❌ Epic実行エラー: {e}")
-            result["status"] = "failed"
-            result["errors"].append(str(e))
-            result["traceback"] = traceback.format_exc()
+            self.logger.error(f"Epic進捗分析中にエラー: {e}")
+            return {"error": str(e)}
 
-        return result
-
-    def _get_epic_data(self, epic_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Epic情報の取得
-
-        Args:
-            epic_id: Epic ID
-
-        Returns:
-            Epic情報の辞書、または None
-        """
+    async def _analyze_single_epic_progress(self, epic_id: str) -> Dict[str, Any]:
+        """単一Epicの進捗分析"""
         try:
-            goals = self.data_accessor.read_sheet_as_dicts("project_goal")
+            # 関連するStoryを取得
+            stories = self.read_sheet_as_dicts("pm_tasks")
+            epic_stories = [s for s in stories if s.get("epic_id") == epic_id]
 
-            for goal in goals:
-                if str(goal.get("goal_id")) == str(epic_id):
-                    return goal
+            if not epic_stories:
+                return {
+                    "epic_id": epic_id,
+                    "completion_rate": 0,
+                    "bottleneck_detected": True,
+                    "bottleneck_reason": "関連Storyが見つかりません",
+                    "bottleneck_severity": "high",
+                }
 
-            return None
+            # 進捗率の計算
+            total_stories = len(epic_stories)
+            completed_stories = len([s for s in epic_stories if s.get("status") == "completed"])
+            completion_rate = (completed_stories / total_stories) * 100
+
+            # ボトルネックの検出
+            bottleneck_detected = completion_rate < 50 and total_stories > 5
+            bottleneck_reason = "進捗が50%未満でボトルネックの可能性" if bottleneck_detected else ""
+
+            return {
+                "epic_id": epic_id,
+                "total_stories": total_stories,
+                "completed_stories": completed_stories,
+                "completion_rate": completion_rate,
+                "bottleneck_detected": bottleneck_detected,
+                "bottleneck_reason": bottleneck_reason,
+                "bottleneck_severity": "medium" if bottleneck_detected else "none",
+            }
 
         except Exception as e:
-            logger.error(f"Epic取得エラー: {e}")
-            return None
+            self.logger.error(f"単一Epic進捗分析エラー {epic_id}: {e}")
+            return {
+                "epic_id": epic_id,
+                "error": str(e),
+                "completion_rate": 0,
+                "bottleneck_detected": True,
+            }
 
-    def _get_existing_stories(self, epic_id: str) -> List[Dict[str, Any]]:
-        """
-        既存Storyの取得
+    async def _generate_recommendations(self, progress_report: Dict[str, Any]) -> List[str]:
+        """進捗分析に基づく推奨アクションを生成"""
+        recommendations = []
 
-        Args:
-            epic_id: Epic ID
+        # ボトルネックに対する推奨
+        for bottleneck in progress_report.get("bottlenecks", []):
+            if bottleneck["severity"] == "high":
+                recommendations.append(
+                    f"高優先度ボトルネック: Epic {bottleneck['epic_id']} - {bottleneck['issue']}"
+                )
 
-        Returns:
-            Storyのリスト
-        """
+        # 全体進捗に基づく推奨
+        overall_progress = progress_report.get("overall_progress", 0)
+        if overall_progress < 30:
+            recommendations.append(
+                "全体進捗が遅延しています。リソース配分の見直しを検討してください"
+            )
+        elif overall_progress > 80:
+            recommendations.append("順調に進捗しています。次のEpicの準備を開始できます")
+
+        # Story数に基づく推奨
+        total_epics = progress_report.get("total_epics", 0)
+        if total_epics > 3:
+            recommendations.append("同時実行Epic数が多いため、優先度付けを強化してください")
+
+        return recommendations
+
+    async def optimize_resource_allocation(self) -> Dict[str, Any]:
+        """リソース配分の最適化"""
         try:
-            tasks = self.data_accessor.read_sheet_as_dicts("pm_tasks")
+            self.logger.info("リソース配分最適化開始")
 
-            stories = [task for task in tasks if str(task.get("goal_id")) == str(epic_id)]
+            # 現在のリソース使用状況の分析
+            resource_usage = await self._analyze_resource_usage()
 
-            return stories
+            # 最適化提案の生成
+            optimization_suggestions = await self._generate_optimization_suggestions(resource_usage)
 
-        except Exception as e:
-            logger.error(f"Story取得エラー: {e}")
-            return []
+            result = {
+                "current_usage": resource_usage,
+                "suggestions": optimization_suggestions,
+                "estimated_improvement": self._estimate_improvement(optimization_suggestions),
+            }
 
-    def _decompose_epic_to_stories(self, epic_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Epic→Story分解（Phase 1）
-
-        Args:
-            epic_data: Epic情報
-
-        Returns:
-            Storyのリスト
-        """
-        try:
-            # PMAgentV33Epicでstory生成
-            stories = self.pm_agent.generate_epic_stories(epic_data)
-
-            return stories
+            self.logger.info("リソース配分最適化完了")
+            return result
 
         except Exception as e:
-            logger.error(f"Epic分解エラー: {e}")
-            return []
+            self.logger.error(f"リソース最適化中にエラー: {e}")
+            return {"error": str(e)}
 
-    def _execute_story(self, story: Dict[str, Any], dry_run: bool = False) -> Dict[str, Any]:
-        """
-        Story実行（Phase 2）
-
-        Args:
-            story: Story情報
-            dry_run: ドライラン
-
-        Returns:
-            実行結果
-        """
-        result = {"story_id": story.get("task_id"), "status": "in_progress", "error": None}
-
-        try:
-            if dry_run:
-                logger.info(f"🔍 [DRY RUN] Story実行スキップ: {story.get('task_id')}")
-                result["status"] = "success"
-                return result
-
-            # TaskExecutorV4SubTaskで実行
-            # （実際の実装ではここでSub-task分解・実行）
-            logger.info(f"⚙️ Story実行: {story.get('task_id')}")
-
-            # 簡易実装（実際はTaskExecutorV4SubTaskを使用）
-            result["status"] = "success"
-
-        except Exception as e:
-            logger.error(f"Story実行エラー: {e}")
-            result["status"] = "failed"
-            result["error"] = str(e)
-
-        return result
-
-    def _analyze_progress(self, epic_id: str) -> Dict[str, Any]:
-        """
-        進捗分析（F11）
-
-        Args:
-            epic_id: Epic ID
-
-        Returns:
-            進捗情報
-        """
-        try:
-            # ProgressAnalyzerで分析
-            analysis = self.progress_analyzer.analyze_epic_progress(epic_id)
-
-            return analysis
-
-        except Exception as e:
-            logger.error(f"進捗分析エラー: {e}")
-            return {"completion_rate": 0.0, "ready_for_integration": False}
-
-    def _integrate_epic(self, epic_id: str, dry_run: bool = False) -> Dict[str, Any]:
-        """
-        Epic統合処理（F12-F14）
-
-        Args:
-            epic_id: Epic ID
-            dry_run: ドライラン
-
-        Returns:
-            統合結果
-        """
-        result = {
-            "integration_status": "not_started",
-            "dependency_status": "not_started",
-            "test_status": "not_started",
+    async def _analyze_resource_usage(self) -> Dict[str, Any]:
+        """現在のリソース使用状況を分析"""
+        # 簡易的な実装 - 実際にはシステムメトリクスを使用
+        return {
+            "cpu_usage": "medium",  # low, medium, high
+            "memory_usage": "medium",
+            "concurrent_epics": 2,
+            "concurrent_stories": 5,
+            "api_usage": "low",
         }
 
+    async def _generate_optimization_suggestions(self, resource_usage: Dict[str, Any]) -> List[str]:
+        """リソース最適化の提案を生成"""
+        suggestions = []
+
+        if resource_usage.get("concurrent_epics", 0) > 3:
+            suggestions.append("同時実行Epic数を3以下に制限することを推奨")
+
+        if resource_usage.get("concurrent_stories", 0) > 10:
+            suggestions.append("同時実行Story数を10以下に制限することを推奨")
+
+        if resource_usage.get("api_usage") == "high":
+            suggestions.append("API使用率が高いため、バッチ処理の導入を検討")
+
+        if not suggestions:
+            suggestions.append("現在のリソース配分は最適です")
+
+        return suggestions
+
+    def _estimate_improvement(self, suggestions: List[str]) -> str:
+        """最適化による改善効果の見積もり"""
+        if len(suggestions) == 1 and "最適です" in suggestions[0]:
+            return "現状維持"
+
+        improvement_mapping = {
+            "Epic数": "10-20%の効率改善",
+            "Story数": "5-15%の実行時間短縮",
+            "API使用率": "15-25%のコスト削減",
+        }
+
+        for key in improvement_mapping:
+            if any(key in suggestion for suggestion in suggestions):
+                return improvement_mapping[key]
+
+        return "5-10%の総合改善"
+
+    def _calculate_next_run(self) -> str:
+        """次回実行時刻の計算"""
+        next_run = datetime.now().timestamp() + 3600  # 1時間後
+        return datetime.fromtimestamp(next_run).isoformat()
+
+    async def get_orchestration_status(self) -> Dict[str, Any]:
+        """オーケストレーションの現在の状態を取得"""
+        return {
+            "stats": self.stats,
+            "is_healthy": await self._health_check(),
+            "recommended_actions": await self._get_recommended_actions(),
+        }
+
+    async def _health_check(self) -> bool:
+        """システム健全性チェック"""
         try:
-            if dry_run:
-                logger.info("🔍 [DRY RUN] 統合処理スキップ")
-                return result
+            # 基本的なコンポーネントが動作しているか確認
+            epics = self.read_sheet_as_dicts("project_goal")
+            stories = self.read_sheet_as_dicts("pm_tasks")
 
-            # F12: コード統合
-            logger.info("🔧 F12: コード統合開始...")
-            self.code_integrator.integrate_epic_code(epic_id)
-            result["integration_status"] = "completed"
+            return len(epics) > 0 and len(stories) > 0
+        except Exception:
+            return False
 
-            # F13: 依存関係解決
-            logger.info("🔧 F13: 依存関係解決開始...")
-            self.dependency_resolver.resolve_epic_dependencies(epic_id)
-            result["dependency_status"] = "completed"
-
-            # F14: 統合テスト
-            logger.info("🔧 F14: 統合テスト開始...")
-            self.integration_tester.test_epic_integration(epic_id)
-            result["test_status"] = "completed"
-
-        except Exception as e:
-            logger.error(f"統合処理エラー: {e}")
-            result["error"] = str(e)
-
-        return result
+    async def _get_recommended_actions(self) -> List[str]:
+        """推奨アクションの取得"""
+        return [
+            "定期的なEpic進捗分析の実行",
+            "リソース使用率の監視",
+            "ボトルネックの早期検出と対応",
+        ]
 
 
-def test_epic_orchestrator():
-    """
-    EpicOrchestrator簡易テスト
-    """
-    print("🧪 EpicOrchestrator テスト開始")
+# テスト用の実行コード
+async def main():
+    """テスト実行"""
+    logging.basicConfig(level=logging.INFO)
 
-    try:
-        # モック依存
-        from unittest.mock import Mock
+    # EpicOrchestratorのインスタンス化
+    orchestrator = EpicOrchestrator()
 
-        mock_sheets = Mock()
-        mock_knowledge = Mock()
+    # オーケストレーションサイクルの実行
+    result = await orchestrator.run_epic_cycle()
 
-        orchestrator = EpicOrchestrator(
-            sheets_manager=mock_sheets, knowledge_wrapper=mock_knowledge, api_key="test_key"
-        )
+    print("🎯 Epicオーケストレーション結果:")
+    print(f"✅ 成功: {result.get('success', False)}")
+    print(f"📊 Epic処理: {result.get('epic_processing', False)}")
+    print(f"📈 進捗分析: {result.get('progress_analysis', {})}")
+    print(f"⚡ リソース最適化: {result.get('resource_optimization', {})}")
 
-        print("✅ 初期化成功")
-
-        # ドライラン実行
-        result = orchestrator.execute_epic_flow(epic_id="test_epic_001", dry_run=True)
-
-        print(f"✅ ドライラン成功: {result.get('status')}")
-
-        return True
-
-    except Exception as e:
-        print(f"❌ テスト失敗: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return False
+    # 現在の状態も表示
+    status = await orchestrator.get_orchestration_status()
+    print(f"🩺 健全性: {status.get('is_healthy', False)}")
+    print(f"📋 推奨アクション: {status.get('recommended_actions', [])}")
 
 
 if __name__ == "__main__":
-    success = test_epic_orchestrator()
-    sys.exit(0 if success else 1)
+    asyncio.run(main())
