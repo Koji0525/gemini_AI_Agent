@@ -1,22 +1,34 @@
-# 🎯 Orchestrator バージョン管理
+# 🎯 Orchestrator バージョン管理（修正版）
 
 ## 📌 最新版（使用推奨）
 
-**v51_complete.py** ← 👈 **常にこれを使用**
+**integrated_orchestrator.py** ← 👈 **これを使用**
 ```bash
 # 方法1: シンボリックリンク経由（推奨）
 python3 scripts/integrated_orchestrator_latest.py
 
 # 方法2: 直接指定
-python3 scripts/integrated_orchestrator_v51_complete.py
+python3 scripts/integrated_orchestrator.py
 ```
 
-## 📊 バージョン履歴
+## 📊 重要な発見
 
-| バージョン | ステータス | 特徴 | 使用 |
-|-----------|----------|------|------|
-| **v51_complete.py** | ✅ **安定版** | 全機能実装、完全版 | ✅ 推奨 |
-| v31_core.py | ⚠️ 非推奨 | コア機能のみ | ❌ 使用禁止 |
+### 分析結果（2025-11-25）
+
+| ファイル | ステータス | 参照数 | サイズ | 備考 |
+|---------|----------|-------|--------|------|
+| **integrated_orchestrator.py** | ✅ **本流** | **15件** | 26K, 677行 | **これが最新版** |
+| integrated/v31_core.py | ✅ 使用中 | 6件 | 32K, 813行 | 一部で使用 |
+| v25_complete.py | ✅ 使用中 | 2件 | 24K, 632行 | レガシー |
+| v51_complete.py | ❌ **未使用** | 0件 | 8.2K, 220行 | 誤認識 |
+| 他24ファイル | ❌ 未使用 | 0件 | - | アーカイブ済み |
+
+### 誤認識の経緯
+```
+当初の判断: v51が最新版と思われた
+実際の調査: integrated_orchestrator.py が本流（15件で使用中）
+結論: ファイル名のバージョン番号に惑わされた
+```
 
 ## 🚀 使用方法
 
@@ -24,91 +36,63 @@ python3 scripts/integrated_orchestrator_v51_complete.py
 ```bash
 cd /workspaces/gemini_AI_Agent
 
-# デフォルト実行
+# 推奨方法
 python3 scripts/integrated_orchestrator_latest.py
 ```
 
-### オプション付き実行
+### 使用中のファイル（保持）
+
+1. **integrated_orchestrator.py** - 本流（15件参照）
+2. **integrated/v31_core.py** - サブシステム（6件参照）
+3. **v25_complete.py** - レガシーシステム（2件参照）
+4. 他5ファイル - 限定的使用
+
+### アーカイブ済み（24ファイル）
+
+- v51を含む未使用バージョン
+- 復元可能: `archived_orchestrators_YYYYMMDD_HHMMSS/`
+
+## 💡 教訓
+
+### 学んだこと
+
+1. **ファイル名のバージョン番号は信用できない**
+   - v51 > v31 とは限らない
+   - 実際の使用状況を調査すべき
+
+2. **分析が重要**
+   - プロジェクト全体でのimport/参照を確認
+   - 使用頻度が真の「最新版」を示す
+
+3. **正規版の重要性**
+   - バージョン番号なしの `integrated_orchestrator.py` が本流
+   - シンボリックリンクはこれを指すべき
+
+## 🔧 今後のバージョン管理
+
+### file_version_manager.py の使用
 ```bash
-# テストモード（60秒実行）
-python3 scripts/integrated_orchestrator_latest.py --mode test --duration 60
+# 新バージョン作成
+python3 tools/file_version_manager.py \
+    scripts/integrated_orchestrator.py \
+    "新機能追加"
 
-# 本番モード（継続実行）
-python3 scripts/integrated_orchestrator_latest.py --mode production
-
-# ドライラン（シミュレーション）
-python3 scripts/integrated_orchestrator_latest.py --dry-run
+# 自動で以下を実行:
+# 1. バックアップ作成
+# 2. 新バージョン生成
+# 3. 重複チェック
 ```
 
-## ⚠️ 注意事項
+### ルール
 
-### 古いバージョンを使用しない
-```bash
-# ❌ これは使わない
-python3 scripts/integrated/integrated_orchestrator_v31_core.py
-
-# ✅ これを使う
-python3 scripts/integrated_orchestrator_latest.py
-```
-
-### 理由
-
-- v31は古いAPIを使用
-- メソッド不足（例: `run_continuous_cycle` がない）
-- バグ修正が反映されていない
-
-## 🔍 バージョン確認方法
-
-### 利用可能なすべてのバージョンをリスト
-```bash
-ls -lt scripts/integrated_orchestrator*.py
-```
-
-### 最新版の確認
-```bash
-ls -la scripts/integrated_orchestrator_latest.py
-```
-
-### コード内バージョン情報
-```bash
-grep -n "__version__" scripts/integrated_orchestrator_v51_complete.py
-```
-
-## 📝 更新履歴
-
-- **2025-11-25**: v51_complete.py を最新安定版として確定
-- **2025-11-25**: シンボリックリンク `integrated_orchestrator_latest.py` 導入
-- **2025-11-25**: v31_core.py を非推奨化
-
-## 🆘 トラブルシューティング
-
-### エラー: `AttributeError: 'IntegratedOrchestratorV31Core' object has no attribute 'run_continuous_cycle'`
-
-**原因**: 古いv31を使用している
-
-**解決策**:
-```bash
-# v51に切り替える
-python3 scripts/integrated_orchestrator_latest.py
-```
-
-### エラー: `ModuleNotFoundError`
-
-**原因**: 依存パッケージが不足
-
-**解決策**:
-```bash
-pip install -r requirements.txt --break-system-packages
-```
-
-## 📚 関連ドキュメント
-
-- [統合要件定義書](/mnt/project/____統合要件定義書_v4_0_-_完全版.txt)
-- [ロードマップ](/mnt/project/___統合システム実装ロードマップ_v4_1.txt)
-- [運用ルール](/mnt/project/_運用ルール.txt)
+1. バージョン番号付きファイルは**実験用**
+2. 正規版は `integrated_orchestrator.py`
+3. 確定したら正規版にマージ
+4. 古いバージョンは即座にアーカイブ
 
 ---
 
 **最終更新**: 2025-11-25  
-**管理者**: AI Development System
+**管理者**: AI Development System  
+**注意**: v51は未使用だったことが判明
 
