@@ -209,6 +209,7 @@ class IntegratedGitTool:
             "knowledge_system",
             "md",
             "MD",
+            "mnt",
             "scripts",
             "sh",
             "task_executor",

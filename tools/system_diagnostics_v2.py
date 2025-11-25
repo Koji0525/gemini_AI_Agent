@@ -1,209 +1,434 @@
+#!/usr/bin/env python3
 """
-システム自動診断ツール v2
-オプションシート対応版
+システム自動診断ツール v2.0
+
+開発ログ:
+何が起きた: epic_orchestratorでインポートエラーが発生し、システム統合が失敗
+原因: コンポーネント間の依存関係が複雑化し、インポートエラーや属性エラーが頻発
+狙い（解決策）: 事前診断により問題を未然に防ぎ、修正提案を自動生成する
 """
 
+import importlib
+import json
+import os
+import re
 import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict
 
-sys.path.insert(0, ".")
+# プロジェクトルート設定
+PROJECT_ROOT = Path("/workspaces/gemini_AI_Agent")
+if not PROJECT_ROOT.exists():
+    PROJECT_ROOT = Path("/home/codespace/gemini_AI_Agent")
+    if not PROJECT_ROOT.exists():
+        PROJECT_ROOT = Path.cwd()
 
-from typing import Any, Dict, List
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from tools.base_data_accessor import BaseDataAccessor
 
-
-class SystemDiagnosticsV2:
-    """システム自動診断 v2"""
-
-    REQUIRED_SHEETS = ["project_goal", "pm_tasks", "task_execution_log"]
-
-    OPTIONAL_SHEETS = ["quality_feedback", "knowledge_base", "error_log"]
-
-    REQUIRED_COLUMNS = {
-        "project_goal": ["goal_id", "goal_description", "status"],
-        "pm_tasks": ["task_id", "parent_goal_id", "status", "description"],
-    }
+class SystemDiagnostics:
+    """システム診断クラス"""
 
     def __init__(self):
-        self.accessor = BaseDataAccessor()
+        self.results = {
+            "timestamp": datetime.now().isoformat(),
+            "checks": {},
+            "errors": [],
+            "warnings": [],
+            "suggestions": [],
+        }
+        self.critical_errors = []
 
-    def diagnose_all_sheets(self) -> List[Dict[str, Any]]:
-        """全シート診断"""
-        results = []
+    def check_environment(self) -> bool:
+        """環境変数のチェック"""
+        print("\n🔍 環境変数チェック")
+        required_vars = ["GEMINI_API_KEY", "SPREADSHEET_ID", "WP_URL", "WP_USER", "WP_PASS"]
 
-        print("\n" + "=" * 80)
-        print("🔍 システム診断開始")
-        print("=" * 80 + "\n")
+        missing_vars = []
+        for var in required_vars:
+            if not os.getenv(var):
+                missing_vars.append(var)
 
-        # 必須シート
-        print("【必須シート】")
-        for sheet_name in self.REQUIRED_SHEETS:
-            print(f"📋 {sheet_name}")
-            diagnosis = self.accessor.diagnose_sheet_structure(sheet_name)
-            self._print_diagnosis(sheet_name, diagnosis, required=True)
-            results.append(diagnosis)
-
-        # オプションシート
-        print("\n【オプションシート】")
-        for sheet_name in self.OPTIONAL_SHEETS:
-            print(f"📋 {sheet_name}")
-            diagnosis = self.accessor.diagnose_sheet_structure(sheet_name)
-            if diagnosis["status"] == "error":
-                print(f"  ℹ️ スキップ（オプション）")
-            else:
-                self._print_diagnosis(sheet_name, diagnosis, required=False)
-            results.append(diagnosis)
-
-        # サマリー
-        print("\n" + "=" * 80)
-        required_ok = sum(1 for r in results[: len(self.REQUIRED_SHEETS)] if r["status"] == "ok")
-        print(f"📊 診断サマリー: {required_ok}/{len(self.REQUIRED_SHEETS)} 必須シート正常")
-        print("=" * 80 + "\n")
-
-        return results
-
-    def _print_diagnosis(self, sheet_name: str, diagnosis: Dict, required: bool):
-        """診断結果表示"""
-        # 必須列チェック
-        if sheet_name in self.REQUIRED_COLUMNS:
-            required_cols = self.REQUIRED_COLUMNS[sheet_name]
-            existing_cols = diagnosis.get("columns", [])
-
-            missing_cols = [col for col in required_cols if col not in existing_cols]
-
-            if missing_cols:
-                diagnosis["missing_columns"] = missing_cols
-                diagnosis["status"] = "warning"
-                print(f"  ⚠️ 不足列: {missing_cols}")
-            else:
-                print(f"  ✅ 必須列: すべて存在")
-
-        if diagnosis["status"] == "ok":
-            print(f"  ✅ ステータス: 正常")
-            print(f"  📊 列数: {diagnosis['column_count']}")
-            print(f"  📈 データ行数: {diagnosis['data_row_count']}")
-        elif diagnosis["status"] == "warning":
-            print(f"  ⚠️ ステータス: 警告")
-        else:
-            if required:
-                print(f"  ❌ ステータス: エラー")
-                if "error" in diagnosis:
-                    print(f"  エラー: {diagnosis['error']}")
-
-        print()
-
-    def check_data_consistency(self) -> Dict[str, Any]:
-        """データ整合性チェック"""
-        print("\n" + "=" * 80)
-        print("🔍 データ整合性チェック")
-        print("=" * 80 + "\n")
-
-        issues = []
-
-        # 1. active/pending ゴールの確認
-        print("1️⃣ active/pending ゴールの確認")
-        goals = self.accessor.read_sheet_as_dicts(
-            "project_goal",
-            filter_func=lambda g: g.get("status", "").lower() in ["active", "pending"],
-        )
-        print(f"   active/pending ゴール: {len(goals)}件")
-        if len(goals) == 0:
-            issues.append("active/pending ゴールが存在しません")
-            print("   ⚠️ active/pending ゴールが存在しません")
-        else:
-            for goal in goals:
-                print(
-                    f"   ✅ {goal.get('goal_id')} - {goal.get('status')} - {goal.get('goal_description', '')[:50]}..."
-                )
-
-        # 2. 各ゴールのタスク数
-        print("\n2️⃣ 各ゴールのタスク数")
-        all_goals = self.accessor.read_sheet_as_dicts("project_goal")
-        all_tasks = self.accessor.read_sheet_as_dicts("pm_tasks")
-
-        for goal in goals:
-            goal_id = goal.get("goal_id")
-            goal_tasks = [t for t in all_tasks if t.get("parent_goal_id") == goal_id]
-            pending_tasks = [t for t in goal_tasks if t.get("status", "").lower() == "pending"]
-
-            print(
-                f"   ゴール {goal_id}: タスク {len(goal_tasks)}件（pending: {len(pending_tasks)}件）"
+        if missing_vars:
+            self.results["errors"].append(f"環境変数不足: {', '.join(missing_vars)}")
+            print(f"  ❌ 環境変数不足: {', '.join(missing_vars)}")
+            self.results["suggestions"].append(
+                f".envファイルに以下を追加: {', '.join(missing_vars)}"
             )
-
-            if len(goal_tasks) == 0:
-                issues.append(f"ゴール{goal_id}にタスクが存在しません")
-                print(f"     ⚠️ タスクなし - タスク分解が必要")
-
-        # 3. pending タスクの確認
-        print("\n3️⃣ pending タスクの確認")
-        pending_tasks = self.accessor.read_sheet_as_dicts(
-            "pm_tasks", filter_func=lambda t: t.get("status", "").lower() == "pending"
-        )
-        print(f"   pending タスク: {len(pending_tasks)}件")
-        if len(pending_tasks) == 0:
-            print("   ℹ️ pending タスクはありません")
+            return False
         else:
-            for task in pending_tasks[:5]:
-                print(f"   ✅ {task.get('task_id')} - {task.get('description', '')[:50]}...")
+            print("  ✅ 全環境変数設定済み")
+            self.results["checks"]["environment"] = "OK"
+            return True
 
-        # 4. 孤児タスクチェック
-        print("\n4️⃣ 孤児タスクチェック")
-        goal_ids = {g.get("goal_id") for g in all_goals}
-        orphan_tasks = [
-            t
-            for t in all_tasks
-            if t.get("parent_goal_id") and t.get("parent_goal_id") not in goal_ids
+    def check_critical_imports(self) -> bool:
+        """重要なインポートのチェック"""
+        print("\n🔍 コアコンポーネントのインポートチェック")
+
+        critical_modules = [
+            ("agents.integrated.integrated_controller_fixed", "IntegratedControllerFixed"),
+            ("agents.google_sheets_manager", "GoogleSheetsManager"),
+            ("agents.task_executor", "TaskExecutor"),
+            ("core_agents.pm_agent_v33_epic", "PMAgentV33Epic"),
+            ("agents.integration.error_classifier", "ErrorClassifier"),
+            ("agents.integration.self_repair_agent", "SelfRepairAgent"),
+            ("agents.integration.progress_analyzer_v2", "ProgressAnalyzer"),
+            ("knowledge_system.core_agents.knowledge_manager", "KnowledgeManager"),
+            ("agents.observability.observability_manager", "ObservabilityManager"),
         ]
 
-        print(f"   孤児タスク: {len(orphan_tasks)}件")
-        if len(orphan_tasks) > 0:
-            print(f"   ℹ️ 古いゴールのタスク（削除推奨）")
-        else:
-            print("   ✅ 孤児タスクなし")
+        import_errors = []
+        import_success = []
 
-        print("\n" + "=" * 80)
-        if len(issues) == 0:
-            print("✅ データ整合性: 問題なし")
-        else:
-            print(f"⚠️ データ整合性: {len(issues)}件の問題")
-            for issue in issues:
-                print(f"  • {issue}")
-        print("=" * 80 + "\n")
+        for module_path, class_name in critical_modules:
+            try:
+                module = importlib.import_module(module_path)
+                if hasattr(module, class_name):
+                    import_success.append(f"{module_path}.{class_name}")
+                    print(f"  ✅ {class_name}")
+                else:
+                    error_msg = f"{module_path}に{class_name}クラスが存在しません"
+                    import_errors.append(error_msg)
+                    print(f"  ❌ {error_msg}")
 
-        return {
-            "active_goals": len(goals),
-            "pending_tasks": len(pending_tasks),
-            "orphan_tasks": len(orphan_tasks),
-            "issues": issues,
-            "status": "ok" if len(issues) == 0 else "warning",
-        }
+                    # 実際のクラス名を探す
+                    actual_classes = [name for name in dir(module) if name[0].isupper()]
+                    if actual_classes:
+                        suggestion = f"{class_name} → {actual_classes[0]}を使用"
+                        self.results["suggestions"].append(suggestion)
+
+            except ImportError as e:
+                error_msg = f"{module_path}: {str(e)}"
+                import_errors.append(error_msg)
+                print(f"  ❌ {error_msg}")
+
+                # ImportErrorの詳細を解析して修正提案
+                if "No module named" in str(e):
+                    self.results["suggestions"].append(
+                        f"モジュール{module_path}が存在しません。パスを確認してください"
+                    )
+                elif "cannot import name" in str(e):
+                    match = re.search(r"cannot import name '(\w+)'", str(e))
+                    if match:
+                        wrong_name = match.group(1)
+                        self.results["suggestions"].append(
+                            f"{wrong_name}という名前は存在しません。正しいクラス名を確認してください"
+                        )
+
+        if import_errors:
+            self.results["errors"].extend(import_errors)
+            self.critical_errors.extend(import_errors)
+            return False
+        else:
+            self.results["checks"]["imports"] = "OK"
+            return True
+
+    def check_file_structure(self) -> bool:
+        """ファイル構造のチェック"""
+        print("\n🔍 ファイル構造チェック")
+
+        required_dirs = [
+            "agents",
+            "agents/integrated",
+            "agents/integration",
+            "agents/observability",
+            "core_agents",
+            "knowledge_system",
+            "knowledge_system/core_agents",
+            "scripts",
+            "tests",
+            "logs",
+            "MD",
+            "sh",
+        ]
+
+        missing_dirs = []
+        for dir_path in required_dirs:
+            full_path = PROJECT_ROOT / dir_path
+            if not full_path.exists():
+                missing_dirs.append(dir_path)
+                print(f"  ❌ ディレクトリ不足: {dir_path}")
+
+        if missing_dirs:
+            self.results["warnings"].append(f"ディレクトリ不足: {', '.join(missing_dirs)}")
+            for dir_path in missing_dirs:
+                self.results["suggestions"].append(f"mkdir -p {dir_path}")
+            return False
+        else:
+            print("  ✅ 全必須ディレクトリ存在")
+            self.results["checks"]["file_structure"] = "OK"
+            return True
+
+    def check_spreadsheet_connection(self) -> bool:
+        """スプレッドシート接続のチェック"""
+        print("\n🔍 スプレッドシート接続チェック")
+
+        try:
+            from agents.google_sheets_manager import GoogleSheetsManager
+
+            sheets = GoogleSheetsManager()
+
+            # 必須シートの存在確認
+            required_sheets = ["project_goal", "pm_tasks", "task_execution_log"]
+            sheet_status = {}
+
+            for sheet_name in required_sheets:
+                try:
+                    data = sheets.read_sheet(sheet_name, range_name="A1:A2")
+                    if data:
+                        sheet_status[sheet_name] = "OK"
+                        print(f"  ✅ {sheet_name}: アクセス可能")
+                    else:
+                        sheet_status[sheet_name] = "Empty"
+                        print(f"  ⚠️ {sheet_name}: データなし")
+                        self.results["warnings"].append(f"{sheet_name}シートが空です")
+                except Exception as e:
+                    sheet_status[sheet_name] = f"Error: {str(e)}"
+                    print(f"  ❌ {sheet_name}: {str(e)}")
+                    self.results["errors"].append(f"{sheet_name}シートアクセスエラー: {str(e)}")
+
+            self.results["checks"]["spreadsheet"] = sheet_status
+            return all(status == "OK" or status == "Empty" for status in sheet_status.values())
+
+        except Exception as e:
+            self.results["errors"].append(f"スプレッドシート接続失敗: {str(e)}")
+            print(f"  ❌ 接続失敗: {str(e)}")
+            return False
+
+    def check_data_integrity(self) -> bool:
+        """データ整合性のチェック"""
+        print("\n🔍 データ整合性チェック")
+
+        try:
+            from agents.google_sheets_manager import GoogleSheetsManager
+
+            sheets = GoogleSheetsManager()
+
+            # pm_tasksの必須列チェック
+            print("  pm_tasksシート構造:")
+            pm_tasks_headers = sheets.read_sheet("pm_tasks", range_name="1:1")
+            if pm_tasks_headers and len(pm_tasks_headers) > 0:
+                required_columns = [
+                    "Task_ID",
+                    "Task_Name",
+                    "Goal_ID",
+                    "Status",
+                    "Priority",
+                    "Assigned_To",
+                    "Start_Date",
+                    "End_Date",
+                ]
+                header_row = pm_tasks_headers[0] if pm_tasks_headers else []
+                missing_columns = [col for col in required_columns if col not in header_row]
+
+                if missing_columns:
+                    self.results["errors"].append(
+                        f"pm_tasks必須列不足: {', '.join(missing_columns)}"
+                    )
+                    print(f"    ❌ 必須列不足: {', '.join(missing_columns)}")
+                    self.results["suggestions"].append(
+                        f"pm_tasksシートに以下の列を追加: {', '.join(missing_columns)}"
+                    )
+                    return False
+                else:
+                    print("    ✅ 必須列すべて存在")
+
+            # アクティブなゴールの存在確認
+            print("  アクティブなゴール:")
+            goals = sheets.read_sheet("project_goal", range_name="A:H")
+            if goals and len(goals) > 1:
+                active_goals = [row for row in goals[1:] if len(row) > 2 and row[2] == "active"]
+                if not active_goals:
+                    self.results["warnings"].append("アクティブなゴールが存在しません")
+                    print("    ⚠️ アクティブなゴールなし")
+                    self.results["suggestions"].append(
+                        "project_goalシートでStatusをactiveに設定してください"
+                    )
+                else:
+                    print(f"    ✅ {len(active_goals)}個のアクティブなゴール")
+
+            self.results["checks"]["data_integrity"] = "OK"
+            return True
+
+        except Exception as e:
+            self.results["errors"].append(f"データ整合性チェック失敗: {str(e)}")
+            print(f"  ❌ チェック失敗: {str(e)}")
+            return False
+
+    def check_epic_orchestrator(self) -> bool:
+        """Epic Orchestratorの特別チェック"""
+        print("\n🔍 Epic Orchestratorチェック")
+
+        epic_file = PROJECT_ROOT / "agents" / "epic_orchestrator.py"
+        if not epic_file.exists():
+            print("  ❌ epic_orchestrator.pyが存在しません")
+            self.results["errors"].append("epic_orchestrator.pyが存在しません")
+            return False
+
+        with open(epic_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # インポート文のチェック
+        import_issues = []
+
+        # ProgressAnalyzerV2のチェック
+        if "import ProgressAnalyzerV2" in content:
+            import_issues.append("ProgressAnalyzerV2は存在しません（ProgressAnalyzerを使用）")
+            self.results["suggestions"].append(
+                "sed -i 's/ProgressAnalyzerV2/ProgressAnalyzer/g' agents/epic_orchestrator.py"
+            )
+
+        # 他の潜在的な問題をチェック
+        problematic_imports = [
+            ("IntegratedControllerV31", "IntegratedControllerFixed"),
+            ("ObservabilityDashboard", "ObservabilityManager"),
+            ("KnowledgeBase", "KnowledgeManager"),
+        ]
+
+        for wrong_name, correct_name in problematic_imports:
+            if wrong_name in content:
+                import_issues.append(f"{wrong_name} → {correct_name}を使用")
+                self.results["suggestions"].append(
+                    f"sed -i 's/{wrong_name}/{correct_name}/g' agents/epic_orchestrator.py"
+                )
+
+        if import_issues:
+            print(f"  ⚠️ インポート問題: {len(import_issues)}件")
+            for issue in import_issues:
+                print(f"    - {issue}")
+            self.results["warnings"].extend(import_issues)
+            return False
+        else:
+            print("  ✅ Epic Orchestrator正常")
+            self.results["checks"]["epic_orchestrator"] = "OK"
+            return True
+
+    def generate_fix_script(self):
+        """修正スクリプトの生成"""
+        if self.results["suggestions"]:
+            print("\n📝 修正スクリプト生成")
+
+            script_content = ["#!/bin/bash", "# 自動生成された修正スクリプト", ""]
+
+            for suggestion in self.results["suggestions"]:
+                if suggestion.startswith("sed"):
+                    script_content.append(suggestion)
+                elif suggestion.startswith("mkdir"):
+                    script_content.append(suggestion)
+                else:
+                    script_content.append(f"# TODO: {suggestion}")
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            script_path = PROJECT_ROOT / "sh" / f"auto_fix_{timestamp}.sh"
+            script_path.parent.mkdir(exist_ok=True)
+
+            with open(script_path, "w") as f:
+                f.write("\n".join(script_content))
+
+            os.chmod(script_path, 0o755)
+            print(f"  ✅ 修正スクリプト生成: {script_path}")
+            return script_path
+        return None
+
+    def run_diagnostics(self) -> Dict[str, Any]:
+        """全診断を実行"""
+        print("=" * 60)
+        print("🏥 システム自動診断 v2.0")
+        print("=" * 60)
+
+        # 各種チェックを実行
+        checks = [
+            ("環境変数", self.check_environment),
+            ("ファイル構造", self.check_file_structure),
+            ("コンポーネントインポート", self.check_critical_imports),
+            ("スプレッドシート接続", self.check_spreadsheet_connection),
+            ("データ整合性", self.check_data_integrity),
+            ("Epic Orchestrator", self.check_epic_orchestrator),
+        ]
+
+        all_passed = True
+        for check_name, check_func in checks:
+            try:
+                result = check_func()
+                if not result:
+                    all_passed = False
+            except Exception as e:
+                print(f"  ❌ {check_name}チェック中にエラー: {str(e)}")
+                self.results["errors"].append(f"{check_name}: {str(e)}")
+                all_passed = False
+
+        # 結果サマリー
+        print("\n" + "=" * 60)
+        print("📊 診断結果サマリー")
+        print("=" * 60)
+
+        if self.critical_errors:
+            print("\n🚨 クリティカルエラー:")
+            for error in self.critical_errors:
+                print(f"  - {error}")
+
+        if self.results["errors"]:
+            print(f"\n❌ エラー: {len(self.results['errors'])}件")
+            for error in self.results["errors"][:5]:  # 最初の5件のみ表示
+                print(f"  - {error}")
+
+        if self.results["warnings"]:
+            print(f"\n⚠️ 警告: {len(self.results['warnings'])}件")
+            for warning in self.results["warnings"][:5]:  # 最初の5件のみ表示
+                print(f"  - {warning}")
+
+        if self.results["suggestions"]:
+            print(f"\n💡 修正提案: {len(self.results['suggestions'])}件")
+            for suggestion in self.results["suggestions"][:5]:  # 最初の5件のみ表示
+                print(f"  - {suggestion}")
+
+        # 総合判定
+        print("\n" + "=" * 60)
+        if all_passed and not self.critical_errors:
+            print("✅ システム正常 - 24時間稼働可能")
+            self.results["status"] = "HEALTHY"
+        elif self.critical_errors:
+            print("🚨 クリティカルエラー - 即座の修正が必要")
+            self.results["status"] = "CRITICAL"
+        else:
+            print("⚠️ 問題あり - 修正が推奨されます")
+            self.results["status"] = "WARNING"
+        print("=" * 60)
+
+        # 修正スクリプト生成
+        if self.results["suggestions"]:
+            fix_script = self.generate_fix_script()
+            if fix_script:
+                print(f"\n実行コマンド: bash {fix_script}")
+
+        # 結果をJSONファイルに保存
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_file = PROJECT_ROOT / "logs" / f"diagnostics_{timestamp}.json"
+        result_file.parent.mkdir(exist_ok=True)
+
+        with open(result_file, "w", encoding="utf-8") as f:
+            json.dump(self.results, f, ensure_ascii=False, indent=2)
+
+        print(f"\n📄 詳細レポート: {result_file}")
+
+        return self.results
 
 
 def main():
-    diagnostics = SystemDiagnosticsV2()
+    """メイン処理"""
+    diagnostics = SystemDiagnostics()
+    results = diagnostics.run_diagnostics()
 
-    # 全シート診断
-    sheet_results = diagnostics.diagnose_all_sheets()
-
-    # データ整合性チェック
-    consistency_results = diagnostics.check_data_consistency()
-
-    # 総合判定
-    required_ok = all(
-        r["status"] == "ok" for r in sheet_results[: len(diagnostics.REQUIRED_SHEETS)]
-    )
-
-    print("\n" + "=" * 80)
-    print("🎯 総合判定")
-    print("=" * 80)
-    if required_ok:
-        print("✅ 必須シート正常")
-        if consistency_results["issues"]:
-            print(f"⚠️ {len(consistency_results['issues'])}件の推奨事項あり")
-    else:
-        print("❌ 必須シートにエラーあり")
-    print("=" * 80 + "\n")
+    # 終了コード
+    if results["status"] == "HEALTHY":
+        return 0
+    elif results["status"] == "WARNING":
+        return 1
+    else:  # CRITICAL
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

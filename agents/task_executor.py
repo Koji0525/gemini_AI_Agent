@@ -6,7 +6,7 @@
 import sys
 from pathlib import Path
 
-from agents.observer_enhanced.tracer import trace_function
+from agents.observer_enhanced.tracer import trace
 
 sys.path.insert(0, "/workspaces/gemini_AI_Agent")
 
@@ -28,7 +28,7 @@ class TaskExecutor:
         self.output_base_dir.mkdir(exist_ok=True)
         self.sequence_counter = {}
 
-    @trace_function(caller="TaskExecutor", callee="execute_task")
+    @trace(caller="TaskExecutor", callee="execute_task")
     def execute_task(self, task_data: dict) -> dict:
         """
         タスク実行
