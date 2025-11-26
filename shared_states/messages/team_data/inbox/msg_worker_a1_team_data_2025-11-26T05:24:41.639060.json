@@ -1,0 +1,13 @@
+{
+  "from_agent": "worker_a1",
+  "to_agent": "team_data",
+  "type": "progress_report",
+  "priority": 2,
+  "content": {
+    "task_id": "task_001",
+    "progress": 75,
+    "quality_score": 85
+  },
+  "timestamp": "2025-11-26T05:24:41.639060",
+  "message_id": "msg_worker_a1_team_data_2025-11-26T05:24:41.639060"
+}

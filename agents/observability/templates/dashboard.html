@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CompleteEngine Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .status-healthy {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .team-list {
+            list-style: none;
+        }
+        
+        .team-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f3f4f6;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .alert {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        
+        .alert-warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .alert-info {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+        
+        .timestamp {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        
+        #connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div id="connection-status">
+        <div class="status-dot"></div>
+        <span>リアルタイム更新中</span>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1>🚀 CompleteEngine Dashboard</h1>
+            <p class="timestamp" id="last-update">最終更新: --</p>
+        </header>
+        
+        <div class="grid">
+            <!-- システムヘルス -->
+            <div class="card">
+                <h2>🏥 システムヘルス</h2>
+                <div id="system-health">
+                    <div class="metric">
+                        <span>状態</span>
+                        <span class="status-badge status-healthy" id="health-status">健全</span>
+                    </div>
+                    <div class="metric">
+                        <span>テスト成功率</span>
+                        <span class="metric-value" id="test-rate">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>メモリ使用</span>
+                        <span class="metric-value" id="memory">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>エージェント数</span>
+                        <span class="metric-value" id="agent-count">--</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- タスク概要 -->
+            <div class="card">
+                <h2>📋 タスク概要</h2>
+                <div id="task-summary">
+                    <div class="metric">
+                        <span>完了率</span>
+                        <span class="metric-value" id="completion-rate">--</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="task-progress" style="width: 0%"></div>
+                    </div>
+                    <div class="metric">
+                        <span>完了</span>
+                        <span class="metric-value" id="completed-tasks">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>実行中</span>
+                        <span class="metric-value" id="progress-tasks">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>待機中</span>
+                        <span class="metric-value" id="pending-tasks">--</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 品質メトリクス -->
+            <div class="card">
+                <h2>⭐ 品質メトリクス</h2>
+                <div id="quality-metrics">
+                    <div class="metric">
+                        <span>平均スコア</span>
+                        <span class="metric-value" id="avg-score">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>Reflexionループ</span>
+                        <span class="metric-value" id="reflexion-loops">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>成功率</span>
+                        <span class="metric-value" id="success-rate">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 階層型組織 -->
+        <div class="card">
+            <h2>🏢 階層型組織</h2>
+            <div id="hierarchy">
+                <h3>Executive Manager</h3>
+                <div class="metric">
+                    <span>管理中のゴール</span>
+                    <span class="metric-value" id="goals-managing">--</span>
+                </div>
+                
+                <h3 style="margin-top: 20px;">チーム</h3>
+                <ul class="team-list" id="team-list">
+                    <!-- 動的に生成 -->
+                </ul>
+            </div>
+        </div>
+        
+        <!-- アラート -->
+        <div class="card">
+            <h2>⚠️ アラート</h2>
+            <div id="alerts">
+                <!-- 動的に生成 -->
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws;
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+            
+            ws.onopen = () => {
+                console.log('✅ WebSocket接続成功');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                updateDashboard(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('❌ WebSocketエラー:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('🔌 WebSocket切断、5秒後に再接続');
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+        
+        function updateDashboard(data) {
+            // 最終更新時刻
+            document.getElementById('last-update').textContent = 
+                `最終更新: ${new Date(data.timestamp).toLocaleString('ja-JP')}`;
+            
+            // システムヘルス
+            const health = data.system_health;
+            document.getElementById('test-rate').textContent = `${health.test_success_rate}%`;
+            document.getElementById('memory').textContent = `${health.memory_usage_mb}MB`;
+            document.getElementById('agent-count').textContent = health.agent_count;
+            
+            // タスク概要
+            const tasks = data.tasks;
+            document.getElementById('completion-rate').textContent = `${tasks.completion_rate.toFixed(1)}%`;
+            document.getElementById('task-progress').style.width = `${tasks.completion_rate}%`;
+            document.getElementById('completed-tasks').textContent = tasks.completed;
+            document.getElementById('progress-tasks').textContent = tasks.in_progress;
+            document.getElementById('pending-tasks').textContent = tasks.pending;
+            
+            // 品質メトリクス
+            const quality = data.quality;
+            document.getElementById('avg-score').textContent = `${quality.avg_score}点`;
+            document.getElementById('reflexion-loops').textContent = quality.reflexion_loops;
+            document.getElementById('success-rate').textContent = `${quality.success_rate}%`;
+            
+            // 階層型組織
+            const hierarchy = data.hierarchy;
+            document.getElementById('goals-managing').textContent = hierarchy.executive.goals_managing;
+            
+            // チーム一覧
+            const teamList = document.getElementById('team-list');
+            teamList.innerHTML = hierarchy.teams.map(team => `
+                <li class="team-item">
+                    <span>${team.name} (${team.leader})</span>
+                    <span class="metric-value">${team.progress}%</span>
+                </li>
+            `).join('');
+            
+            // アラート
+            const alertsDiv = document.getElementById('alerts');
+            if (data.alerts.length === 0) {
+                alertsDiv.innerHTML = '<p style="color: #6b7280;">アラートはありません</p>';
+            } else {
+                alertsDiv.innerHTML = data.alerts.map(alert => `
+                    <div class="alert alert-${alert.level}">
+                        <div>${alert.message}</div>
+                        <div class="timestamp">${new Date(alert.timestamp).toLocaleString('ja-JP')}</div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // 初回データ取得（WebSocket接続前）
+        async function fetchInitialData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('❌ 初回データ取得エラー:', error);
+            }
+        }
+        
+        // 起動時
+        fetchInitialData();
+        connectWebSocket();
+    </script>
+</body>
+</html>

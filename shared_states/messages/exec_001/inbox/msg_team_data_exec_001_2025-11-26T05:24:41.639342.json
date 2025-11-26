@@ -1,0 +1,15 @@
+{
+  "from_agent": "team_data",
+  "to_agent": "exec_001",
+  "type": "progress_report",
+  "priority": 3,
+  "content": {
+    "team_progress": {
+      "completed": 2,
+      "total": 3
+    },
+    "blockers": []
+  },
+  "timestamp": "2025-11-26T05:24:41.639342",
+  "message_id": "msg_team_data_exec_001_2025-11-26T05:24:41.639342"
+}

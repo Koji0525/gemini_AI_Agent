@@ -1,0 +1,14 @@
+{
+  "from_agent": "team_leader_test",
+  "to_agent": "worker_test_01",
+  "type": "task_assignment",
+  "priority": 3,
+  "content": {
+    "task_id": "task_test_001",
+    "task_details": {
+      "description": "\u30e1\u30c3\u30bb\u30fc\u30b8\u99c6\u52d5\u30bf\u30b9\u30af"
+    }
+  },
+  "timestamp": "2025-11-26T05:36:08.501763",
+  "message_id": "msg_team_leader_test_worker_test_01_2025-11-26T05:36:08.501763"
+}

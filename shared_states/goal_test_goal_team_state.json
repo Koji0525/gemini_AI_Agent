@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "goal_id": "test_goal_team",
+    "version": 1,
+    "last_updated": "2025-11-26T05:09:35.395951",
+    "locked_by": null,
+    "lock_expires_at": null
+  },
+  "goal_info": {},
+  "progress": {
+    "total_tasks": 0,
+    "completed": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "percentage": 0.0
+  },
+  "quality_metrics": {
+    "avg_score": 0,
+    "low_quality_count": 0,
+    "reflexion_loops_total": 0,
+    "reflexion_success_rate": 0.0
+  },
+  "sections": {},
+  "dependencies": {},
+  "milestones": [],
+  "alerts": []
+}
