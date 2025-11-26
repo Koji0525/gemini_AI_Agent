@@ -707,8 +707,8 @@ class SharedBlackboardManager:
 |----|--------|-------------|------|------|------|
 | P3-001 | Planningディレクトリ | `agents/planning/` | - | 0.5h | ✅ |
 | P3-002 | DAGマネージャー | `agents/planning/dynamic_dag_manager.py` | 700 | 14h | ✅ |
-| P3-003 | タスク分割ロジック | 同上 | 300 | 8h | ⬜ |
-| P3-004 | 依存関係解決 | 同上 | 200 | 6h | ⬜ |
+| P3-003 | タスク分割ロジック | `agents/planning/task_splitter.py` | 300 | 8h | ✅ |
+| P3-004 | 依存関係解決 | `agents/planning/dependency_resolver.py` | 200 | 6h | ✅ |
 | P3-005 | 可視化機能 | `agents/planning/dag_visualizer.py` | 400 | 8h | ⬜ |
 | P3-006 | テスト作成 | `tests/integration/test_dynamic_dag.py` | 400 | 8h | ⬜ |
 
@@ -722,7 +722,7 @@ class SharedBlackboardManager:
 
 | ID | タスク | ファイルパス | 行数 | 所要 | 状態 |
 |----|--------|-------------|------|------|------|
-| P4-001 | Hierarchyディレクトリ | `agents/hierarchy/` | - | 0.5h | ⬜ |
+| P4-001 | Hierarchyディレクトリ | `agents/hierarchy/` | - | 0.5h | ✅ |
 | P4-002 | Executive Manager | `agents/hierarchy/executive_manager.py` | 800 | 16h | ⬜ |
 | P4-003 | Team Leader | `agents/hierarchy/team_leader.py` | 600 | 12h | ⬜ |
 | P4-004 | メッセージング | `agents/hierarchy/messaging.py` | 400 | 10h | ⬜ |
