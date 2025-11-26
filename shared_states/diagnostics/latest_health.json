@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-26T03:28:54+00:00",
+  "overall_health": "warning",
+  "test_success_rate": 0,
+  "test_threshold": 84.3,
+  "memory_used_mb": 1720,
+  "memory_total_mb": 7944,
+  "disk_used": "13G",
+  "agent_count": 462,
+  "knowledge_count": 0,
+  "recent_logs": 0,
+  "protected_files_changed": 0
+}
