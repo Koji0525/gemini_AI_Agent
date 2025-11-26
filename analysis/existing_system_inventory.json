@@ -1,0 +1,115 @@
+{
+  "total_files": 15,
+  "total_lines": 4266,
+  "components": {
+    "PMエージェント": [
+      {
+        "path": "core_agents/pm_agent_v33_epic.py",
+        "lines": 469,
+        "size": 13882,
+        "exists": true
+      },
+      {
+        "path": "core_agents/pm_agent_v34_epic.py",
+        "lines": 469,
+        "size": 13882,
+        "exists": true
+      }
+    ],
+    "タスク実行エンジン": [
+      {
+        "path": "agents/task_execution/high_quality_executor_v8.py",
+        "lines": 129,
+        "size": 3599,
+        "exists": true
+      },
+      {
+        "path": "agents/task_execution/iterative_refinement_engine.py",
+        "lines": 315,
+        "size": 8312,
+        "exists": true
+      },
+      {
+        "path": "agents/task_execution/iterative_refinement_engine_v2.py",
+        "lines": 260,
+        "size": 7313,
+        "exists": true
+      }
+    ],
+    "統合エンジン": [
+      {
+        "path": "agents/complete_engine_ultimate.py",
+        "lines": 1212,
+        "size": 46080,
+        "exists": true
+      },
+      {
+        "path": "agents/integration/complete_engine_adapter.py",
+        "lines": 256,
+        "size": 7052,
+        "exists": true
+      }
+    ],
+    "データ管理": [
+      {
+        "path": "tools/sheets_manager.py",
+        "lines": 211,
+        "size": 6604,
+        "exists": true
+      },
+      {
+        "path": "tools/base_data_accessor.py",
+        "lines": 220,
+        "size": 6152,
+        "exists": true
+      }
+    ],
+    "ナレッジ管理": [
+      {
+        "path": "knowledge_system/core_agents/knowledge_manager.py",
+        "lines": 76,
+        "size": 2455,
+        "exists": true
+      },
+      {
+        "path": "knowledge_system/core_agents/knowledge_manager_v2.py",
+        "lines": 59,
+        "size": 1935,
+        "exists": true
+      }
+    ],
+    "品質管理": [
+      {
+        "path": "agents/quality_evaluator.py",
+        "lines": 206,
+        "size": 6277,
+        "exists": true
+      },
+      {
+        "path": "agents/quality/quality_checker.py",
+        "lines": 136,
+        "size": 3675,
+        "exists": true
+      }
+    ],
+    "オブザーバビリティ": [
+      {
+        "path": "agents/observability/observability_manager.py",
+        "lines": 119,
+        "size": 3495,
+        "exists": true
+      }
+    ],
+    "自己修復": [
+      {
+        "path": "agents/self_healing_agent.py",
+        "lines": 129,
+        "size": 3173,
+        "exists": true
+      }
+    ]
+  },
+  "test_coverage": {
+    "test_files": 28
+  }
+}
