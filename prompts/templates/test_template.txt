@@ -1,0 +1,10 @@
+
+# Test Template
+
+Hello {name}!
+
+Your task is: {task_description}
+
+Requirements:
+- Minimum lines: {min_lines}
+- Minimum files: {min_files}
