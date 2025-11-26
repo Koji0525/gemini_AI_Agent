@@ -18,8 +18,10 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from agents.complete_engine_ultimate import CompleteEngineUltimate
-from agents.hierarchy.executive_manager import ExecutiveManager
-from agents.hierarchy.messaging import MessageBus
+
+# 階層型コンポーネント（遅延インポートで初期化問題回避）
+ExecutiveManager = None
+MessageBus = None
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +65,17 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
 
     def _init_hierarchical_mode(self):
         """階層型モードの初期化"""
+        global ExecutiveManager, MessageBus
+
         try:
+            # 遅延インポート
+            if ExecutiveManager is None:
+                from agents.hierarchy import ExecutiveManager as EM
+                from agents.hierarchy import MessageBus as MB
+
+                ExecutiveManager = EM
+                MessageBus = MB
+
             self.message_bus = MessageBus()
             self.executive = ExecutiveManager(
                 executive_id="exec_001",
@@ -74,7 +86,8 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
             logger.info("✅ 階層型モード初期化成功")
         except Exception as e:
             logger.error(f"❌ 階層型モード初期化失敗: {e}")
-            raise
+            logger.warning("階層型モードは利用できません。legacyモードで続行します。")
+            self.mode = "legacy"
 
     def execute_goal(self, goal_id: str, count: int = 1) -> Dict:
         """
@@ -111,6 +124,10 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
         Returns:
             Dict: 実行結果
         """
+        if self.executive is None:
+            logger.error("Executive Manager未初期化。legacyモードにフォールバック")
+            return super().execute_goal(goal_id, count)
+
         try:
             # Executive にゴール設定
             self.executive.goal_id = goal_id
