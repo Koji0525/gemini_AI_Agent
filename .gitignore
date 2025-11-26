@@ -131,7 +131,7 @@ credentials.json
 database/
 demos/
 dist/
-docs/
+docs/*.pyc
 env/
 exports/alerts_*.json
 exports/archive/

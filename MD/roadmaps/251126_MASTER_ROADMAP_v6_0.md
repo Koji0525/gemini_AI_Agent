@@ -211,7 +211,7 @@ wc -l agents/integration/shared_blackboard_manager.py
 | P0-002 | システムヘルスチェック | `scripts/diagnostics/system_health_check.sh` | 200 | 4h | ✅ |
 | P0-003 | テスト成功率監視 | `scripts/diagnostics/test_success_monitor.py` | 150 | 3h | ✅ |
 | P0-004 | 依存関係チェック | `scripts/diagnostics/check_protected_files.py` | 100 | 3h | ✅ |
-| P0-005 | 診断結果可視化 | `scripts/diagnostics/diagnostic_dashboard.html` | 500 | 8h | ⬜ |
+| P0-005 | 診断結果可視化 | `docs/diagnostics/reports/diagnostic_dashboard.html` | 500 | 8h | ✅ |
 
 **合計**: 1,150行、21.5時間（3日間）
 
@@ -589,8 +589,8 @@ if __name__ == "__main__":
 
 | ID | タスク | ファイルパス | 行数 | 所要 | 状態 |
 |----|--------|-------------|------|------|------|
-| P1-001 | 共有黒板ディレクトリ | `shared_states/` | - | 0.5h | ⬜ |
-| P1-002 | 基本クラス実装 | `agents/integration/shared_blackboard_manager.py` | 850 | 16h | ⬜ |
+| P1-001 | 共有黒板ディレクトリ | `shared_states/` | - | 0.5h | ✅ |
+| P1-002 | 基本クラス実装 | `agents/integration/shared_blackboard_manager.py` | 850 | 16h | ✅ |
 | P1-003 | ロック機構 | 同上 | - | 8h | ⬜ |
 | P1-004 | 履歴管理 | `shared_states/history/` | 200 | 6h | ⬜ |
 | P1-005 | イベント通知 | 同上 | 150 | 6h | ⬜ |

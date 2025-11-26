@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "goal_id": "test_001",
+    "version": 3,
+    "last_updated": "2025-11-26T03:40:37.799341",
+    "locked_by": null,
+    "lock_expires_at": null
+  },
+  "goal_info": {},
+  "progress": {
+    "total_tasks": 10,
+    "completed": 5,
+    "in_progress": 0,
+    "pending": 0,
+    "percentage": 50.0
+  },
+  "quality_metrics": {
+    "avg_score": 0,
+    "low_quality_count": 0,
+    "reflexion_loops_total": 0,
+    "reflexion_success_rate": 0.0
+  },
+  "sections": {
+    "data_collection": {
+      "owner": "worker_1",
+      "status": "completed",
+      "quality_score": 85,
+      "output": "data/test.csv"
+    }
+  },
+  "dependencies": {},
+  "milestones": [],
+  "alerts": []
+}

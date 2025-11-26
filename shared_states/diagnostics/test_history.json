@@ -5,5 +5,12 @@
     "failed": 0,
     "total": 0,
     "success_rate": 0
+  },
+  {
+    "timestamp": "2025-11-26T03:40:35.242785",
+    "passed": 0,
+    "failed": 0,
+    "total": 0,
+    "success_rate": 0
   }
 ]
