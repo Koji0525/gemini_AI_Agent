@@ -13,10 +13,12 @@ import sys
 from pathlib import Path
 from typing import Dict
 
-# プロジェクトルート追加
+# プロジェクトルート追加（最上部で実行）
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
+# 既存システムのインポート
 from agents.complete_engine_ultimate import CompleteEngineUltimate
 
 # 階層型コンポーネント（遅延インポートで初期化問題回避）
@@ -41,17 +43,16 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
         message_bus (MessageBus): メッセージバス（階層型のみ）
     """
 
-    def __init__(self, mode: str = "legacy", sheets_manager=None, browser_controller=None):
+    def __init__(self, sheets_manager=None, mode: str = "legacy"):
         """
         初期化
 
         Args:
+            sheets_manager: GoogleSheetsManager（親クラスに渡す）
             mode (str): 実行モード ('legacy' or 'hierarchical')
-            sheets_manager: GoogleSheetsManager
-            browser_controller: BrowserController
         """
         # 既存初期化（完全保護）
-        super().__init__(sheets_manager, browser_controller)
+        super().__init__(sheets_manager)
 
         self.mode = mode
         self.executive = None
@@ -79,7 +80,7 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
             self.message_bus = MessageBus()
             self.executive = ExecutiveManager(
                 executive_id="exec_001",
-                goal_id="placeholder",  # execute_goal で設定
+                goal_id="placeholder",
                 sheets_manager=self.sheets,
                 message_bus=self.message_bus,
             )
@@ -101,12 +102,10 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
             Dict: 実行結果
         """
         if self.mode == "legacy":
-            # 既存動作（完全保護）
             logger.info(f"Legacy モードで実行: goal_id={goal_id}")
             return super().execute_goal(goal_id, count)
 
         elif self.mode == "hierarchical":
-            # 階層型実行
             logger.info(f"Hierarchical モードで実行: goal_id={goal_id}")
             return self._execute_hierarchical(goal_id, count)
 
@@ -129,19 +128,12 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
             return super().execute_goal(goal_id, count)
 
         try:
-            # Executive にゴール設定
             self.executive.goal_id = goal_id
-
-            # チーム編成
             teams = self.executive.organize_teams()
             logger.info(f"チーム編成完了: {len(teams)}チーム")
 
-            # 各チームにミッション割り当て
             for team_id, mission in teams.items():
                 self.executive.assign_mission(team_id, mission)
-
-            # 実行監視（簡易版）
-            # TODO: 完全な監視ループ実装
 
             return {
                 "status": "success",
@@ -172,7 +164,6 @@ class CompleteEngineUltimateV2(CompleteEngineUltimate):
         old_mode = self.mode
         self.mode = new_mode
 
-        # 階層型に切り替える場合
         if new_mode == "hierarchical" and self.executive is None:
             self._init_hierarchical_mode()
 
@@ -184,7 +175,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     print("=" * 60)
-    print("CompleteEngineUltimateV2 テスト")
+    print("CompleteEngineUltimateV2 修正版テスト")
     print("=" * 60)
 
     # 1. Legacyモードテスト
@@ -223,4 +214,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"   ❌ エラー: {e}")
 
-    print("\n✅ CompleteEngineUltimateV2 テスト完了")
+    print("\n✅ CompleteEngineUltimateV2 修正版テスト完了")
