@@ -835,3 +835,476 @@ fi
 1. Phase 0から実装開始
 2. 各タスク完了後に診断実行
 3. チェックシートを✅に更新
+
+## 📊 Phase 4-5 進捗更新 (2回目)
+
+### Phase 4完全実装
+- ✅ P4-001: Hierarchyディレクトリ作成
+- ✅ P4-002: Executive Manager実装 (完全版)
+- ✅ P4-003: MessageBus実装 (完全版)
+- ✅ P4-004: CompleteEngineUltimateV2 (モックモード対応)
+- ⬜ P4-005: HierarchicalWorker実装
+- ⬜ P4-006: テスト作成
+- ⬜ P4-007: ドキュメント
+
+### Phase 5実装中
+- ✅ P5-003: リアルタイムダッシュボード
+  - ✅ バックエンドAPI (FastAPI)
+  - ✅ WebSocketエンドポイント
+  - ✅ フロントエンドHTML (完全版)
+  - ✅ リアルタイム更新機能
+  - ⬜ グラフ可視化 (Chart.js)
+  - ⬜ 階層型組織図 (D3.js)
+
+### 実装完了行数
+- Executive Manager: 100行
+- MessageBus: 120行
+- Dashboard HTML: 400行
+- Dashboard Backend: 200行
+
+合計: 820行
+
+
+## 📊 Phase 5 進捗更新 (最終)
+
+### Phase 5完了項目
+- ✅ P5-003: リアルタイムダッシュボード
+  - ✅ バックエンドAPI (FastAPI)
+  - ✅ WebSocketエンドポイント
+  - ✅ フロントエンドHTML v2 (Chart.js統合)
+  - ✅ 品質トレンドグラフ（折れ線グラフ）
+  - ✅ リアルタイム更新機能
+- ✅ 統合テスト作成
+  - ✅ CompleteEngineUltimateV2テスト
+  - ✅ MessageBusテスト
+  - ✅ Executive Managerテスト
+
+### 実装完了行数（合計）
+Phase 4-5:
+- Executive Manager: 100行
+- MessageBus: 120行
+- CompleteEngineUltimateV2: 200行
+- Dashboard HTML v2: 450行
+- Dashboard Backend v2: 250行
+- 統合テスト: 150行
+
+合計: 1,270行
+
+### 次のフェーズ
+Phase 6: 本番統合
+- 既存CompleteEngineUltimateとの完全統合
+- 認証情報設定（Google Sheets API）
+- 24時間耐久テスト
+- ドキュメント整備
+
+# Phase 6: 本番統合 - 詳細タスク定義
+
+**作成日**: 2025年11月26日  
+**前提**: Phase 4-5完了（CompleteEngineUltimateV2、MessageBus、Executive Manager実装済み）  
+**目的**: 既存システムとの完全統合、認証設定、24時間耐久テスト実施
+
+---
+
+## 📊 Phase 6 タスクサマリー
+
+| タスクID | タスク名 | 所要時間 | 状態 |
+|---------|---------|---------|------|
+| P6-001 | 実装状況診断 | 2h | ⬜ 未着手 |
+| P6-002 | CompleteEngine統合戦略 | 3h | ⬜ 未着手 |
+| P6-003 | Google Sheets API認証設定 | 2h | ⬜ 未着手 |
+| P6-004 | 統合テスト実施 | 4h | ⬜ 未着手 |
+| P6-005 | 6時間耐久テスト | 6h | ⬜ 未着手 |
+| P6-006 | 24時間耐久テスト | 24h | ⬜ 未着手 |
+| P6-007 | 結果分析とナレッジ登録 | 2h | ⬜ 未着手 |
+
+**合計所要時間**: 43時間（作業時間） + 30時間（待機時間） = 73時間
+
+---
+
+## P6-001: 実装状況診断（2時間）
+
+### 目的
+Phase 4-5で実装されたコンポーネントの完全性を確認し、統合に必要な情報を収集する。
+
+### 実施内容
+
+1. **Phase 4-5実装ファイル確認**
+   ```bash
+   # CompleteEngineUltimateV2
+   - agents/complete_engine_ultimate_v2_fixed.py
+   
+   # 階層型システム
+   - agents/hierarchy/messaging.py (MessageBus)
+   - agents/hierarchy/executive_manager.py (Executive Manager)
+   
+   # 統合テスト
+   - tests/integration/test_phase4_phase5.py
+   
+   # ダッシュボード
+   - agents/observability/dashboard_backend_v2.py
+   - agents/observability/dashboard_v2.html
+   ```
+
+2. **既存システム確認**
+   ```bash
+   # 既存CompleteEngineUltimate
+   - agents/complete_engine_ultimate.py (52,210バイト)
+   
+   # 依存コンポーネント
+   - tools/sheets_manager.py
+   - tools/safe_sheets_wrapper.py
+   - knowledge_system/core_agents/knowledge_manager.py
+   ```
+
+3. **統合ポイント分析**
+   - CompleteEngineUltimateとCompleteEngineUltimateV2の違い
+   - API互換性チェック
+   - データフロー確認
+
+### 成功基準
+- 全実装ファイルの存在確認完了
+- 統合ポイント5箇所以上特定
+- 互換性問題0件
+
+---
+
+## P6-002: CompleteEngine統合戦略（3時間）
+
+### 目的
+既存システムを保護しながら、V2機能を段階的に統合する戦略を策定する。
+
+### 統合方針
+
+#### オプション1: プラグイン方式（推奨）
+```python
+# agents/complete_engine_ultimate.py に追加
+class CompleteEngineUltimate:
+    def __init__(self, enable_hierarchical=False):
+        # 既存の初期化
+        ...
+        
+        # V2機能をオプショナルに追加
+        if enable_hierarchical:
+            from agents.complete_engine_ultimate_v2_fixed import CompleteEngineUltimateV2
+            self.v2_engine = CompleteEngineUltimateV2()
+    
+    def execute_goal_with_hierarchy(self, goal_id):
+        """階層型実行（V2機能）"""
+        if hasattr(self, 'v2_engine'):
+            return self.v2_engine.execute_goal(goal_id, mode='hierarchical')
+        else:
+            # フォールバック: 既存メソッド
+            return self.execute_goal(goal_id)
+```
+
+**メリット**:
+- 既存システム無変更
+- 段階的な機能有効化が可能
+- ロールバックが容易
+
+#### オプション2: フラグベース切り替え
+```python
+# 環境変数で制御
+HIERARCHICAL_MODE = os.getenv('HIERARCHICAL_MODE', 'false').lower() == 'true'
+```
+
+### 実装タスク
+1. プラグイン統合コード作成
+2. 機能フラグ追加
+3. 既存メソッドの互換性保持
+4. ドキュメント更新
+
+### 成功基準
+- 既存テスト成功率84.3%維持
+- V2機能がオプショナルで利用可能
+- フラグでon/off切り替え可能
+
+---
+
+## P6-003: Google Sheets API認証設定（2時間）
+
+### 目的
+Google Sheets APIの認証情報を確認・設定し、本番環境で動作することを保証する。
+
+### 実施内容
+
+1. **認証ファイル確認**
+   ```bash
+   # サービスアカウントキー
+   configuration/service_account.json
+   
+   # 環境変数
+   SPREADSHEET_ID
+   GOOGLE_APPLICATION_CREDENTIALS
+   ```
+
+2. **接続テスト**
+   ```python
+   # tools/sheets_manager.py を使用
+   from tools.sheets_manager import GoogleSheetsManager
+   
+   manager = GoogleSheetsManager()
+   # 読み取りテスト
+   goals = manager.read_project_goals()
+   print(f"✅ 接続成功: {len(goals)}件のゴール取得")
+   ```
+
+3. **権限確認**
+   - project_goal シート: 読み取り/書き込み
+   - pm_tasks シート: 読み取り/書き込み
+   - task_execution_log シート: 読み取り/書き込み
+   - context_log シート: 読み取り/書き込み
+
+### 成功基準
+- Google Sheets API接続成功
+- 全シートへの読み書き動作確認
+- エラーログ0件
+
+---
+
+## P6-004: 統合テスト実施（4時間）
+
+### 目的
+既存システムとV2機能の統合が正しく動作することを確認する。
+
+### テストシナリオ
+
+#### シナリオ1: Mock モード
+```python
+# V2をMockモードで実行
+engine = CompleteEngineUltimate(enable_hierarchical=True)
+result = engine.execute_goal_with_hierarchy("test_goal_001", mock=True)
+assert result['success'] == True
+```
+
+#### シナリオ2: Hierarchical モード
+```python
+# 階層型実行
+engine = CompleteEngineUltimate(enable_hierarchical=True)
+result = engine.execute_goal_with_hierarchy("test_goal_002", mode='hierarchical')
+assert result['status'] == 'completed'
+```
+
+#### シナリオ3: モード切り替え
+```python
+# Mock → Hierarchical
+engine.switch_mode('mock', 'hierarchical')
+assert engine.current_mode == 'hierarchical'
+```
+
+#### シナリオ4: 既存機能維持
+```python
+# V2無効時の既存動作
+engine = CompleteEngineUltimate(enable_hierarchical=False)
+result = engine.execute_goal("test_goal_003")
+assert result['success'] == True
+```
+
+### 成功基準
+- 全シナリオ成功
+- 既存テスト成功率84.3%以上維持
+- 新規テストカバレッジ80%以上
+
+---
+
+## P6-005: 6時間耐久テスト（6時間）
+
+### 目的
+中期的な安定性を確認し、24時間テストの前段階として問題を早期発見する。
+
+### テスト内容
+
+1. **テスト設定**
+   ```bash
+   # 実行間隔: 15分ごと
+   # 合計サイクル数: 24回（6時間 / 15分）
+   # テストゴール: 3-5個
+   ```
+
+2. **監視項目**
+   - テスト成功率: 84.3%以上維持
+   - API成功率: 95%以上
+   - メモリ使用量: <500MB
+   - CPU使用率: <70%
+   - エラー発生回数: <3回
+
+3. **自動記録**
+   ```python
+   # logs/endurance_test_6h_YYYYMMDD_HHMMSS.log
+   {
+       "start_time": "2025-11-26 12:00:00",
+       "duration": "6h",
+       "cycles": 24,
+       "success_rate": 85.2,
+       "api_success_rate": 96.8,
+       "memory_max_mb": 420,
+       "errors": [...]
+   }
+   ```
+
+### 成功基準
+- 6時間連続稼働成功
+- 全監視項目が基準達成
+- 致命的エラー0件
+
+---
+
+## P6-006: 24時間耐久テスト（24時間）
+
+### 目的
+本番運用に耐えうる長期安定性を実証する。
+
+### テスト内容
+
+1. **テスト設定**
+   ```bash
+   # 実行間隔: 15分ごと
+   # 合計サイクル数: 96回（24時間 / 15分）
+   # テストゴール: 5-10個
+   ```
+
+2. **監視項目（厳格化）**
+   - テスト成功率: 84.3%以上維持
+   - API成功率: 95%以上維持
+   - 応答時間: 基準値+20%以内
+   - メモリリーク: 検出0件
+   - エラー自己修復率: 80%以上
+   - ダウンタイム: <0.1%
+
+3. **時間帯別分析**
+   ```python
+   # 0-6時（深夜）
+   # 6-12時（午前）
+   # 12-18時（午後）
+   # 18-24時（夜間）
+   
+   # 各時間帯で性能劣化がないか確認
+   ```
+
+4. **自動レポート生成**
+   ```bash
+   # 1時間ごとの健全性チェック
+   bash scripts/health_check_periodic.sh
+   
+   # 24時間後の最終レポート
+   python3 scripts/generate_endurance_report.py
+   ```
+
+### 成功基準
+- 24時間連続稼働成功
+- 全監視項目が基準達成
+- 致命的エラー0件
+- メモリリーク0件
+- 全時間帯で性能維持
+
+---
+
+## P6-007: 結果分析とナレッジ登録（2時間）
+
+### 目的
+テスト結果を分析し、成功パターンをナレッジベースに登録する。
+
+### 実施内容
+
+1. **結果集計**
+   ```python
+   # 6時間 + 24時間の統合分析
+   - 合計稼働時間: 30時間
+   - 合計サイクル数: 120回
+   - 成功率: XX.X%
+   - エラー発生パターン
+   ```
+
+2. **改善点抽出**
+   - 頻発エラーTop 3
+   - パフォーマンスボトルネック
+   - 最適化候補
+
+3. **ナレッジ登録**
+   ```python
+   from knowledge_system.core_agents.knowledge_manager import KnowledgeManager
+   
+   km = KnowledgeManager()
+   km.add_knowledge(
+       title='Phase6_本番統合_30時間耐久テスト成功',
+       content='''
+       【テスト結果】
+       - 稼働時間: 30時間
+       - 成功率: XX.X%
+       - 安定性: 実証済み
+       
+       【成功要因】
+       1. 段階的統合（プラグイン方式）
+       2. 既存システム保護
+       3. 継続的監視
+       
+       【今後の推奨事項】
+       - 定期的な健全性チェック継続
+       - エラーパターンの学習継続
+       ''',
+       category='integration_test'
+   )
+   ```
+
+### 成功基準
+- 結果レポート作成完了
+- ナレッジ登録完了
+- 改善アクション3件以上特定
+
+---
+
+## 📝 Phase 6 完了条件
+
+### 技術的完了条件
+- [ ] 全タスク（P6-001〜P6-007）完了
+- [ ] 既存テスト成功率84.3%以上維持
+- [ ] V2機能が正常動作
+- [ ] 30時間耐久テスト成功
+
+### ビジネス的完了条件
+- [ ] 本番環境で利用可能
+- [ ] ドキュメント完備
+- [ ] ナレッジベース更新
+
+### 品質基準
+- [ ] 致命的エラー0件
+- [ ] API成功率95%以上
+- [ ] メモリリーク0件
+
+---
+
+## 🚀 次のアクション
+
+### 今すぐ実行
+```bash
+# P6-001開始: 実装状況診断
+cat << 'EOF' > scripts/phase6_diagnostic.sh
+#!/bin/bash
+echo "============================================================"
+echo "P6-001: 実装状況診断"
+echo "============================================================"
+
+# Phase 4-5実装ファイル確認
+echo "[1/3] Phase 4-5実装ファイル確認"
+ls -lh agents/complete_engine_ultimate_v2_fixed.py
+ls -lh agents/hierarchy/messaging.py
+ls -lh agents/hierarchy/executive_manager.py
+
+# 既存システム確認
+echo "[2/3] 既存システム確認"
+ls -lh agents/complete_engine_ultimate.py
+
+# 統合テスト確認
+echo "[3/3] 統合テスト確認"
+python3 tests/integration/test_phase4_phase5.py
+
+EOF
+
+chmod +x scripts/phase6_diagnostic.sh
+bash scripts/phase6_diagnostic.sh
+```
+
+---
+
+**文書終了**
+
