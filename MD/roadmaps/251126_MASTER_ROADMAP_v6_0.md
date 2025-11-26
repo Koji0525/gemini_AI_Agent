@@ -689,8 +689,8 @@ class SharedBlackboardManager:
 |----|--------|-------------|------|------|------|
 | P2-001 | Reflexionディレクトリ | `agents/quality/` | - | 0.5h | ✅ |
 | P2-002 | ループエンジン | `agents/quality/reflexion_loop.py` | 600 | 12h | ✅ |
-| P2-003 | Criticエージェント | `agents/quality/critic_agent.py` | 400 | 10h | ⬜ |
-| P2-004 | フィードバック生成 | 同上 | 300 | 8h | ⬜ |
+| P2-003 | Criticエージェント | `agents/quality/critic_agent.py` | 400 | 10h | ✅ |
+| P2-004 | フィードバック生成 | `agents/quality/feedback_generator.py` | 300 | 8h | ✅ |
 | P2-005 | 既存Executor統合 | `agents/task_execution/executor_with_reflexion.py` | 500 | 10h | ⬜ |
 | P2-006 | テスト作成 | `tests/integration/test_reflexion_loop.py` | 500 | 12h | ⬜ |
 | P2-007 | ドキュメント | `docs/reflexion_loop_guide.md` | - | 4h | ⬜ |

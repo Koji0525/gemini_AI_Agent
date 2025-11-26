@@ -46,12 +46,19 @@ class LegacySystemBridge:
             print(f"⚠️  既存システム接続スキップ: {e}")
             self.sheets_manager = None
         
-        # 新システム
-        from agents.integration.shared_blackboard_manager import SharedBlackboardManager
-        from agents.quality.reflexion_loop import ReflexionLoop
+        # 新システム（直接インポート - __init__.pyを経由しない）
+        self.blackboard_manager = None
+        self.reflexion_loop = None
+    
+    def _lazy_load_new_systems(self):
+        """新システムを遅延ロード"""
+        if self.blackboard_manager is None:
+            from agents.integration.shared_blackboard_manager import SharedBlackboardManager
+            self.blackboard_manager = SharedBlackboardManager
         
-        self.blackboard_class = SharedBlackboardManager
-        self.reflexion_class = ReflexionLoop
+        if self.reflexion_loop is None:
+            from agents.quality.reflexion_loop import ReflexionLoop
+            self.reflexion_loop = ReflexionLoop
     
     def execute_task_with_enhancements(
         self,
@@ -72,6 +79,8 @@ class LegacySystemBridge:
         Returns:
             実行結果
         """
+        self._lazy_load_new_systems()
+        
         print(f"\n{'='*60}")
         print(f"🚀 拡張タスク実行: {task_id}")
         print(f"   Reflexion: {'ON' if use_reflexion else 'OFF'}")
@@ -82,19 +91,19 @@ class LegacySystemBridge:
         result = self._execute_legacy_task(task_data)
         
         # 2. Reflexionループ（オプション）
-        if use_reflexion:
+        if use_reflexion and self.reflexion_loop:
             print("\n🔄 Reflexionループ適用中...")
-            loop = self.reflexion_class(task_id=task_id)
+            loop = self.reflexion_loop(task_id=task_id)
             result, success = loop.execute_with_reflexion(
                 executor_func=lambda td: self._execute_legacy_task(td),
                 task_data=task_data
             )
         
         # 3. 共有黒板に記録（オプション）
-        if use_blackboard:
+        if use_blackboard and self.blackboard_manager:
             print("\n📋 共有黒板に記録中...")
             goal_id = task_data.get('goal_id', 'default')
-            blackboard = self.blackboard_class(goal_id=goal_id)
+            blackboard = self.blackboard_manager(goal_id=goal_id)
             
             blackboard.write_section(f"task_{task_id}", {
                 'status': 'completed',

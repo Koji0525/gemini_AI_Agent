@@ -1,18 +1,18 @@
 {
   "meta": {
-    "goal_id": "test_001",
-    "version": 5,
-    "last_updated": "2025-11-26T04:01:46.355971",
+    "goal_id": "6",
+    "version": 2,
+    "last_updated": "2025-11-26T04:01:46.137350",
     "locked_by": null,
     "lock_expires_at": null
   },
   "goal_info": {},
   "progress": {
-    "total_tasks": 10,
-    "completed": 5,
+    "total_tasks": 0,
+    "completed": 0,
     "in_progress": 0,
     "pending": 0,
-    "percentage": 50.0
+    "percentage": 0.0
   },
   "quality_metrics": {
     "avg_score": 0,
@@ -21,11 +21,14 @@
     "reflexion_success_rate": 0.0
   },
   "sections": {
-    "data_collection": {
-      "owner": "worker_1",
+    "task_test_001": {
       "status": "completed",
-      "quality_score": 85,
-      "output": "data/test.csv"
+      "result": {
+        "status": "completed",
+        "output": "タスク実行結果",
+        "quality_score": 60
+      },
+      "used_reflexion": true
     }
   },
   "dependencies": {},
