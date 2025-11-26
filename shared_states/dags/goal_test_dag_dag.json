@@ -1,0 +1,42 @@
+{
+  "goal_id": "test_dag",
+  "nodes": {
+    "task_001": {
+      "description": "データ収集",
+      "status": "pending"
+    },
+    "task_002": {
+      "description": "データ前処理",
+      "status": "pending"
+    },
+    "task_004": {
+      "description": "可視化",
+      "status": "pending"
+    },
+    "task_003_a": {
+      "description": "分析A"
+    },
+    "task_003_b": {
+      "description": "分析B"
+    }
+  },
+  "edges": [
+    [
+      "task_001",
+      "task_002"
+    ],
+    [
+      "task_002",
+      "task_004"
+    ],
+    [
+      "task_002",
+      "task_003_a"
+    ],
+    [
+      "task_003_a",
+      "task_003_b"
+    ]
+  ],
+  "last_updated": "2025-11-26T04:09:16.041033"
+}

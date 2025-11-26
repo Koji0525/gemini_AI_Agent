@@ -691,9 +691,9 @@ class SharedBlackboardManager:
 | P2-002 | ループエンジン | `agents/quality/reflexion_loop.py` | 600 | 12h | ✅ |
 | P2-003 | Criticエージェント | `agents/quality/critic_agent.py` | 400 | 10h | ✅ |
 | P2-004 | フィードバック生成 | `agents/quality/feedback_generator.py` | 300 | 8h | ✅ |
-| P2-005 | 既存Executor統合 | `agents/task_execution/executor_with_reflexion.py` | 500 | 10h | ⬜ |
-| P2-006 | テスト作成 | `tests/integration/test_reflexion_loop.py` | 500 | 12h | ⬜ |
-| P2-007 | ドキュメント | `docs/reflexion_loop_guide.md` | - | 4h | ⬜ |
+| P2-005 | 既存Executor統合 | `agents/quality/reflexion_executor_wrapper.py` | 500 | 10h | ✅ |
+| P2-006 | テスト作成 | `tests/integration/test_reflexion_system.py` | 500 | 12h | ✅ |
+| P2-007 | ドキュメント | `docs/architecture/reflexion_quality_system.md` | - | 4h | ✅ |
 
 **合計**: 2,300行、56.5時間（10日間）
 
@@ -705,8 +705,8 @@ class SharedBlackboardManager:
 
 | ID | タスク | ファイルパス | 行数 | 所要 | 状態 |
 |----|--------|-------------|------|------|------|
-| P3-001 | Planningディレクトリ | `agents/planning/` | - | 0.5h | ⬜ |
-| P3-002 | DAGマネージャー | `agents/planning/dynamic_dag_manager.py` | 700 | 14h | ⬜ |
+| P3-001 | Planningディレクトリ | `agents/planning/` | - | 0.5h | ✅ |
+| P3-002 | DAGマネージャー | `agents/planning/dynamic_dag_manager.py` | 700 | 14h | ✅ |
 | P3-003 | タスク分割ロジック | 同上 | 300 | 8h | ⬜ |
 | P3-004 | 依存関係解決 | 同上 | 200 | 6h | ⬜ |
 | P3-005 | 可視化機能 | `agents/planning/dag_visualizer.py` | 400 | 8h | ⬜ |
