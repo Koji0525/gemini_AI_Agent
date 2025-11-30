@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オブザーバーダッシュボード v2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            padding: 0 20px;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            color: #495057;
+            background: #e9ecef;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+        }
+        
+        .impact-section {
+            margin-bottom: 30px;
+        }
+        
+        .impact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .impact-header:hover {
+            background: #e9ecef;
+        }
+        
+        .impact-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .impact-badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-size: 14px;
+        }
+        
+        .high-badge { background: #dc3545; color: white; }
+        .medium-badge { background: #ffc107; color: #333; }
+        .low-badge { background: #28a745; color: white; }
+        
+        .impact-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .impact-details.show {
+            max-height: 2000px;
+        }
+        
+        .module-list {
+            padding: 20px;
+            background: white;
+        }
+        
+        .module-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+        
+        .module-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .module-name {
+            font-family: 'Courier New', monospace;
+            color: #495057;
+        }
+        
+        .module-count {
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-export {
+            background: #28a745;
+            color: white;
+            margin-left: 10px;
+        }
+        
+        .btn-export:hover {
+            background: #218838;
+        }
+        
+        .duplicate-item {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        
+        .duplicate-name {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+        
+        .duplicate-locations {
+            font-size: 12px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 オブザーバーダッシュボード v2</h1>
+            <p>依存関係可視化 & 重複コード検知</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">📊 概要</button>
+            <button class="tab" onclick="showTab('dependencies')">🔗 依存関係詳細</button>
+            <button class="tab" onclick="showTab('duplicates')">⚠️ 重複コード</button>
+            <button class="tab" onclick="showTab('export')">📥 エクスポート</button>
+        </div>
+        
+        <!-- 概要タブ -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid" id="statsGrid">
+                <!-- 動的に生成 -->
+            </div>
+        </div>
+        
+        <!-- 依存関係詳細タブ -->
+        <div id="dependencies" class="tab-content">
+            <div class="impact-section">
+                <div class="impact-header" onclick="toggleDetails('high')">
+                    <div class="impact-title">
+                        <span class="impact-badge high-badge">🔴</span>
+                        <span>高影響モジュール</span>
+                        <span id="highCount">(0)</span>
+                    </div>
+                    <button class="btn btn-export" onclick="exportCSV('high', event)">CSV出力</button>
+                </div>
+                <div id="highDetails" class="impact-details">
+                    <div class="module-list" id="highModules"></div>
+                </div>
+            </div>
+            
+            <div class="impact-section">
+                <div class="impact-header" onclick="toggleDetails('medium')">
+                    <div class="impact-title">
+                        <span class="impact-badge medium-badge">🟡</span>
+                        <span>中影響モジュール</span>
+                        <span id="mediumCount">(0)</span>
+                    </div>
+                    <button class="btn btn-export" onclick="exportCSV('medium', event)">CSV出力</button>
+                </div>
+                <div id="mediumDetails" class="impact-details">
+                    <div class="module-list" id="mediumModules"></div>
+                </div>
+            </div>
+            
+            <div class="impact-section">
+                <div class="impact-header" onclick="toggleDetails('low')">
+                    <div class="impact-title">
+                        <span class="impact-badge low-badge">🟢</span>
+                        <span>低影響モジュール</span>
+                        <span id="lowCount">(0)</span>
+                    </div>
+                    <button class="btn btn-export" onclick="exportCSV('low', event)">CSV出力</button>
+                </div>
+                <div id="lowDetails" class="impact-details">
+                    <div class="module-list" id="lowModules"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 重複コードタブ -->
+        <div id="duplicates" class="tab-content">
+            <h2>重複検出結果</h2>
+            <div id="duplicatesList"></div>
+            <button class="btn btn-export" onclick="exportCSV('duplicates')">CSV出力</button>
+        </div>
+        
+        <!-- エクスポートタブ -->
+        <div id="export" class="tab-content">
+            <h2>データエクスポート</h2>
+            <p>必要なデータをCSV形式でダウンロードできます。</p>
+            
+            <div style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="exportCSV('all')">全モジュールデータ</button>
+                <button class="btn btn-primary" onclick="exportCSV('high')">高影響モジュール</button>
+                <button class="btn btn-primary" onclick="exportCSV('medium')">中影響モジュール</button>
+                <button class="btn btn-primary" onclick="exportCSV('low')">低影響モジュール</button>
+                <button class="btn btn-primary" onclick="exportCSV('duplicates')">重複コード</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let statsData = null;
+        let duplicatesData = null;
+        
+        async function loadData() {
+            try {
+                const statsResponse = await fetch('/api/stats');
+                statsData = await statsResponse.json();
+                
+                const duplicatesResponse = await fetch('/api/duplicates/summary');
+                duplicatesData = await duplicatesResponse.json();
+                
+                renderOverview();
+                renderDependencies();
+                renderDuplicates();
+            } catch (error) {
+                console.error('データロードエラー:', error);
+            }
+        }
+        
+        function renderOverview() {
+            const grid = document.getElementById('statsGrid');
+            grid.innerHTML = `
+                <div class="stat-card">
+                    <h3>総モジュール数</h3>
+                    <div class="value">${statsData.total_modules.toLocaleString()}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>総依存関係数</h3>
+                    <div class="value">${statsData.total_dependencies.toLocaleString()}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>🔴 高影響モジュール</h3>
+                    <div class="value">${statsData.high_impact.count}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>🟡 中影響モジュール</h3>
+                    <div class="value">${statsData.medium_impact.count}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>🟢 低影響モジュール</h3>
+                    <div class="value">${statsData.low_impact.count}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>⚠️ 重複クラス</h3>
+                    <div class="value">${statsData.duplicates.classes}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>⚠️ 重複メソッド</h3>
+                    <div class="value">${statsData.duplicates.methods}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>⚠️ 重複関数</h3>
+                    <div class="value">${statsData.duplicates.functions}</div>
+                </div>
+            `;
+        }
+        
+        function renderDependencies() {
+            document.getElementById('highCount').textContent = `(${statsData.high_impact.count})`;
+            document.getElementById('mediumCount').textContent = `(${statsData.medium_impact.count})`;
+            document.getElementById('lowCount').textContent = `(${statsData.low_impact.count})`;
+            
+            renderModuleList('highModules', statsData.high_impact.modules);
+            renderModuleList('mediumModules', statsData.medium_impact.modules);
+            renderModuleList('lowModules', statsData.low_impact.modules);
+        }
+        
+        function renderModuleList(containerId, modules) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = modules.map(m => `
+                <div class="module-item">
+                    <span class="module-name">${m.module}</span>
+                    <span class="module-count">${m.count} 依存</span>
+                </div>
+            `).join('');
+        }
+        
+        function renderDuplicates() {
+            const container = document.getElementById('duplicatesList');
+            let html = '<h3>重複クラス</h3>';
+            
+            duplicatesData.top_classes.forEach(item => {
+                html += `
+                    <div class="duplicate-item">
+                        <div class="duplicate-name">クラス: ${item.name} (${item.count}箇所で重複)</div>
+                        <div class="duplicate-locations">
+                            ${item.locations.map(loc => `${loc.file}:${loc.line}`).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '<h3 style="margin-top: 30px;">重複メソッド（上位10件）</h3>';
+            
+            duplicatesData.top_methods.slice(0, 10).forEach(item => {
+                html += `
+                    <div class="duplicate-item">
+                        <div class="duplicate-name">メソッド: ${item.name} (${item.count}箇所で重複)</div>
+                        <div class="duplicate-locations">
+                            ${item.locations.slice(0, 5).map(loc => `${loc.file}:${loc.line}`).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+        
+        function toggleDetails(level) {
+            const details = document.getElementById(`${level}Details`);
+            details.classList.toggle('show');
+        }
+        
+        function exportCSV(category, event) {
+            if (event) event.stopPropagation();
+            window.location.href = `/api/export/csv?category=${category}`;
+        }
+        
+        // 初期ロード
+        loadData();
+        
+        // 30秒ごとに更新
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
