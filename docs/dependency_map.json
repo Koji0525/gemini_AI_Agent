@@ -11471,6 +11471,33 @@
       "total_imports": 6,
       "file_size": 2109
     },
+    "scripts/monitoring/test_integration_monitor.py": {
+      "imports": [],
+      "all_imports": [
+        "json",
+        "subprocess",
+        "pathlib",
+        "datetime"
+      ],
+      "import_count": 0,
+      "total_imports": 4,
+      "file_size": 5786
+    },
+    "scripts/monitoring/contract_monitor.py": {
+      "imports": [],
+      "all_imports": [
+        "ast",
+        "json",
+        "hashlib",
+        "pathlib",
+        "datetime",
+        "typing",
+        "sys"
+      ],
+      "import_count": 0,
+      "total_imports": 7,
+      "file_size": 13093
+    },
     "scripts/autonomous/runner_v1.py": {
       "imports": [],
       "all_imports": [
@@ -17613,7 +17640,7 @@
       ],
       "import_count": 0,
       "total_imports": 10,
-      "file_size": 7352
+      "file_size": 7266
     },
     "agents/observer_enhanced/web/api_extensions.py": {
       "imports": [
@@ -17637,6 +17664,21 @@
       "import_count": 5,
       "total_imports": 9,
       "file_size": 4356
+    },
+    "agents/observer_enhanced/web/api_server_v3.py": {
+      "imports": [],
+      "all_imports": [
+        "fastapi",
+        "fastapi.responses",
+        "fastapi.staticfiles",
+        "fastapi.middleware.cors",
+        "json",
+        "pathlib",
+        "uvicorn"
+      ],
+      "import_count": 0,
+      "total_imports": 7,
+      "file_size": 5116
     },
     "agents/observer_enhanced/web/api_server.py": {
       "imports": [
@@ -21149,7 +21191,7 @@
         24
       ]
     ],
-    "total_modules": 1341,
+    "total_modules": 1344,
     "total_dependencies": 1944,
     "dependency_stats": {
       "high_impact": 55,
@@ -21159,7 +21201,7 @@
     }
   },
   "metadata": {
-    "generated_at": "2025-11-30T09:28:57.532645",
+    "generated_at": "2025-11-30T21:29:37.344916",
     "working_directory": "/workspaces/gemini_AI_Agent",
     "version": "1.0.0"
   }
