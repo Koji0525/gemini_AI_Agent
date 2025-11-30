@@ -80,3 +80,5 @@ markdown==3.5
 pyyaml==6.0.1
 
 flask
+autoflake
+isort

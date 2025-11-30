@@ -11421,6 +11421,19 @@
       "total_imports": 5,
       "file_size": 8826
     },
+    "scripts/quality/duplicate_detector.py": {
+      "imports": [],
+      "all_imports": [
+        "ast",
+        "json",
+        "pathlib",
+        "collections",
+        "datetime"
+      ],
+      "import_count": 0,
+      "total_imports": 5,
+      "file_size": 6887
+    },
     "scripts/ci/pre_commit_check.py": {
       "imports": [],
       "all_imports": [
@@ -17584,6 +17597,24 @@
       "total_imports": 19,
       "file_size": 8991
     },
+    "agents/observer_enhanced/web/api_server_v2.py": {
+      "imports": [],
+      "all_imports": [
+        "fastapi",
+        "fastapi.responses",
+        "fastapi.staticfiles",
+        "fastapi.middleware.cors",
+        "json",
+        "csv",
+        "io",
+        "pathlib",
+        "datetime",
+        "uvicorn"
+      ],
+      "import_count": 0,
+      "total_imports": 10,
+      "file_size": 7352
+    },
     "agents/observer_enhanced/web/api_extensions.py": {
       "imports": [
         "agents.observer_enhanced.hidden_dependency_detector",
@@ -21118,7 +21149,7 @@
         24
       ]
     ],
-    "total_modules": 1339,
+    "total_modules": 1341,
     "total_dependencies": 1944,
     "dependency_stats": {
       "high_impact": 55,
@@ -21128,7 +21159,7 @@
     }
   },
   "metadata": {
-    "generated_at": "2025-11-29T08:30:40.503847",
+    "generated_at": "2025-11-30T09:28:57.532645",
     "working_directory": "/workspaces/gemini_AI_Agent",
     "version": "1.0.0"
   }
