@@ -1,68 +1,206 @@
+
+# *.md は除外しない（重要ドキュメントも含まれる）
+# === セキュリティ強化 (v1.15.1) ===
+# === テスト・実験用ファイル ===
+# === ナレッジ抽出ファイル ===
+# === 一時ファイル・バックアップ ===
+# === 会話ログ・レポート ===
+# ====================
+# ===================================================
+# Backups are tracked
+# Gemini cookies (機密情報)
+# Google Cloud認証情報（絶対にコミットしない）
+# Google Sheets認証
+# IDE設定
+# POCファイル
+# Phase 2開発時の一時ファイル
+# Playwright
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# agent_outputs/
+# backups/ is intentionally tracked
+# downloads/
+# reports/
+# v1.15.0/v1.16.0 開発中の一時ファイル
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# キャッシュファイル（機密情報を含む可能性）
+# クッキー
+# スクリプト実行結果
+# セキュリティチェック用一時ファイル
+# テストファイル
+# テンポラリファイル
+# ナレッジ抽出ファイル
 
-# Virtual Environment
-venv/
-.venv/
-env/
-.env/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
+# バックアップファイル完全除外
+# バックアップファイル（1680個を除外）
+# ブラウザデータ
+# レポート・ドキュメント（82個）- 必要なものは手動で追加
 # ログファイル
-*.log
-logs/
+# 一時ファイル
+# 一時的なテストスクリプト（本番用スクリプトは含める）
+# 会話ログ・データベース
+# 作業中ファイル
+# 出力ファイル（オプション - 必要に応じてコメントアウト）
+# 品質チェックキャッシュ
+# 実行時生成ファイル
+# 環境変数・認証情報
+# 監視システム出力
+# 自動生成ファイル - アーカイブ
+
+# 認証情報（絶対にコミットしない）
+# 🔄 自動生成ファイル（Git管理不要）
+# 🔒 機密情報（絶対にコミットしない）
+# 🛡️ 再発防止策：バックアップ・一時ファイル除外
 
 # データファイル
-*.csv
-*.json
-*.pkl
-*.h5
-*.pt
-*.bin
-myenv/
+# バックアップファイル
+# ログファイル
+# 一時ファイル
+# 監視システム出力
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+_ARCHIVE/
+_BACKUP/
+_WIP/
+_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
+_WIP/task_dependency_manager_v01.py
+._*
+.coverage
+.DS_Store
+.DS_Store?
+.eggs/
+.env
+.env.*
+.env.backup*
+.env.development
+.env.local
+.env.production
+.env/
+.idea/
+.installed.cfg
+.pytest_cache/
 .Python
-pip-log.txt
-pip-delete-this-directory.txt
-myenv/
-__pycache__/
-*.pyc
-mvp_v4/models/chroma_db/
+.quality_cache.json
+.Spotlight-V100
+.Trashes
+.venv/
+.vscode/
+*_backup_*
+*_backup.py
+*_cookies.json
+*_DRAFT.md
+*_poc.py
+*_TEMP.md
+*_temp.py
+*_tmp.py
+*.backup
+*.backup_*
+*.backup.*
+*.backup*
+*.bak
+*.bak*
+*.before_*
+*.bin
+*.broken
+*.broken_*
+*.cache.json
+*.csv
+*.egg
+*.egg-info/
+*.env
+*.env.*
+*.h5
 *.jar
+*.json
+*.key
+*.log
+*.md.backup
+*.old
+*.pem
+*.pkl
+*.pt
+*.py[cod]
+*.pyc
+*.pyd
+*.pyo
+*.so
 *.sqlite3
+*.sublime-*
+*.swo
+*.swp
+*.tmp
+*.v*_backup
+**/*_key.json
+**/*.pem
+**/credentials.json
+**/service_account.json
+*~
+*$py.class
+/blob-report/
+/playwright-report/
+/playwright/.auth/
+/playwright/.cache/
+/test-results/
+/tmp/*.md
+
+# IDE
+# OS
+# Virtual Environment
+
+agent_outputs/
+browser_profile/
+build/
+chrome_profile/
+Claude/
+configuration/service_account.json
+conversations/
+cookies/
+credentials.json
+database/
+demos/
+develop-eggs/
+dist/
+docs/
+downloads/
+eggs/
+ehthumbs.db
+env/
+ENV/
+exports/alerts_*.json
+exports/archive/
+exports/dependency_graph_*.json
+exports/traces_*.json
+extracted_knowledge_*.txt
+gap_analysis.md
+gemini_AI_Agent/
+gemini_auto_generate/configuration/service_account.json
+gemini_automation.log
+gemini_cookies.json
+htmlcov/
+knowledge_*.txt
+knowledge_system/database/knowledge.db
+lib/
+lib64/
+logs/
+mvp_v4/models/chroma_db/
+myenv/
+node_modules/
+parts/
+pip-delete-this-directory.txt
+pip-log.txt
+README_v*.md
+README_v1.15.0.md
+reports/
+run_pm_tasks_adaptive_v1.3_test.py
+run_poc_*.py
+sdist/
+service_account.json
+service_account*.json
+session_data/
+system_check.sh
+test_*.sh
+Thumbs.db
+token.json
+token.pickle
+var/
+venv/
+wheels/
+wordpress_cookies.json.backup
