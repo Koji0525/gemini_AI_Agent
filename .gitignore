@@ -1,185 +1,54 @@
-
-# *.md は除外しない（重要ドキュメントも含まれる）
-# === セキュリティ強化 (v1.15.1) ===
-# === テスト・実験用ファイル ===
-# === ナレッジ抽出ファイル ===
-# === 一時ファイル・バックアップ ===
-# === 会話ログ・レポート ===
-# ====================
-# ===================================================
-# Backups are tracked
-# Gemini cookies (機密情報)
-# Google Cloud認証情報（絶対にコミットしない）
-# Google Sheets認証
-# IDE設定
-# POCファイル
-# Phase 2開発時の一時ファイル
-# Playwright
 # Python
-# agent_outputs/
-# backups/ is intentionally tracked
-# downloads/
-# reports/
-# v1.15.0/v1.16.0 開発中の一時ファイル
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# キャッシュファイル（機密情報を含む可能性）
-# クッキー
-# スクリプト実行結果
-# セキュリティチェック用一時ファイル
-# テストファイル
-# テンポラリファイル
-# ナレッジ抽出ファイル
-# バックアップ
-# バックアップファイル
-# バックアップファイル完全除外
-# バックアップファイル（1680個を除外）
-# ブラウザデータ
-# レポート・ドキュメント（82個）- 必要なものは手動で追加
-# ログファイル
-# 一時ファイル
-# 一時的なテストスクリプト（本番用スクリプトは含める）
-# 会話ログ・データベース
-# 作業中ファイル
-# 出力ファイル（オプション - 必要に応じてコメントアウト）
-# 品質チェックキャッシュ
-# 実行時生成ファイル
-# 環境変数・認証情報
-# 監視システム出力
-# 自動生成ファイル - アーカイブ
-# 認証情報
-# 認証情報（絶対にコミットしない）
-# 🔄 自動生成ファイル（Git管理不要）
-# 🔒 機密情報（絶対にコミットしない）
-# 🛡️ 再発防止策：バックアップ・一時ファイル除外
-*$py.class
-**/*.pem
-**/*_key.json
-**/credentials.json
-**/service_account.json
-*.backup
-*.backup*
-*.backup.*
-*.backup_*
-*.bak
-*.bak*
-*.before_*
-*.broken
-*.cache.json
-*.egg-info/
-*.env
-*.env.*
-*.key
-*.log
-*.md.backup
-*.pem
-*.pkl
+__pycache__/
 *.py[cod]
-*.pyc
-*.pyo
+*$py.class
 *.so
-*.sublime-*
-*.swp
-*.tmp
-*.v*_backup
-*_DRAFT.md
-*_TEMP.md
-*_backup.*
-*_backup.py
-*_backup_*
-*_cookies.json
-*_poc.py
-*_temp.py
-*_tmp.py
-*~
-.DS_Store
 .Python
-.coverage
-.env
-.env.*
-.env.backup*
-.env.development
-.env.local
-.env.production
-.idea/
-.pytest_cache/
-.quality_cache.json
-.vscode/
-/blob-report/
-/playwright-report/
-/playwright/.auth/
-/playwright/.cache/
-/test-results/
-/tmp/*.md
-Claude/
-ENV/
-README_v*.md
-README_v1.15.0.md
-_ARCHIVE/
-_BACKUP/
-_WIP/
-_WIP/run_pm_tasks_adaptive_v1.3-dependency.py*
-_WIP/task_dependency_manager_v01.py
-__pycache__/
-agent_outputs/
-browser_profile/
 build/
-chrome_profile/
-configuration/service_account.json
-conversations/
-cookies/
-credentials.json
-database/
-demos/
+develop-eggs/
 dist/
-docs/*.pyc
-env/
-exports/alerts_*.json
-exports/archive/
-exports/dependency_graph_*.json
-exports/dependency_graph_*.json  
-exports/traces_*.json
-extracted_knowledge_*.txt
-gap_analysis.md
-gemini_auto_generate/configuration/service_account.json
-gemini_automation.log
-gemini_cookies.json
-htmlcov/
-knowledge_*.txt
-logs/
-node_modules/
-reports/
-run_pm_tasks_adaptive_v1.3_test.py
-run_poc_*.py
-service_account*.json
-service_account.json
-session_data/
-system_check.sh
-test_*.sh
-token.json
-token.pickle
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
-wordpress_cookies.json.backup
+.venv/
+env/
+.env/
 
-# ====================
-# 🔄 自動生成ファイル（Git管理不要）
-# ====================
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# 監視システム出力
-exports/archive/
-exports/alerts_*.json
-exports/dependency_graph_*.json
-exports/traces_*.json
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# バックアップファイル
-*.backup*
-*_backup_*
+# ログファイル
+*.log
+logs/
 
-# 一時ファイル
-_WIP/
-__pycache__/
-*.pyc
-.quality_cache.json
-*.broken_*
-*.old
-gemini_AI_Agent/
-knowledge_system/database/knowledge.db
+# データファイル
+*.csv
+*.json
+*.pkl
+*.h5
+*.pt
+*.bin

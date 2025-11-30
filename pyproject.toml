@@ -1,27 +1,10 @@
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 🎨 Black フォーマッター設定 v6.0
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[project]
+name = "gemini-ai-agent"
+requires-python = ">=3.11"
 
-[tool.black]
-line-length = 100
-target-version = ['py39', 'py310', 'py311']
-include = '\.pyi?$'
+[build-system]
+requires = ["uv"]
+build-backend = "uv"
 
-# 除外ディレクトリ
-exclude = '''
-/(
-    \.git
-  | __pycache__
-  | _WIP
-  | _ARCHIVE
-  | _BACKUP
-  | node_modules
-  | wordpress-core
-  | \.venv
-  | venv
-)/
-'''
-
-# 拡張性: 将来の設定用
-# skip-string-normalization = false
-# skip-magic-trailing-comma = false
+[tool.uv]
+always-use-uv = true

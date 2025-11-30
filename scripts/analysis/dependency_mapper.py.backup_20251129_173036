@@ -79,8 +79,7 @@ def build_dependency_map(project_root: str = ".") -> Dict:
     for file_path in python_files:
         # 除外パターン
         exclude_patterns = [
-            '__pycache__',
-        'archived_*', 'venv', '.git', 'site-packages',
+            '__pycache__', 'venv', '.git', 'site-packages',
             '.venv', 'env', 'build', 'dist', '.pytest_cache'
         ]
         
@@ -108,20 +107,12 @@ def build_dependency_map(project_root: str = ".") -> Dict:
         ]
         
         # 全ファイルを記録（インポートがなくても）
-        # ファイルサイズ取得（シンボリックリンク対応）
-        try:
-            file_size = file_path.stat().st_size
-        except (FileNotFoundError, OSError):
-            # 壊れたシンボリックリンクや削除済みファイルをスキップ
-            skipped += 1
-            continue
-        
         dependency_map[relative_path] = {
             'imports': project_imports,
             'all_imports': imports[:20],  # 最初の20個のみ保存（容量削減）
             'import_count': len(project_imports),
             'total_imports': len(imports),
-            'file_size': file_size
+            'file_size': file_path.stat().st_size
         }
     
     print(f"✅ {len(dependency_map)}個のファイルを分析（{skipped}個をスキップ）")
