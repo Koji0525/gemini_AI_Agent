@@ -1,9 +1,9 @@
 name: Clean Cache on Code Execution
 
 on:
-  workflow_dispatch:  # 手動実行用
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # 毎日UTC0時に実行
+    - cron: '0 0 * * *'
   push:
     branches: [ main, master ]
 
@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        
+      
     - name: Clean cache
       run: |
         echo "== キャッシュクリーンアップ開始 =="
