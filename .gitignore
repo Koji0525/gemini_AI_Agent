@@ -63,3 +63,6 @@ pip-delete-this-directory.txt
 myenv/
 __pycache__/
 *.pyc
+mvp_v4/models/chroma_db/
+*.jar
+*.sqlite3
